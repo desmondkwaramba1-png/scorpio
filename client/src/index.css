@@ -657,15 +657,13 @@ img{max-width:100%;display:block;}
 
 /* ---- nav: account dropdown (Dashboard + My orders, for a creator who
    also buys — see the comment on AccountMenu in Nav.jsx) ---- */
-/* Brighter and chip-backed by default, not the same dim rgba(.65) every
-   other nav icon rests at — this is the one nav item that represents the
-   logged-in person's own space, so it should read as present at a glance,
-   not blend into the row until hovered or opened. */
+/* Solid gold text, same proven treatment as "Start selling" (.nav__icon-
+   link--cta) — not a translucent white chip, which depends on whatever
+   backdrop-filter happens to be blurring behind it and can wash out
+   instead of standing out. Gold-on-navy has reliable contrast regardless. */
 .nav__account{position:relative;}
-.nav__account > .nav__icon-link{
-  color:rgba(255,255,255,.92);background:rgba(255,255,255,.08);
-}
-.nav__account > .nav__icon-link:hover{background:rgba(255,255,255,.14);}
+.nav__account > .nav__icon-link{color:var(--gold);}
+.nav__account > .nav__icon-link:hover{background:rgba(var(--gold-rgb),.14);color:var(--gold);}
 .nav__account > .nav__icon-link.nav__icon-link--active{background:rgba(var(--gold-rgb),.16);}
 .nav__account-menu{
   position:absolute;top:calc(100% + 8px);right:0;min-width:180px;z-index:60;

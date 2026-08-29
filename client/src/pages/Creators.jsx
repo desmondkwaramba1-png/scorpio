@@ -8,7 +8,7 @@ function CreatorCard({ creator }) {
     <Link to={`/@${creator.handle}`} className="creator-card">
       <div
         className="creator-card__avatar"
-        style={{ background: creator.avatar_path ? `url(${creator.avatar_path}) center/cover` : 'var(--gold)' }}
+        style={{ background: creator.avatar_path ? `url(${creator.avatar_path}) center/cover` : 'linear-gradient(135deg, var(--gold) 0%, var(--green-glow) 100%)' }}
       >
         {!creator.avatar_path && creator.name.charAt(0).toUpperCase()}
       </div>

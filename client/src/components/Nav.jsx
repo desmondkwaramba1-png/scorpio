@@ -1,9 +1,50 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { FiCompass, FiUsers, FiGrid, FiUser, FiLogIn, FiLogOut, FiShoppingBag, FiShoppingCart, FiSun, FiMoon, FiSearch } from 'react-icons/fi';
+import { FiCompass, FiUsers, FiGrid, FiUser, FiLogIn, FiLogOut, FiShoppingBag, FiShoppingCart, FiSun, FiMoon, FiSearch, FiPackage, FiChevronDown } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
+
+// A creator has two real destinations (their storefront dashboard, and
+// their own purchase history as a buyer) — the nav used to only ever show
+// one ("Dashboard" replaced "Account" outright the moment a creator profile
+// existed), so a seller who also buys things had no visible way back to
+// their own orders. This folds both into one dropdown instead of picking a
+// winner. A plain buyer has exactly one destination, so they keep the
+// simple direct link — no dropdown needed for the common case.
+function AccountMenu({ creator, logout }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function onClickOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
+
+  return (
+    <div className="nav__account" ref={ref}>
+      <button type="button" className="nav__icon-link" onClick={() => setOpen(o => !o)} aria-expanded={open}>
+        <FiGrid /> <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>Account <FiChevronDown size={11} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s ease' }} /></span>
+      </button>
+      {open && (
+        <div className="nav__account-menu">
+          <Link to="/dashboard" onClick={() => setOpen(false)} className="nav__account-menu__item">
+            <FiGrid size={15} /> Dashboard
+          </Link>
+          <Link to="/account" onClick={() => setOpen(false)} className="nav__account-menu__item">
+            <FiPackage size={15} /> My orders
+          </Link>
+          <button type="button" onClick={() => { setOpen(false); logout(); }} className="nav__account-menu__item">
+            <FiLogOut size={15} /> Log out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Nav() {
   const { user, creator, loading, logout } = useAuth();
@@ -11,10 +52,6 @@ export default function Nav() {
   const { count } = useCart();
   const navigate = useNavigate();
   const [q, setQ] = useState('');
-
-  const accountLink = creator
-    ? { to: '/dashboard', label: 'Dashboard', icon: FiGrid }
-    : { to: '/account', label: 'Account', icon: FiUser };
 
   function submitSearch(e) {
     e.preventDefault();
@@ -53,12 +90,13 @@ export default function Nav() {
               {count > 0 && <span className="nav__cart-badge">{count}</span>}
             </NavLink>
           )}
-          {!loading && user && (
-            <NavLink to={accountLink.to} className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')}>
-              <accountLink.icon /> <span>{accountLink.label}</span>
+          {!loading && user && creator && <AccountMenu creator={creator} logout={logout} />}
+          {!loading && user && !creator && (
+            <NavLink to="/account" className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')}>
+              <FiUser /> <span>Account</span>
             </NavLink>
           )}
-          {!loading && user && (
+          {!loading && user && !creator && (
             <button onClick={logout} className="nav__icon-link" style={{ border: 'none', background: 'none', cursor: 'pointer' }}>
               <FiLogOut /> <span>Log out</span>
             </button>

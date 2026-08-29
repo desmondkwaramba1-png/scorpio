@@ -1,10 +1,37 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { FiShoppingBag, FiShoppingCart } from 'react-icons/fi';
+import { FiShoppingBag, FiShoppingCart, FiEye, FiEyeOff } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
 import { FaFacebook } from 'react-icons/fa';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext.jsx';
+
+// A plain <input type="password"> gives no way to check what you actually
+// typed before submitting — a real source of failed logins/signups on a
+// fiddly mobile keyboard. tabIndex={-1} keeps the toggle out of the tab
+// order between the field and the next one; it's a convenience click/tap
+// target, not a stop on the form's real path.
+function PasswordField({ id, label, value, onChange, placeholder, hint, minLength }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      <div className="field__password-wrap">
+        <input
+          id={id} type={show ? 'text' : 'password'} required minLength={minLength}
+          value={value} onChange={onChange} placeholder={placeholder}
+        />
+        <button
+          type="button" tabIndex={-1} className="field__password-toggle"
+          onClick={() => setShow(s => !s)} aria-label={show ? 'Hide password' : 'Show password'}
+        >
+          {show ? <FiEyeOff size={16} /> : <FiEye size={16} />}
+        </button>
+      </div>
+      {hint && <small>{hint}</small>}
+    </div>
+  );
+}
 
 export default function Login() {
   const navigate = useNavigate();
@@ -159,12 +186,11 @@ export default function Login() {
             <form onSubmit={handleLogin}>
               <div className="field">
                 <label htmlFor="identifier">Username or email</label>
-                <input id="identifier" required value={form.identifier} onChange={update('identifier')} />
+                <input id="identifier" required value={form.identifier} onChange={update('identifier')} placeholder="myusername" />
               </div>
-              <div className="field">
-                <label htmlFor="password">Password</label>
-                <input id="password" type="password" required value={form.password} onChange={update('password')} />
-              </div>
+              <PasswordField
+                id="password" label="Password" value={form.password} onChange={update('password')} placeholder="mypassword"
+              />
               {error && <p className="error-text">{error}</p>}
               <button className="btn btn--primary btn--block" disabled={submitting} type="submit">
                 {submitting ? 'Logging in...' : 'Log in'}
@@ -181,11 +207,11 @@ export default function Login() {
             <form onSubmit={handleSignup}>
               <div className="field">
                 <label htmlFor="username">Username</label>
-                <input id="username" required value={form.username} onChange={update('username')} placeholder="e.g. tendaiwrites" />
+                <input id="username" required value={form.username} onChange={update('username')} placeholder="myusername" />
               </div>
               <div className="field">
                 <label htmlFor="email">Email</label>
-                <input id="email" type="email" required value={form.email} onChange={update('email')} />
+                <input id="email" type="email" required value={form.email} onChange={update('email')} placeholder="you@example.com" />
                 <small>We'll send a verification link here.</small>
               </div>
               <div className="field">
@@ -193,15 +219,13 @@ export default function Login() {
                 <input id="phone" required value={form.phone} onChange={update('phone')} placeholder="+263 77 123 4567" />
                 <small>Used for WhatsApp password reset and payouts.</small>
               </div>
-              <div className="field">
-                <label htmlFor="signup_password">Password</label>
-                <input id="signup_password" type="password" required minLength={8} value={form.password} onChange={update('password')} />
-                <small>At least 8 characters.</small>
-              </div>
-              <div className="field">
-                <label htmlFor="confirm">Confirm password</label>
-                <input id="confirm" type="password" required value={form.confirm} onChange={update('confirm')} />
-              </div>
+              <PasswordField
+                id="signup_password" label="Password" value={form.password} onChange={update('password')}
+                placeholder="mypassword" minLength={8} hint="At least 8 characters."
+              />
+              <PasswordField
+                id="confirm" label="Confirm password" value={form.confirm} onChange={update('confirm')} placeholder="mypassword"
+              />
               <div className="field">
                 <label style={{ display: 'flex', alignItems: 'flex-start', fontWeight: 400, gap: 8 }}>
                   <input type="checkbox" required checked={form.terms}

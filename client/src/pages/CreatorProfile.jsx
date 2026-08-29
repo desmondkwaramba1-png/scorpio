@@ -5,6 +5,7 @@ import Seal from '../components/Seal.jsx';
 import { Stars } from '../components/ReviewsSection.jsx';
 import ProductCard from '../components/ProductCard.jsx';
 import ReelViewer from '../components/ReelViewer.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import { SITE_HOST } from '../lib/site.js';
 
 export default function CreatorProfile() {
@@ -14,6 +15,7 @@ export default function CreatorProfile() {
   // value still has the leading "@" from the URL. Strip it before using it
   // as the actual handle anywhere.
   const handle = rawHandle.replace(/^@/, '');
+  const { creator: myCreator } = useAuth();
   const [creator, setCreator] = useState(null);
   const [error, setError] = useState(null);
   const [reels, setReels] = useState(null);
@@ -116,7 +118,7 @@ export default function CreatorProfile() {
         {creator.products.length > 0 && (
           <div className="product-grid">
             {creator.products.map(p => (
-              <ProductCard key={p.id} product={{
+              <ProductCard key={p.id} isOwner={myCreator?.id === creator.id} product={{
                 ...p, creator_name: creator.name, creator_handle: creator.handle,
                 creator_verified: creator.verified, creator_avatar: creator.avatar_path
               }} />

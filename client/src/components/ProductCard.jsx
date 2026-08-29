@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiHeart, FiMessageCircle, FiShare2, FiCheck, FiEye, FiShoppingCart } from 'react-icons/fi';
+import { FiHeart, FiMessageCircle, FiShare2, FiCheck, FiEye, FiShoppingCart, FiEdit2 } from 'react-icons/fi';
 import Seal from './Seal.jsx';
 import { Stars } from './ReviewsSection.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -10,7 +10,11 @@ import { formatMoney } from '../lib/money';
 import { CATEGORY_LABELS } from '../lib/categories.js';
 import { shareOrCopy } from '../lib/share';
 
-export default function ProductCard({ product }) {
+// isOwner: true when the logged-in creator viewing this card IS the seller
+// (their own storefront, seen through CreatorProfile.jsx) — a "Buy now"
+// button pointed at yourself is nonsensical, so this swaps the buy row for
+// an edit shortcut instead of pretending the seller is a customer here.
+export default function ProductCard({ product, isOwner = false }) {
   const p = product;
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -122,7 +126,15 @@ export default function ProductCard({ product }) {
         )}
 
         <div className="product-card__buyrow">
-          {soldOut ? (
+          {isOwner ? (
+            <Link
+              to={`/dashboard/products/${p.id}/edit`}
+              onClick={e => e.stopPropagation()}
+              className="btn btn--gold btn--sm product-card__buy"
+            >
+              <FiEdit2 size={13} /> Edit listing
+            </Link>
+          ) : soldOut ? (
             <span className="badge badge--neutral">Sold out</span>
           ) : (
             <Link
@@ -133,7 +145,7 @@ export default function ProductCard({ product }) {
               {p.type === 'service' ? 'Order now' : 'Buy now'}
             </Link>
           )}
-          {!soldOut && !p.pay_what_you_want && p.type !== 'service' && (
+          {!isOwner && !soldOut && !p.pay_what_you_want && p.type !== 'service' && (
             <button
               onClick={handleAddToCart}
               className="btn btn--ghost btn--sm"

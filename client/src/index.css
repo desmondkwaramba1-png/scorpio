@@ -771,23 +771,44 @@ img{max-width:100%;display:block;}
 
 /* ---- splash screen (first open only) ---- */
 .splash{
-  position:fixed;inset:0;z-index:1000;
+  position:fixed;inset:0;z-index:1000;overflow:hidden;
   background:
     radial-gradient(1px 1px at 18% 25%, rgba(255,255,255,.7) 0, transparent 60%),
     radial-gradient(1px 1px at 78% 18%, rgba(255,255,255,.5) 0, transparent 60%),
     radial-gradient(1.5px 1.5px at 65% 62%, rgba(255,255,255,.6) 0, transparent 60%),
     radial-gradient(1px 1px at 25% 75%, rgba(255,255,255,.4) 0, transparent 60%),
-    /* A real sunset glow behind the scorpion — same palette as the shop
-       hero, but radial and centered so it reads as light source rather
-       than a wash, fading to navy at the edges to keep the frame dark. */
-    radial-gradient(950px 750px at 50% 48%, #d1522f 0%, #8a3050 32%, #3d1f3d 58%, #131921 82%);
+    /* Stays entirely in the gold -> ember -> navy range, deliberately —
+       the earlier version blended orange straight into a wine/plum stop,
+       and an orange-to-purple RGB blend passes through a genuinely pink
+       midtone (red channel still high while blue climbs). Ember/maroon
+       keeps blue low the whole way through, so the transition to navy
+       reads as embers dying down into night, never pink. */
+    radial-gradient(950px 750px at 50% 48%, #FFA24D 0%, #D1522F 26%, #7A2E28 52%, #241A1E 76%, #131921 94%);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
   opacity:1;transition:opacity .45s ease;
 }
+/* A slow ambient pulse behind the scorpion — the difference between a
+   static wallpaper and something that feels alive while someone waits.
+   A separate layer (not an animated `background`, which browsers don't
+   interpolate smoothly across gradient stops) so it can scale/fade with a
+   real, cheap transform+opacity animation. */
+.splash::before{
+  content:'';position:absolute;inset:-15%;pointer-events:none;
+  background:radial-gradient(560px 480px at 50% 48%, rgba(255,162,77,.4), transparent 70%);
+  animation:splash-breathe 4.5s ease-in-out infinite;
+}
+@keyframes splash-breathe{
+  0%,100%{opacity:.55;transform:scale(1);}
+  50%{opacity:1;transform:scale(1.1);}
+}
 .splash--leaving{opacity:0;pointer-events:none;}
-.splash__scorpion{filter:drop-shadow(0 0 0 rgba(var(--gold-rgb),0));transition:filter .6s ease;}
+.splash__scorpion{
+  position:relative;z-index:1;
+  filter:drop-shadow(0 0 0 rgba(var(--gold-rgb),0));transition:filter .6s ease;
+}
 .splash__scorpion.is-glowing{filter:drop-shadow(0 0 10px rgba(var(--gold-rgb),.7));animation:splash-pulse 2.2s ease-in-out .9s infinite;}
 .splash__name{
+  position:relative;z-index:1;
   font-family:'Alex Brush',cursive;font-weight:400;font-size:3.2rem;line-height:1;color:var(--gold);
   text-shadow:0 0 18px rgba(var(--gold-rgb),.55);margin:0;
 }
@@ -798,6 +819,7 @@ img{max-width:100%;display:block;}
   50%{filter:drop-shadow(0 0 20px rgba(var(--gold-rgb),1));}
 }
 @media (prefers-reduced-motion: reduce){
+  .splash::before{animation:none;opacity:.75;}
   .splash__scorpion, .splash__scorpion.is-glowing{animation:none;filter:drop-shadow(0 0 10px rgba(var(--gold-rgb),.55));}
   .splash__name span{transition:none;opacity:1;transform:none;}
 }

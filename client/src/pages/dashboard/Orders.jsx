@@ -1,0 +1,198 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { FiTrendingUp, FiMail, FiMessageCircle, FiShield, FiAlertTriangle } from 'react-icons/fi';
+import { useAuth } from '../../context/AuthContext.jsx';
+import { api } from '../../lib/api';
+import { formatMoney } from '../../lib/money';
+
+function formatDate(sqliteDatetime) {
+  const d = new Date(sqliteDatetime.replace(' ', 'T'));
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// wa.me needs digits only, country code first, no leading zero on the
+// trunk digit — Zimbabwean numbers arrive as 07..., 2637..., or +2637...
+function whatsappLink(phone) {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, '');
+  const withCountryCode = digits.startsWith('263') ? digits : `263${digits.replace(/^0/, '')}`;
+  return `https://wa.me/${withCountryCode}`;
+}
+
+const FULFILLMENT_LABEL = {
+  awaiting_delivery: { text: 'Awaiting delivery', className: 'badge--gold' },
+  delivered: { text: 'Delivered, awaiting buyer', className: 'badge--gold' },
+  released: { text: 'Released to you', className: 'badge--green' },
+  disputed: { text: 'Disputed', className: 'badge--neutral' },
+  refunded: { text: 'Refunded to buyer', className: 'badge--neutral' }
+};
+
+function DeliverForm({ purchaseId, onDelivered }) {
+  const [message, setMessage] = useState('');
+  const [externalUrl, setExternalUrl] = useState('');
+  const [file, setFile] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function submit(e) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    const body = new FormData();
+    body.append('message', message);
+    if (externalUrl) body.append('external_url', externalUrl);
+    if (file) body.append('file', file);
+    try {
+      await api.post(`/api/purchases/${purchaseId}/deliver`, body);
+      onDelivered();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+      <div className="field" style={{ marginBottom: 10 }}>
+        <label htmlFor={`deliver-msg-${purchaseId}`}>What did you deliver?</label>
+        <textarea id={`deliver-msg-${purchaseId}`} required value={message} onChange={e => setMessage(e.target.value)}
+          placeholder="Final logo files, 3 concepts as discussed" style={{ minHeight: 70 }} />
+      </div>
+      <div className="field" style={{ marginBottom: 10 }}>
+        <label htmlFor={`deliver-url-${purchaseId}`}>Link (optional)</label>
+        <input id={`deliver-url-${purchaseId}`} value={externalUrl} onChange={e => setExternalUrl(e.target.value)} placeholder="https://drive.google.com/..." />
+      </div>
+      <div className="field" style={{ marginBottom: 10 }}>
+        <label htmlFor={`deliver-file-${purchaseId}`}>File (optional)</label>
+        <input id={`deliver-file-${purchaseId}`} type="file" onChange={e => setFile(e.target.files[0] || null)} />
+      </div>
+      {error && <p className="error-text" style={{ marginBottom: 10 }}>{error}</p>}
+      <button className="btn btn--gold btn--sm" disabled={submitting} type="submit">
+        {submitting ? 'Marking delivered...' : 'Mark delivered'}
+      </button>
+    </form>
+  );
+}
+
+function OrderRow({ o, creator }) {
+  const [delivering, setDelivering] = useState(false);
+  const [fulfillment, setFulfillment] = useState(o.fulfillment_status);
+  const wa = whatsappLink(o.buyer_phone);
+  const label = fulfillment ? FULFILLMENT_LABEL[fulfillment] : null;
+
+  return (
+    <div className="card card--pad">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {o.buyer_name || o.buyer_email}
+          </p>
+          <p className="muted" style={{ fontSize: '.85rem' }}>
+            Bought <Link to={`/@${creator.handle}/${o.product_slug}`}>{o.product_title}</Link> &middot; {formatDate(o.created_at)}
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          {label && <span className={`badge ${label.className}`}>{label.text}</span>}
+          <span className="mono" style={{ fontWeight: 600, fontSize: '.9rem' }}>{formatMoney(o.amount_minor, o.currency)}</span>
+          <a href={`mailto:${o.buyer_email}`} className="btn btn--ghost btn--sm" title="Email this buyer">
+            <FiMail size={13} />
+          </a>
+          {wa && (
+            <a href={wa} target="_blank" rel="noopener noreferrer" className="btn btn--ghost btn--sm" title="Message on WhatsApp">
+              <FiMessageCircle size={13} />
+            </a>
+          )}
+          {fulfillment === 'awaiting_delivery' && (
+            <button className="btn btn--gold btn--sm" onClick={() => setDelivering(d => !d)}>
+              {delivering ? 'Cancel' : 'Mark delivered'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {fulfillment === 'disputed' && (
+        <p className="muted" style={{ fontSize: '.82rem', marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <FiAlertTriangle size={13} color="var(--red)" /> The buyer reported a problem with this order. It's being reviewed.
+        </p>
+      )}
+
+      {delivering && fulfillment === 'awaiting_delivery' && (
+        <DeliverForm purchaseId={o.id} onDelivered={() => { setFulfillment('delivered'); setDelivering(false); }} />
+      )}
+    </div>
+  );
+}
+
+export default function Orders() {
+  const { creator } = useAuth();
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    api.get('/api/insights/orders').then(setData).catch(err => setError(err.message));
+  }, []);
+
+  if (error) return <p className="error-text">{error}</p>;
+
+  if (!data) {
+    return (
+      <div>
+        <h1 style={{ fontSize: '1.5rem', marginBottom: 24 }}>Orders</h1>
+        <div className="skeleton" style={{ height: 80, borderRadius: 'var(--radius)', marginBottom: 24 }} />
+        <div style={{ display: 'grid', gap: 10 }}>
+          {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton" style={{ height: 60, borderRadius: 'var(--radius)' }} />)}
+        </div>
+      </div>
+    );
+  }
+
+  const awaitingDelivery = data.orders.filter(o => o.fulfillment_status === 'awaiting_delivery').length;
+
+  return (
+    <div>
+      <h1 style={{ fontSize: '1.5rem', marginBottom: 6 }}>Orders</h1>
+      <p className="muted" style={{ fontSize: '.88rem', marginBottom: 24 }}>
+        Everyone who's bought from you, with a way to reach them when you launch something new.
+      </p>
+
+      {awaitingDelivery > 0 && (
+        <div className="trust-line" style={{ marginBottom: 24 }}>
+          <FiShield size={16} />
+          <span>
+            {awaitingDelivery} service order{awaitingDelivery === 1 ? '' : 's'} waiting on you to deliver.
+            That money is held safely until you mark it delivered and the buyer confirms (or 5 days pass).
+          </span>
+        </div>
+      )}
+
+      <div className="card card--pad" style={{ marginBottom: 24 }}>
+        <p style={{ fontWeight: 600, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 7 }}>
+          <FiTrendingUp size={15} color="var(--green-glow)" /> Running fast this week
+        </p>
+        {data.trending.length === 0 && <p className="muted" style={{ fontSize: '.9rem' }}>No orders in the last 7 days yet.</p>}
+        {data.trending.length > 0 && (
+          <div style={{ display: 'grid', gap: 10 }}>
+            {data.trending.map(p => (
+              <Link key={p.id} to={`/@${creator.handle}/${p.slug}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.92rem' }}>
+                <span>{p.title}</span>
+                <span className="mono muted">{p.order_count} order{p.order_count === 1 ? '' : 's'} this week</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {data.orders.length === 0 ? (
+        <div className="empty-state">
+          <strong>No paid orders yet.</strong>
+          Your buyers will show up here once your first order comes in.
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: 10 }}>
+          {data.orders.map(o => <OrderRow key={o.id} o={o} creator={creator} />)}
+        </div>
+      )}
+    </div>
+  );
+}

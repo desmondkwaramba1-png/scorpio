@@ -1,0 +1,12 @@
+node_modules
+client
+.git
+.env
+.env.*
+src/db/zimselar.db
+src/db/zimselar.db-wal
+src/db/zimselar.db-shm
+src/uploads/*
+!src/uploads/.gitkeep
+*.log
+.vscode

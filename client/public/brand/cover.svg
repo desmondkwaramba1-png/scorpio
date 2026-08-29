@@ -1,0 +1,49 @@
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="sky" cx="50%" cy="32%" r="80%">
+      <stop offset="0%" stop-color="#161E45"/>
+      <stop offset="100%" stop-color="#070A1C"/>
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="400" height="400" fill="url(#sky)"/>
+
+  <!-- starlight: gold kept scarce on purpose, three points only -->
+  <g fill="#E8B23A">
+    <circle cx="72" cy="66" r="2.2"/>
+    <circle cx="330" cy="90" r="1.6"/>
+    <circle cx="300" cy="300" r="2"/>
+  </g>
+
+  <!-- scorpion, centered upper field -->
+  <g filter="url(#glow)" transform="translate(112,90)" fill="none" stroke="#2DE1E6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- tail, five segments curling up and over -->
+    <path d="M150 150 Q160 118 138 96 Q118 78 96 84 Q70 92 74 66 Q77 46 100 40"
+          stroke-width="7"/>
+    <circle cx="100" cy="40" r="5" fill="#2DE1E6" stroke="none"/>
+    <!-- body -->
+    <ellipse cx="118" cy="150" rx="42" ry="26" stroke-width="7"/>
+    <!-- head -->
+    <ellipse cx="66" cy="146" rx="18" ry="15" stroke-width="7"/>
+    <!-- pincers -->
+    <path d="M52 134 Q30 122 34 104" stroke-width="6"/>
+    <path d="M54 160 Q34 168 32 188" stroke-width="6"/>
+    <!-- legs -->
+    <path d="M92 168 L80 190" stroke-width="5"/>
+    <path d="M112 174 L104 198" stroke-width="5"/>
+    <path d="M136 174 L140 198" stroke-width="5"/>
+    <path d="M154 164 L168 182" stroke-width="5"/>
+  </g>
+
+  <text x="200" y="298" font-family="Arial, sans-serif" font-weight="900" font-size="46" letter-spacing="4" fill="#FFFFFF" text-anchor="middle">SCORPIO</text>
+  <text x="200" y="323" font-family="Arial, sans-serif" font-weight="700" font-size="12" letter-spacing="4" fill="#2DE1E6" text-anchor="middle">CREATE &#183; SELL &#183; EMPOWER</text>
+
+  <rect x="70" y="345" width="260" height="2" fill="#1F2B5C"/>
+</svg>

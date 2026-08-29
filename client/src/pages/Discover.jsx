@@ -1,0 +1,140 @@
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { FiSearch, FiCompass } from 'react-icons/fi';
+import ProductCard from '../components/ProductCard.jsx';
+import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../lib/launchScope.js';
+
+const TYPES = [
+  { value: '', label: 'All' },
+  { value: 'single', label: 'Single item' },
+  { value: 'serial', label: 'Serial' }
+];
+
+function SkeletonCard() {
+  return (
+    <div className="skeleton-card">
+      <div className="skeleton" style={{ aspectRatio: '4/3' }} />
+      <div style={{ padding: 14 }}>
+        <div className="skeleton" style={{ height: 14, width: '80%', marginBottom: 10 }} />
+        <div className="skeleton" style={{ height: 12, width: '50%', marginBottom: 14 }} />
+        <div className="skeleton" style={{ height: 16, width: '35%' }} />
+      </div>
+    </div>
+  );
+}
+
+export default function Discover() {
+  const [params, setParams] = useSearchParams();
+  const [products, setProducts] = useState(null);
+  const [error, setError] = useState(null);
+
+  const type = params.get('type') || '';
+  const q = params.get('q') || '';
+  const sort = params.get('sort') || '';
+  const category = params.get('category') || '';
+
+  useEffect(() => {
+    const qs = new URLSearchParams();
+    if (type) qs.set('type', type);
+    if (q) qs.set('q', q);
+    if (sort) qs.set('sort', sort);
+    if (category) qs.set('category', category);
+    setProducts(null);
+    setError(null);
+    fetch(`/api/products?${qs.toString()}`)
+      .then(r => r.json())
+      .then(setProducts)
+      .catch(() => setError('Could not load the marketplace. Check your connection and try again.'));
+  }, [type, q, sort, category]);
+
+  function updateParam(key, value) {
+    const next = new URLSearchParams(params);
+    if (value) next.set(key, value); else next.delete(key);
+    setParams(next);
+  }
+
+  return (
+    <main className="wrap" style={{ padding: '40px 20px 80px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+        <FiCompass size={22} color="var(--green)" />
+        <h1 style={{ fontSize: '1.8rem' }}>Discover</h1>
+      </div>
+      <p className="muted" style={{ marginBottom: 24 }}>
+        {EBOOKS_ONLY ? 'Ebooks, guides, templates, and courses from people who actually know the subject.' : 'Products from creators across Zimbabwe.'}
+      </p>
+
+      {ACTIVE_CATEGORIES.length > 1 && (
+        <div className="category-chips">
+          <button
+            onClick={() => updateParam('category', '')}
+            className={`category-chip${category === '' ? ' category-chip--active' : ''}`}
+          >
+            All
+          </button>
+          {ACTIVE_CATEGORIES.map(c => (
+            <button
+              key={c.value}
+              onClick={() => updateParam('category', c.value)}
+              className={`category-chip${category === c.value ? ' category-chip--active' : ''}`}
+            >
+              <c.icon size={13} /> {c.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="discover-filters">
+        <div className="input-icon" style={{ flex: '1 1 220px' }}>
+          <FiSearch size={15} />
+          <input
+            value={q} onChange={e => updateParam('q', e.target.value)}
+            placeholder="Search products..."
+          />
+        </div>
+        <select value={sort} onChange={e => updateParam('sort', e.target.value)} className="discover-sort">
+          <option value="">Newest first</option>
+          <option value="popular">Most popular</option>
+          <option value="bestselling">Bestselling</option>
+          <option value="price_asc">Price: low to high</option>
+          <option value="price_desc">Price: high to low</option>
+        </select>
+      </div>
+
+      <div className="type-pills">
+        {TYPES.map(t => (
+          <button key={t.value} onClick={() => updateParam('type', t.value)}
+            className={`type-pill${type === t.value ? ' type-pill--active' : ''}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {error && <p className="error-text">{error}</p>}
+
+      {products && products.length > 0 && (
+        <p className="muted" style={{ fontSize: '.85rem', marginBottom: 16 }}>
+          {products.length} product{products.length === 1 ? '' : 's'}
+        </p>
+      )}
+
+      {!products && !error && (
+        <div className="product-grid">
+          {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+      )}
+
+      {products && products.length === 0 && (
+        <div className="empty-state">
+          <strong>No products match yet.</strong>
+          Try a different search or clear your filters.
+        </div>
+      )}
+
+      {products && products.length > 0 && (
+        <div className="product-grid">
+          {products.map(p => <ProductCard key={p.id} product={p} />)}
+        </div>
+      )}
+    </main>
+  );
+}

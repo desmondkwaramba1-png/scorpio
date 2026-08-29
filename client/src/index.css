@@ -1,0 +1,1013 @@
+:root{
+  /* SCORPIO palette: "sunset energy" — coral/rose and warm orange, the two
+     halves of an actual sunset gradient, used as flat fills for legibility
+     rather than a literal gradient everywhere. A near-white/light-grey
+     ground (--paper) with white cards (--surface) popping above it,
+     near-black text. --green-dark stays the deep navy chrome shared by
+     nav/hero/footer/splash — a legacy token name at this point (nothing
+     about it is green) kept deliberately unchanged: it's the one color
+     that's been asked for by name ("that blue... represents trust") and
+     every one of those surfaces already keys off it, so the sunset accents
+     sit ON TOP of navy chrome rather than replacing it. */
+  --green:#E0447A;
+  --green-dark:#131921;
+  --green-tint:#FCE7ED;
+  --green-glow:#C93659;
+  --green-glow-rgb:201,54,89;
+  --gold:#FF8C42;
+  --gold-dark:#E86F1F;
+  --gold-tint:#FFEEDC;
+  --gold-rgb:255,140,66;
+  /* Text-safe gold: raw --gold reads fine as a button/badge FILL (dark
+     navy text sits on it) but isn't dark enough itself to use as text on
+     the pale --gold-tint wash badges sit on. */
+  --gold-ink:#8A4712;
+  --ink:#0F1111;
+  --ink-dim:#3D4852;
+  --ink-800:#232F3E;
+  --muted:#565959;
+  --paper:#F0F2F2;
+  --surface:#FFFFFF;
+  --line:#D5D9D9;
+  /* Form controls need to read as distinctly interactive against the page,
+     so they get a visibly stronger border than the passive --surface/
+     --line pair used for cards and dividers. */
+  --field-bg:#FFFFFF;
+  --line-strong:#888C8C;
+  --red:#CC0C39;
+  --radius:12px;
+  --radius-sm:8px;
+  --max-w:1160px;
+
+  /* The text color that reads correctly ON TOP of a solid var(--ink) fill
+     (primary buttons, active pills/tabs). --ink itself flips between
+     themes, so whatever sits on it has to flip the opposite way too. */
+  --ink-contrast:#ffffff;
+  --skeleton-base:var(--line);
+  --skeleton-shine:#E6E6E6;
+
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px; --sp-8:64px;
+
+  --shadow-1:0 1px 2px rgba(20,24,27,.06), 0 1px 1px rgba(20,24,27,.04);
+  --shadow-2:0 8px 24px rgba(20,24,27,.10), 0 2px 6px rgba(20,24,27,.06);
+}
+
+/* Dark theme — opt-in via the nav toggle, not the default anymore. Ground
+   (--paper/--surface/--ink) is the same true zero-hue-bias neutral-dark
+   pass tuned earlier and left unchanged; --green/--gold are the same
+   sunset coral/orange pair as the light theme, tuned brighter so they hold
+   contrast against a near-black ground. Nav/hero/footer/splash stay their
+   own literal --green-dark chrome in both themes — only the tokens page
+   CONTENT is built from live here. */
+:root[data-theme="dark"]{
+  --green:#FF7A93;
+  --green-tint:rgba(255,122,147,.14);
+  --green-glow:#FF8FA6;
+  --green-glow-rgb:255,143,166;
+  --gold:#FFA24D;
+  --gold-dark:#E8863A;
+  --gold-tint:rgba(255,162,77,.16);
+  --gold-rgb:255,162,77;
+  --gold-ink:var(--gold);
+  --ink:#F7EFE6;
+  --ink-dim:#E4D5C4;
+  --ink-800:#2B2B2B;
+  --muted:#ABABAB;
+  --paper:#121212;
+  --surface:#1C1C1C;
+  --line:rgba(255,255,255,.10);
+  --field-bg:#262626;
+  --line-strong:rgba(255,255,255,.22);
+  --red:#E5584A;
+  --ink-contrast:var(--green-dark);
+  --skeleton-base:var(--ink-800);
+  --skeleton-shine:#383838;
+}
+
+*,*::before,*::after{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto;}
+  *,*::before,*::after{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:'Inter',-apple-system,sans-serif;line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+h1,h2,h3{font-family:'Cabinet Grotesk','Sora',sans-serif;font-weight:700;margin:0;letter-spacing:-0.02em;}
+p{margin:0;}
+a{color:inherit;text-decoration:none;}
+button,input,textarea,select{font-family:inherit;color:inherit;}
+img{max-width:100%;display:block;}
+/* --green-glow, not --gold: the focus ring needs 3:1 against whatever
+   content background sits under it, and --green-glow is the token that
+   actually darkens for the light theme — raw --gold stays bright in both
+   themes and nearly disappears against light paper. */
+:focus-visible{outline:2px solid var(--green-glow);outline-offset:2px;border-radius:4px;}
+
+.wrap{max-width:var(--max-w);margin:0 auto;padding-inline:20px;width:100%;}
+.mono{font-family:'JetBrains Mono',monospace;}
+.muted{color:var(--muted);}
+.section{padding:var(--sp-8) 0;}
+.section__head{max-width:56ch;margin-bottom:var(--sp-6);}
+.section__eyebrow{color:var(--green-glow);font-weight:700;font-size:.78rem;letter-spacing:.08em;margin-bottom:10px;}
+.section__title{font-size:clamp(1.5rem,3.4vw,2.1rem);margin-bottom:10px;}
+
+/* ---- buttons ---- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:.8rem 1.4rem;border-radius:999px;font-weight:600;font-size:.92rem;
+  cursor:pointer;border:1px solid transparent;transition:transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease, color .15s ease;
+  white-space:nowrap;min-height:44px;
+}
+.btn--primary{background:var(--ink); color:var(--ink-contrast); box-shadow:var(--shadow-1);}
+.btn--primary:hover{background:var(--ink-dim);transform:translateY(-1px);box-shadow:var(--shadow-2);}
+.btn--gold{background:var(--gold);color:var(--green-dark);box-shadow:var(--shadow-1);}
+.btn--gold:hover{background:var(--gold-dark);transform:translateY(-1px);box-shadow:var(--shadow-2);}
+.btn--ghost{background:transparent;color:var(--ink);border-color:var(--line);}
+.btn--ghost:hover{border-color:var(--green-glow);color:var(--green-glow);}
+.btn--sm{padding:.6rem 1.1rem;font-size:.85rem;min-height:38px;}
+.btn--block{width:100%;}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
+.btn:active:not(:disabled){transform:translateY(0) scale(.97);}
+
+/* ---- form fields ---- */
+.field{margin-bottom:18px;text-align:left;}
+.field label{
+  display:block;font-size:.82rem;font-weight:600;color:var(--muted);margin-bottom:6px;
+}
+.field input,.field textarea,.field select{
+  width:100%;padding:.75rem .9rem;border:1.5px solid var(--line-strong);border-radius:var(--radius-sm);
+  font-size:1rem;color:var(--ink);background:var(--field-bg);transition:border-color .15s ease, box-shadow .15s ease;
+}
+.field input::placeholder,.field textarea::placeholder{color:var(--muted);opacity:1;}
+.field input:focus,.field textarea:focus,.field select:focus{
+  border-color:var(--green-glow);outline:none;box-shadow:0 0 0 3px var(--green-tint);
+}
+.field textarea{min-height:90px;resize:vertical;}
+.field small{display:block;margin-top:5px;color:var(--muted);font-size:.78rem;}
+.error-text{color:var(--red);font-size:.85rem;margin-top:10px;}
+.btn-row{display:flex;gap:10px;}
+
+/* Chrome/Edge autofill forces its own light background otherwise, which
+   would flash a jarring white box into an otherwise dark form. */
+.field input:-webkit-autofill,.input-icon input:-webkit-autofill{
+  -webkit-box-shadow:0 0 0 1000px var(--field-bg) inset;
+  -webkit-text-fill-color:var(--ink);
+}
+
+.input-icon{position:relative;}
+.input-icon svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;}
+.input-icon input{
+  width:100%;padding:.75rem .9rem .75rem 36px;border:1.5px solid var(--line-strong);border-radius:var(--radius-sm);
+  font-size:1rem;color:var(--ink);background:var(--field-bg);transition:border-color .15s ease, box-shadow .15s ease;
+}
+.input-icon input::placeholder{color:var(--muted);opacity:1;}
+.input-icon input:focus{border-color:var(--green-glow);outline:none;box-shadow:0 0 0 3px var(--green-tint);}
+
+/* ---- discover filters ---- */
+.discover-filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.discover-sort{
+  padding:.75rem .9rem;border:1.5px solid var(--line-strong);border-radius:var(--radius-sm);
+  background:var(--field-bg);font-size:.92rem;color:var(--ink);
+}
+.type-pills{display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap;}
+.type-pill{
+  padding:.5rem 1.05rem;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);
+  font-size:.85rem;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s ease;
+}
+.type-pill:hover{border-color:var(--green-glow);color:var(--green-glow);}
+.type-pill--active{background:var(--ink);border-color:var(--ink);color:var(--ink-contrast);}
+
+.category-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:16px;scrollbar-width:thin;}
+.category-chip{
+  display:flex;align-items:center;gap:6px;padding:.5rem .95rem;border-radius:999px;
+  border:1.5px solid var(--line);background:var(--surface);font-size:.82rem;font-weight:600;
+  color:var(--muted);white-space:nowrap;cursor:pointer;transition:all .15s ease;flex-shrink:0;
+}
+.category-chip:hover{border-color:var(--green-glow);color:var(--green-glow);}
+.category-chip--active{background:var(--ink);border-color:var(--ink);color:var(--ink-contrast);}
+
+.pay-methods{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+.pay-method{
+  display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;
+  background:var(--paper);border:1px solid var(--line);color:var(--muted);font-size:.76rem;font-weight:600;
+}
+
+.trust-line{
+  display:flex;align-items:flex-start;gap:8px;padding:12px 14px;border-radius:var(--radius-sm);
+  background:var(--green-tint);color:var(--ink);font-size:.82rem;line-height:1.45;margin-bottom:18px;
+}
+.trust-line svg{flex-shrink:0;margin-top:2px;color:var(--green-glow);}
+
+.order-summary{display:flex;gap:12px;align-items:center;padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid var(--line);}
+.order-summary__cover{width:52px;height:52px;border-radius:8px;background-color:var(--green-tint);background-size:contain;background-repeat:no-repeat;background-position:center;flex-shrink:0;}
+.order-summary .mono{font-size:1.2rem;}
+
+/* Concrete, specific reasons to trust the purchase, sitting right above
+   the buy button where they can actually influence the click — a vague
+   "secure checkout" badge does less than "you'll have this in your hands
+   in 10 seconds" spelled out. */
+.buy-benefits{list-style:none;margin:0 0 18px;padding:0;display:grid;gap:9px;}
+.buy-benefits li{display:flex;align-items:center;gap:9px;font-size:.85rem;color:var(--ink-dim);}
+.buy-benefits svg{flex-shrink:0;color:var(--green-glow);}
+
+/* A real secondary path, not a third stacked button competing with Buy —
+   text-link weight keeps the buy box reading as one clear decision instead
+   of a menu of equal options. */
+.buy-panel__browse-link{
+  display:flex;align-items:center;justify-content:center;gap:6px;margin-top:14px;
+  font-size:.85rem;font-weight:600;color:var(--green-glow);
+}
+.buy-panel__browse-link:hover{text-decoration:underline;}
+
+/* ---- cart line item ---- */
+/* flex-wrap + a real min-width on the title block, not a media query —
+   once the title can't fit alongside price+remove on one line at its
+   minimum readable width, price+remove naturally flow to their own line
+   instead of squeezing the title toward zero or forcing the row wider
+   than the screen. */
+.cart-item{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.cart-item__info{flex:1 1 160px;min-width:160px;}
+.cart-item__price{flex-shrink:0;margin-left:auto;}
+.cart-item__remove{flex-shrink:0;}
+
+/* ---- file upload ---- */
+.file-upload__input{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}
+.file-upload__dropzone{
+  display:flex;flex-direction:row;align-items:center;justify-content:center;gap:10px;
+  border:1.5px dashed var(--line-strong);border-radius:var(--radius);padding:20px 16px;
+  background:var(--field-bg);cursor:pointer;color:var(--muted);font-size:.9rem;font-weight:600;text-align:center;
+  transition:border-color .15s ease, background .15s ease, color .15s ease;
+}
+.file-upload__dropzone:hover{border-color:var(--green-glow);color:var(--green-glow);background:var(--green-tint);}
+.file-upload__input:focus-visible + .file-upload__dropzone{outline:2px solid var(--green-glow);outline-offset:2px;}
+.file-upload__preview{margin-top:10px;width:100%;max-height:220px;object-fit:contain;background:var(--field-bg);border-radius:var(--radius-sm);}
+
+/* ---- seal badge: the signature element ---- */
+.seal{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--gold);color:var(--green-dark);border-radius:999px;
+  padding:3px 10px 3px 6px;font-size:.72rem;font-weight:700;
+  font-family:'JetBrains Mono',monospace;letter-spacing:.02em;
+}
+.seal svg{width:13px;height:13px;}
+
+/* ---- surfaces ---- */
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.card--pad{padding:var(--sp-5);}
+
+.stat-grid{display:grid;gap:var(--sp-3);grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:var(--sp-5);}
+.stat-tile{padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.stat-tile__value{font-family:'JetBrains Mono',monospace;font-size:1.05rem;font-weight:700;color:var(--ink);line-height:1;}
+.stat-tile__label{color:var(--muted);font-size:.76rem;font-weight:600;display:flex;align-items:center;gap:6px;}
+
+/* ---- product grid + card ---- */
+.product-grid{
+  display:grid;gap:var(--sp-5);
+  grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
+}
+.product-card{
+  display:block;border-radius:var(--radius);overflow:hidden;
+  background:var(--surface);border:1px solid var(--line);
+  box-shadow:var(--shadow-1);
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  cursor:pointer;
+}
+.product-card:hover, .product-card:focus-visible{
+  transform:translateY(-4px);
+  box-shadow:var(--shadow-2);
+  border-color:var(--ink);
+}
+/* Amazon-style restraint: the image is a supporting element, not the pitch
+   — title and price carry the weight. Shorter than a true 4:3 hero crop so
+   a page with many stacked category rows doesn't turn into a wall of big
+   photos. */
+.product-card__cover{
+  aspect-ratio:5/4;background-color:var(--green-tint);
+  background-size:contain;background-repeat:no-repeat;background-position:center;
+  position:relative;
+}
+.product-card__cover--empty{
+  display:flex;align-items:center;justify-content:center;
+  color:var(--ink);opacity:.35;font-family:'Cabinet Grotesk',sans-serif;font-weight:700;font-size:2rem;
+}
+.product-card__watermark{
+  position:absolute;left:10px;bottom:10px;width:34px;height:34px;border-radius:50%;
+  background-color:var(--green-dark);background-size:cover;background-position:center;
+  border:2px solid var(--surface);box-shadow:var(--shadow-1);
+}
+.product-card__body{padding:var(--sp-4);}
+.product-card__title{
+  font-size:.98rem;font-weight:600;margin-bottom:var(--sp-2);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.product-card__meta{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.product-card__creator{font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.product-card__price{margin-top:var(--sp-3);font-weight:700;color:var(--green-glow);font-size:1.02rem;}
+.product-card__sold{margin-top:3px;color:var(--muted);font-size:.74rem;font-weight:600;}
+.product-card__buyrow{display:flex;align-items:center;gap:8px;margin-top:12px;}
+.product-card__buy{flex-shrink:0;}
+.product-card__engagement{
+  display:flex;align-items:center;gap:14px;margin-top:9px;padding-top:9px;
+  border-top:1px solid var(--line);opacity:.72;
+}
+.product-card__engagement button{
+  display:flex;align-items:center;gap:4px;background:none;border:none;cursor:pointer;padding:0;
+  color:var(--muted);font-size:.72rem;font-weight:600;font-family:inherit;
+}
+.product-card__engagement button.is-active{color:var(--red);}
+.product-card__engagement button:hover{color:var(--ink);}
+
+/* ---- skeleton loading ---- */
+.skeleton{background:linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-shine) 37%, var(--skeleton-base) 63%);
+  background-size:400% 100%;animation:skeleton-shine 1.4s ease infinite;border-radius:var(--radius-sm);}
+@keyframes skeleton-shine{0%{background-position:100% 50%;}100%{background-position:0 50%;}}
+.skeleton-card{border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);background:var(--surface);}
+.skeleton-card .skeleton{border-radius:0;}
+
+/* ---- entrance animation ---- */
+/* Every grid/rail of cards used to just pop into existence the instant
+   data loaded — real but jarring. A short, staggered rise-and-fade reads
+   as the page coming alive instead of content snapping in, without
+   costing a real transition system: this is pure CSS, keyed off mount, so
+   it works identically whether the cards came from the initial load or a
+   later filter change. prefers-reduced-motion already neutralizes every
+   animation-duration site-wide (see the top of this file), so this needs
+   no separate opt-out. */
+@keyframes fade-in-up{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.product-grid > *,.rail > *,.category-grid > *{animation:fade-in-up .5s cubic-bezier(.22,.7,.3,1) both;}
+.product-grid > *:nth-child(1),.rail > *:nth-child(1),.category-grid > *:nth-child(1){animation-delay:.02s;}
+.product-grid > *:nth-child(2),.rail > *:nth-child(2),.category-grid > *:nth-child(2){animation-delay:.06s;}
+.product-grid > *:nth-child(3),.rail > *:nth-child(3),.category-grid > *:nth-child(3){animation-delay:.10s;}
+.product-grid > *:nth-child(4),.rail > *:nth-child(4),.category-grid > *:nth-child(4){animation-delay:.14s;}
+.product-grid > *:nth-child(5),.rail > *:nth-child(5),.category-grid > *:nth-child(5){animation-delay:.18s;}
+.product-grid > *:nth-child(6),.rail > *:nth-child(6),.category-grid > *:nth-child(6){animation-delay:.22s;}
+.product-grid > *:nth-child(7),.rail > *:nth-child(7),.category-grid > *:nth-child(7){animation-delay:.26s;}
+.product-grid > *:nth-child(8),.rail > *:nth-child(8),.category-grid > *:nth-child(8){animation-delay:.30s;}
+.product-grid > *:nth-child(n+9),.rail > *:nth-child(n+9),.category-grid > *:nth-child(n+9){animation-delay:.32s;}
+
+/* ---- empty state ---- */
+.empty-state{
+  text-align:center;padding:var(--sp-8) var(--sp-5);border:1.5px dashed var(--line);border-radius:var(--radius);
+  color:var(--muted);
+}
+.empty-state strong{display:block;color:var(--ink);font-size:1.05rem;margin-bottom:6px;}
+
+/* ---- badges ---- */
+.badge{
+  display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;
+  font-size:.72rem;font-weight:600;font-family:'JetBrains Mono',monospace;letter-spacing:.02em;
+}
+.badge--gold{background:var(--gold-tint);color:var(--gold-ink);}
+.badge--green{background:var(--green-tint);color:var(--green-glow);}
+.badge--neutral{background:var(--paper);color:var(--muted);border:1px solid var(--line);}
+.badge--category{background:var(--paper);color:var(--muted);border:1px solid var(--line);margin-bottom:8px;}
+
+.product-card__category{
+  position:absolute;top:10px;left:10px;z-index:1;
+  padding:3px 10px;border-radius:999px;font-size:.68rem;font-weight:700;
+  letter-spacing:.02em;color:#fff;background:rgba(19,25,33,.64);
+  backdrop-filter:blur(3px);
+}
+
+/* ---- shop: category tiles ---- */
+/* A distinct white band behind "Shop by category" — it's a navigation
+   module (like Amazon's department strip), not another product row, so it
+   gets its own surface instead of sitting on the same page wash as the
+   rails below it. */
+.category-band{background:var(--surface);border-bottom:1px solid var(--line);}
+.category-grid{
+  display:grid;gap:var(--sp-4);
+  grid-template-columns:repeat(auto-fill, minmax(112px, 1fr));
+}
+.category-tile{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  padding:var(--sp-3) var(--sp-2);text-align:center;background:none;
+  border-radius:var(--radius);transition:transform .15s ease;
+}
+.category-tile:hover{transform:translateY(-3px);}
+.category-tile__icon{
+  width:60px;height:60px;border-radius:50%;background:var(--green-tint);color:var(--green-glow);
+  display:flex;align-items:center;justify-content:center;font-size:1.5rem;
+  transition:background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.category-tile:hover .category-tile__icon{background:var(--green-glow);color:#fff;box-shadow:var(--shadow-2);}
+.category-tile__label{font-size:.82rem;font-weight:600;color:var(--ink);line-height:1.3;}
+
+/* ---- shop: homepage product rows (Trending/New arrivals/per-category) ---- */
+/* A dozen-plus rows share this page, back to back — full .section padding
+   and a full .section__title on every single one is what made the page
+   feel like an undifferentiated wall. Tighter vertical rhythm and a
+   smaller row title (this is a row label, not a page heading) fix that;
+   the divider between rows does the separating work that padding alone
+   was trying and failing to do. */
+.section--row{padding:26px 0;}
+.section--row + .section--row{border-top:1px solid var(--line);}
+.rail-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:var(--sp-4);}
+.rail-head__title{
+  font-size:1.05rem;font-weight:700;letter-spacing:-.01em;color:var(--ink);min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.rail-head__link{color:var(--green-glow);font-size:.85rem;font-weight:700;white-space:nowrap;flex-shrink:0;}
+
+/* ---- shop: horizontal carousel of compact cards ---- */
+/* The fade lives on a wrapper, not .rail itself, so it can sit outside the
+   scroll container's own overflow — a gradient hint that there's more to
+   swipe to, not a hard-edged cutoff. */
+.rail-wrap{position:relative;}
+.rail-wrap::after{
+  content:'';position:absolute;top:0;right:0;bottom:0;width:36px;
+  background:linear-gradient(90deg, transparent, var(--paper));
+  pointer-events:none;
+}
+.rail{
+  display:flex;gap:var(--sp-3);overflow-x:auto;padding:2px 2px 10px;
+  scroll-snap-type:x proximity;scrollbar-width:thin;
+}
+.rail::-webkit-scrollbar{height:5px;}
+.rail::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px;}
+
+.compact-card{
+  flex:0 0 132px;scroll-snap-align:start;display:block;border-radius:var(--radius-sm);
+  overflow:hidden;background:var(--surface);border:1px solid var(--line);
+  transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.compact-card:hover, .compact-card:focus-visible{
+  transform:translateY(-3px);box-shadow:var(--shadow-2);border-color:var(--ink);
+}
+.compact-card__cover{
+  aspect-ratio:1/1;background-color:var(--green-tint);
+  background-size:contain;background-repeat:no-repeat;background-position:center;
+  position:relative;
+}
+.compact-card__cover--empty{
+  display:flex;align-items:center;justify-content:center;
+  color:var(--ink);opacity:.35;font-family:'Cabinet Grotesk',sans-serif;font-weight:700;font-size:1.6rem;
+}
+.compact-card__badge{
+  position:absolute;top:6px;right:6px;padding:2px 7px;border-radius:999px;
+  font-size:.62rem;font-weight:700;background:var(--gold);color:var(--green-dark);
+  font-family:'JetBrains Mono',monospace;
+}
+.compact-card__body{padding:8px 9px 10px;}
+.compact-card__title{
+  font-size:.78rem;font-weight:600;line-height:1.3;margin-bottom:4px;color:var(--ink);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  min-height:2.6em;
+}
+.compact-card__price{font-size:.82rem;font-weight:700;color:var(--green-glow);}
+
+@media (max-width:480px){
+  .compact-card{flex-basis:128px;}
+}
+
+/* ---- shop: compact store hero ---- */
+/* An actual sunset sweep, not dark navy with two faint color spots on it —
+   the previous version was ~90% flat --green-dark with barely-visible
+   accent glows, which read as murky rather than "sunset energy." This is a
+   real diagonal gradient (navy dusk -> wine -> burnt orange -> the site's
+   own vivid gold), literal enough to actually look like a sunset, with the
+   sparkle dots layered on top for texture. Deliberately hardcoded rather
+   than token-built since this chrome is always dark regardless of site
+   theme — same reasoning as --green-dark itself being theme-invariant. */
+.shop-hero{
+  position:relative;overflow:hidden;padding:52px 0 44px;
+  background:
+    radial-gradient(1px 1px at 15% 30%, rgba(255,255,255,.6) 0, transparent 60%),
+    radial-gradient(1px 1px at 80% 20%, rgba(255,255,255,.45) 0, transparent 60%),
+    radial-gradient(1.5px 1.5px at 68% 65%, rgba(255,255,255,.5) 0, transparent 60%),
+    radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,.35) 0, transparent 60%),
+    /* Darkens the left/lower band the text and buttons actually sit on, so
+       badge/title/link contrast holds up regardless of which sunset color
+       (navy, plum, rose, orange) happens to land under a given word — the
+       gradient stays fully vivid past ~60% where nothing needs to be read. */
+    linear-gradient(100deg, rgba(8,10,15,.6) 0%, rgba(8,10,15,.28) 38%, transparent 62%),
+    linear-gradient(120deg, #131921 0%, #3d1f3d 28%, #8a3050 52%, #d1522f 76%, var(--gold) 100%);
+}
+.shop-hero__badge{
+  display:inline-flex;align-items:center;gap:7px;
+  background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.28);
+  padding:6px 14px 6px 12px;border-radius:999px;font-weight:700;font-size:.72rem;letter-spacing:.08em;
+  margin-bottom:18px;
+}
+.shop-hero__badge svg{flex-shrink:0;color:var(--gold);}
+.shop-hero__title{font-size:clamp(1.6rem,3.8vw,2.4rem);color:#fff;margin-bottom:8px;max-width:20ch;}
+.shop-hero__sub{color:rgba(255,255,255,.7);font-size:1rem;margin-bottom:24px;max-width:52ch;}
+/* The one-time first-impression moment — badge, title, sub, and actions
+   land one after another (see the inline animation-delay on each in
+   Marketplace.jsx) rather than all at once, so it reads as a considered
+   reveal instead of a wall of text appearing mid-blink. */
+.shop-hero__reveal{animation:fade-in-up .6s cubic-bezier(.22,.7,.3,1) both;}
+
+/* First-encounter door: one clear CTA into /login (buyer/seller is chosen
+   there now, in Create account), plus a low-key way out for someone who
+   isn't ready to commit to an account and just wants to look around. */
+.shop-hero__actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.shop-hero__cta{padding:.9rem 1.7rem;font-size:.96rem;box-shadow:0 8px 24px rgba(var(--gold-rgb),.35);}
+.shop-hero__cta:hover{box-shadow:0 10px 28px rgba(var(--gold-rgb),.45);}
+.shop-hero__browse-btn{
+  display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-family:inherit;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.3);color:#fff;
+  font-size:.88rem;font-weight:600;padding:.72rem 1.15rem;border-radius:999px;
+  transition:background .15s ease, border-color .15s ease, transform .15s ease;
+}
+.shop-hero__browse-btn:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.55);transform:translateY(-1px);}
+.shop-hero__browse-btn svg{flex-shrink:0;}
+
+.shop-hero__search{
+  display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:999px;
+  padding:6px 6px 6px 20px;max-width:560px;box-shadow:var(--shadow-2);
+}
+.shop-hero__search input{
+  flex:1;border:none;background:none;outline:none;font-size:1rem;color:var(--ink);padding:10px 0;
+}
+.shop-hero__search input::placeholder{color:var(--muted);}
+.shop-hero__search-btn{
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  width:46px;height:46px;border-radius:50%;border:none;cursor:pointer;
+  background:var(--gold);color:var(--green-dark);
+  transition:background .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.shop-hero__search-btn:hover{background:var(--gold-dark);transform:translateY(-1px);box-shadow:var(--shadow-1);}
+.shop-hero__search-btn:active{transform:translateY(0);}
+
+/* Returning-visitor pass: the pitch (badge/title/sub) is gone, so the
+   glow/sparkle background built for a big block of text is overkill for
+   a lone search bar — flatten to the solid navy and shrink the padding
+   way down instead of dragging the full hero height along for no reason. */
+.shop-hero--compact{background:var(--green-dark);padding:18px 0;}
+
+/* ---- nav search ---- */
+.nav__search{
+  display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:0 6px 0 14px;
+  width:100%;max-width:380px;transition:border-color .15s ease, background .15s ease;
+}
+.nav__search:focus-within{border-color:var(--green-glow);background:rgba(255,255,255,.12);}
+.nav__search svg{color:rgba(255,255,255,.55);flex-shrink:0;}
+.nav__search input{
+  flex:1;min-width:0;border:none;background:none;outline:none;color:#fff;font-size:.86rem;padding:9px 0;
+}
+.nav__search input::placeholder{color:rgba(255,255,255,.45);}
+@media (max-width:900px){
+  .nav__search{display:none;}
+}
+
+/* ---- nav ---- */
+.nav{
+  position:sticky;top:0;z-index:50;background:rgba(19,25,33,.88);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--ink-800);
+}
+.nav__inner{display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:6px 20px;gap:16px;}
+.nav__brand{display:flex;align-items:center;gap:9px;flex-shrink:0;justify-self:start;}
+.nav__name{
+  font-family:'Alex Brush',cursive;font-weight:400;font-size:2rem;line-height:1;
+  color:var(--gold);text-shadow:0 0 16px rgba(var(--gold-rgb),.5);
+}
+
+/* Icon-over-label nav row, Facebook-style on desktop, icon-only on mobile. */
+.nav__icons{display:flex;align-items:stretch;gap:2px;}
+.nav__icon-link{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  padding:8px 16px;border-radius:10px;color:rgba(255,255,255,.65);position:relative;
+  font-size:.66rem;font-weight:600;letter-spacing:.01em;white-space:nowrap;
+  transition:background .15s ease, color .15s ease;min-width:52px;
+}
+.nav__icon-link svg{font-size:1.35rem;}
+.nav__icon-link:hover{background:rgba(255,138,61,.12);color:#fff;}
+.nav__icon-link--active{color:#fff;}
+.nav__icon-link--active::after{
+  content:'';position:absolute;bottom:0;left:14px;right:14px;height:3px;
+  background:var(--green-glow);border-radius:3px 3px 0 0;
+  box-shadow:0 0 8px var(--green-glow);
+}
+.nav__icon-link--cta{color:var(--gold);}
+.nav__icon-link--cta:hover{background:rgba(var(--gold-rgb),.14);color:var(--gold);}
+
+.nav__cart-badge{
+  position:absolute;top:0;right:2px;min-width:17px;height:17px;padding:0 4px;
+  border-radius:999px;background:var(--gold);color:var(--green-dark);
+  font-size:.62rem;font-weight:700;line-height:15px;text-align:center;
+  font-family:'JetBrains Mono',monospace;border:1px solid var(--green-dark);
+  box-shadow:0 0 0 1px rgba(255,255,255,.25);
+}
+
+@media (max-width:780px){
+  .nav__icon-link{padding:8px 11px;min-width:auto;}
+  .nav__icon-link span{display:none;}
+  .nav__icon-link svg{font-size:1.4rem;}
+  .nav__name{font-size:1.5rem;}
+}
+
+/* ---- hero ---- */
+.hero{
+  position:relative;overflow:hidden;
+  background:
+    radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,.7) 0, transparent 60%),
+    radial-gradient(1px 1px at 82% 15%, rgba(255,255,255,.5) 0, transparent 60%),
+    radial-gradient(1.5px 1.5px at 70% 55%, rgba(255,255,255,.6) 0, transparent 60%),
+    radial-gradient(1px 1px at 30% 70%, rgba(255,255,255,.4) 0, transparent 60%),
+    radial-gradient(900px 480px at 50% -10%, rgba(255,138,61,.18), transparent 65%),
+    var(--green-dark);
+  padding:76px 0 96px;
+}
+.hero__eyebrow{color:var(--green-glow);font-weight:700;font-size:.8rem;letter-spacing:.1em;margin-bottom:16px;}
+.hero__title{font-size:clamp(2rem,5.2vw,3.4rem);max-width:17ch;line-height:1.05;color:#fff;}
+.hero__sub{margin-top:18px;max-width:46ch;color:rgba(255,255,255,.72);font-size:1.08rem;line-height:1.6;}
+.hero__fade{
+  position:absolute;left:0;right:0;bottom:0;height:64px;pointer-events:none;
+  background:linear-gradient(180deg, transparent, var(--paper));
+}
+
+/* ---- how it works / features / demo ---- */
+.steps{display:grid;gap:var(--sp-5);grid-template-columns:repeat(3, 1fr);}
+.step{position:relative;padding-top:var(--sp-5);}
+.step__num{
+  display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;
+  background:var(--ink-800);color:var(--gold);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.92rem;
+  margin-bottom:var(--sp-4);
+}
+.step__title{font-weight:700;font-size:1.02rem;margin-bottom:6px;}
+
+.features-grid{display:grid;gap:var(--sp-4);grid-template-columns:repeat(3, 1fr);}
+.feature-card{padding:var(--sp-5);}
+.feature-card__icon{
+  width:38px;height:38px;border-radius:10px;background:var(--green-tint);color:var(--green-glow);
+  display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin-bottom:var(--sp-4);
+}
+.feature-card__title{font-weight:700;font-size:.98rem;margin-bottom:6px;}
+
+.cta-band{
+  background:var(--green-dark);padding:var(--sp-8) 0;margin-top:var(--sp-4);
+}
+
+.footer{background:var(--green-dark);padding:var(--sp-6) 0;color:rgba(255,255,255,.55);font-size:.85rem;}
+.footer__inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+
+/* ---- dashboard ---- */
+.tabs{display:flex;gap:6px;margin-bottom:var(--sp-6);border-bottom:1px solid var(--line);padding-bottom:var(--sp-3);flex-wrap:wrap;}
+.tab{
+  padding:.55rem 1.05rem;font-size:.86rem;font-weight:600;border-radius:999px;color:var(--muted);
+  transition:background .15s ease, color .15s ease;
+}
+.tab:hover{background:var(--green-tint);color:var(--green-glow);}
+.tab--active{background:var(--ink);color:var(--ink-contrast);}
+
+/* ---- product page ---- */
+.product-layout{
+  display:grid;gap:var(--sp-7);grid-template-columns:1.15fr .85fr;align-items:start;
+  padding:var(--sp-6) 20px var(--sp-8);
+}
+/* Grid items default to min-width:auto — sized to fit their content's
+   natural minimum, not the track. The "More from creator" carousel's
+   row of fixed-width cards normally scrolls within itself (overflow-x:
+   auto), but as a grid item its content still tried to claim that full
+   unscrolled width, stretching the whole grid (and page) wider than the
+   viewport. min-width:0 lets every column actually respect the grid
+   track instead of the widest thing inside it. */
+.product-layout > *{min-width:0;}
+/* A supporting image, not the page's hero — the title, description and
+   proof-it-sells stats below it are what actually helps someone decide to
+   buy, so the cover is capped well short of full aspect-ratio height and
+   given a plain card border instead of bleeding edge-to-edge. */
+.product-cover{
+  aspect-ratio:16/9;max-height:280px;border-radius:var(--radius);overflow:hidden;
+  background-color:var(--green-tint);border:1px solid var(--line);
+  background-size:contain;background-repeat:no-repeat;background-position:center;
+  position:relative;
+}
+.product-cover__watermark{
+  position:absolute;left:14px;bottom:14px;width:40px;height:40px;border-radius:50%;
+  background-color:var(--green-dark);background-size:cover;background-position:center;
+  border:3px solid var(--surface);box-shadow:var(--shadow-2);
+}
+.buy-panel{
+  position:sticky;top:88px;
+}
+/* The one card on this page someone is meant to actually act on — a
+   plain white card reads identically to every inert card elsewhere
+   (comments, feature tiles), so it needs its own weight: a gold top edge
+   and a firmer shadow to lift it off the page as "the decision," not just
+   another content block. */
+.buy-panel .card{
+  border-top:3px solid var(--gold);box-shadow:var(--shadow-2);
+}
+
+/* ---- creator storefront ---- */
+/* A branded band, not identity-info sitting bare on the page background —
+   matches the nav/hero/footer chrome so a storefront reads as part of the
+   same site instead of a plain data dump. */
+.creator-header{background:var(--green-dark);padding:40px 0 32px;}
+.creator-header__inner{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+.creator-header__avatar{
+  width:76px;height:76px;border-radius:50%;flex-shrink:0;background-size:cover;background-position:center;
+  border:3px solid rgba(255,255,255,.18);box-shadow:var(--shadow-2);
+  display:flex;align-items:center;justify-content:center;color:var(--green-dark);font-weight:700;font-size:1.7rem;
+}
+.creator-header__name{color:#fff;font-size:1.5rem;}
+.creator-header__handle{color:rgba(255,255,255,.7);font-size:.85rem;margin-top:2px;}
+.creator-header__meta{color:rgba(255,255,255,.55);font-size:.82rem;margin-top:4px;}
+
+/* ---- splash screen (first open only) ---- */
+.splash{
+  position:fixed;inset:0;z-index:1000;
+  background:
+    radial-gradient(1px 1px at 18% 25%, rgba(255,255,255,.7) 0, transparent 60%),
+    radial-gradient(1px 1px at 78% 18%, rgba(255,255,255,.5) 0, transparent 60%),
+    radial-gradient(1.5px 1.5px at 65% 62%, rgba(255,255,255,.6) 0, transparent 60%),
+    radial-gradient(1px 1px at 25% 75%, rgba(255,255,255,.4) 0, transparent 60%),
+    radial-gradient(900px 500px at 30% 20%, rgba(var(--gold-rgb),.18), transparent 65%),
+    radial-gradient(700px 420px at 80% 85%, rgba(var(--green-glow-rgb),.16), transparent 65%),
+    var(--green-dark);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  opacity:1;transition:opacity .45s ease;
+}
+.splash--leaving{opacity:0;pointer-events:none;}
+.splash__scorpion{filter:drop-shadow(0 0 0 rgba(var(--gold-rgb),0));transition:filter .6s ease;}
+.splash__scorpion.is-glowing{filter:drop-shadow(0 0 10px rgba(var(--gold-rgb),.7));animation:splash-pulse 2.2s ease-in-out .9s infinite;}
+.splash__name{
+  font-family:'Alex Brush',cursive;font-weight:400;font-size:3.2rem;line-height:1;color:var(--gold);
+  text-shadow:0 0 18px rgba(var(--gold-rgb),.55);margin:0;
+}
+.splash__name span{display:inline-block;opacity:0;transform:translateY(10px);transition:opacity .5s ease,transform .5s ease;}
+.splash__name span.is-in{opacity:1;transform:translateY(0);}
+@keyframes splash-pulse{
+  0%,100%{filter:drop-shadow(0 0 10px rgba(var(--gold-rgb),.7));}
+  50%{filter:drop-shadow(0 0 20px rgba(var(--gold-rgb),1));}
+}
+@media (prefers-reduced-motion: reduce){
+  .splash__scorpion, .splash__scorpion.is-glowing{animation:none;filter:drop-shadow(0 0 10px rgba(var(--gold-rgb),.55));}
+  .splash__name span{transition:none;opacity:1;transform:none;}
+}
+
+/* ---- verification checklist ---- */
+.checklist-item{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:.9rem;}
+.checklist-item__icon{
+  width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;border:1.5px solid var(--line);color:transparent;
+}
+.checklist-item--done .checklist-item__icon{background:var(--green);border-color:var(--green);color:#fff;}
+.checklist-item--done span{color:var(--ink);}
+.checklist-item span{color:var(--muted);}
+
+/* ---- onboarding wizard ---- */
+.wizard-steps{display:flex;align-items:center;margin-bottom:36px;}
+.wizard-step{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.8rem;font-weight:600;white-space:nowrap;}
+.wizard-step__circle{
+  width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;
+  font-size:.76rem;background:var(--surface);transition:all .15s ease;
+}
+.wizard-step--active{color:var(--ink);}
+.wizard-step--active .wizard-step__circle{border-color:var(--ink);background:var(--ink);color:var(--ink-contrast);}
+.wizard-step--done .wizard-step__circle{border-color:var(--green-glow);background:var(--green-glow);color:#fff;}
+.wizard-connector{flex:1;height:1.5px;background:var(--line);margin:0 10px;min-width:16px;}
+.wizard-step span{display:none;}
+@media (min-width:640px){ .wizard-step span{display:inline;} }
+
+/* ---- form + live preview (desktop) ---- */
+.form-layout{display:grid;grid-template-columns:1fr 340px;gap:var(--sp-7);align-items:start;}
+.form-layout__preview{position:sticky;top:88px;}
+@media (max-width:920px){
+  .form-layout{grid-template-columns:1fr;}
+  .form-layout__preview{position:static;order:-1;max-width:340px;}
+}
+
+/* ---- role picker (login) ---- */
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4);}
+.role-card{
+  display:block;padding:var(--sp-5);border:1.5px solid var(--line-strong);border-radius:var(--radius);
+  background:var(--surface);cursor:pointer;transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+  text-align:left;width:100%;
+}
+.role-card:hover{border-color:var(--green-glow);box-shadow:var(--shadow-1);transform:translateY(-2px);}
+.role-card__icon{
+  width:38px;height:38px;border-radius:10px;background:var(--green-tint);color:var(--green-glow);
+  display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin-bottom:12px;
+}
+.role-card__title{font-weight:700;margin-bottom:4px;color:var(--ink);}
+.role-card__sub{font-size:.85rem;color:var(--muted);}
+
+.method-btn{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:.85rem 1rem;border:1.5px solid var(--line-strong);border-radius:var(--radius-sm);
+  background:var(--field-bg);cursor:pointer;font-weight:600;font-size:.9rem;color:var(--muted);
+  transition:border-color .15s ease, color .15s ease;
+}
+.method-btn--active{border-color:var(--ink);color:var(--ink);}
+
+/* ---- creators directory ---- */
+.creators-grid{display:grid;gap:var(--sp-5);grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));}
+.creator-card{
+  display:block;padding:22px 20px;text-align:center;border-radius:var(--radius);
+  background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow-1);
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.creator-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-2);border-color:var(--ink);}
+.creator-card__avatar{
+  width:64px;height:64px;border-radius:50%;background-size:cover;background-position:center;margin:0 auto 14px;
+  display:flex;align-items:center;justify-content:center;color:var(--green-dark);font-weight:700;font-size:1.4rem;
+}
+.creator-card__name{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:700;}
+.creator-card__bio{
+  color:var(--muted);font-size:.85rem;line-height:1.5;margin-top:10px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.creator-card__count{
+  margin-top:12px;font-size:.78rem;color:var(--muted);font-weight:600;
+  display:flex;align-items:center;justify-content:center;gap:5px;
+}
+
+/* ---- homepage creator spotlight (story-bubble tray) ---- */
+.creator-spotlight{display:flex;gap:18px;overflow-x:auto;padding:4px 2px 10px;scroll-snap-type:x proximity;scrollbar-width:thin;}
+.creator-spotlight::-webkit-scrollbar{height:5px;}
+.creator-spotlight::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px;}
+.creator-spotlight__item{
+  flex:0 0 72px;scroll-snap-align:start;display:flex;flex-direction:column;align-items:center;gap:8px;
+  background:none;border:none;cursor:pointer;font-family:inherit;text-align:center;
+}
+.creator-spotlight__ring{
+  width:68px;height:68px;border-radius:50%;padding:3px;display:flex;align-items:center;justify-content:center;
+  border:2px solid var(--line);position:relative;transition:border-color .15s ease;
+}
+/* Gold ring = "there's a reel here," same visual grammar as every
+   story-tray app teaches for free — but unlike those, tapping it never
+   leads to generic content: see ReelViewer's shop card. */
+.creator-spotlight__ring--has-reel{border-color:var(--gold);}
+.creator-spotlight__avatar{
+  width:100%;height:100%;border-radius:50%;background-size:cover;background-position:center;
+  display:flex;align-items:center;justify-content:center;color:var(--green-dark);font-weight:700;font-size:1.15rem;
+}
+.creator-spotlight__play{
+  position:absolute;bottom:-2px;right:-2px;width:22px;height:22px;border-radius:50%;
+  background:var(--gold);color:var(--green-dark);display:flex;align-items:center;justify-content:center;
+  border:2px solid var(--surface);
+}
+.creator-spotlight__name{
+  font-size:.78rem;font-weight:600;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72px;
+}
+
+/* ---- reel viewer (full-screen) ---- */
+.reel-viewer{
+  position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.92);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  animation:fade-in-up .25s ease both;
+}
+.reel-viewer__stage{
+  position:relative;width:min(420px, 100%);height:min(100%, 760px);border-radius:var(--radius);
+  overflow:hidden;background:#000;box-shadow:var(--shadow-2);
+}
+.reel-viewer__progress{position:absolute;top:10px;left:10px;right:10px;z-index:3;display:flex;gap:4px;}
+.reel-viewer__progress-bar{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.3);overflow:hidden;}
+.reel-viewer__progress-bar.is-done{background:#fff;}
+.reel-viewer__progress-bar.is-active{background:linear-gradient(90deg,#fff 50%,rgba(255,255,255,.3) 50%);}
+.reel-viewer__close,.reel-viewer__mute{
+  position:absolute;top:22px;z-index:3;width:34px;height:34px;border-radius:50%;
+  background:rgba(0,0,0,.4);color:#fff;display:flex;align-items:center;justify-content:center;
+  border:none;cursor:pointer;backdrop-filter:blur(4px);
+}
+.reel-viewer__close{right:10px;}
+.reel-viewer__mute{right:52px;}
+.reel-viewer__video{width:100%;height:100%;object-fit:cover;display:block;}
+.reel-viewer__tap-zone{position:absolute;top:0;bottom:0;width:32%;background:none;border:none;cursor:pointer;z-index:2;}
+.reel-viewer__tap-zone--left{left:0;}
+.reel-viewer__tap-zone--right{right:0;}
+.reel-viewer__overlay{
+  position:absolute;left:0;right:0;bottom:0;padding:20px 16px 96px;z-index:2;
+  background:linear-gradient(180deg, transparent, rgba(0,0,0,.75));color:#fff;
+}
+.reel-viewer__creator{display:flex;align-items:center;gap:8px;font-weight:700;font-size:.95rem;color:#fff;margin-bottom:8px;}
+.reel-viewer__creator-avatar{
+  width:32px;height:32px;border-radius:50%;background-size:cover;background-position:center;
+  border:2px solid rgba(255,255,255,.5);flex-shrink:0;
+}
+.reel-viewer__caption{font-size:.88rem;line-height:1.5;color:rgba(255,255,255,.9);max-width:36ch;}
+/* The one fixed, non-negotiable element in the whole viewer — see the
+   comment at the top of ReelViewer.jsx. */
+.reel-viewer__shop{
+  position:absolute;left:14px;right:14px;bottom:16px;z-index:3;display:flex;align-items:center;gap:10px;
+  background:var(--surface);border-radius:var(--radius);padding:10px 12px;box-shadow:var(--shadow-2);
+}
+.reel-viewer__shop-cover{
+  width:40px;height:40px;border-radius:8px;flex-shrink:0;background-size:cover;background-position:center;
+  background-color:var(--green-tint);
+}
+.reel-viewer__shop-info{flex:1;min-width:0;}
+.reel-viewer__shop-title{
+  display:block;font-size:.85rem;font-weight:600;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.reel-viewer__shop-price{display:block;font-size:.8rem;color:var(--green-glow);font-weight:700;margin-top:2px;}
+.reel-viewer__shop-cta{
+  display:flex;align-items:center;gap:5px;flex-shrink:0;background:var(--gold);color:var(--green-dark);
+  padding:8px 12px;border-radius:999px;font-size:.78rem;font-weight:700;
+}
+
+/* ---- storefront reels row (CreatorProfile.jsx) ---- */
+.storefront-reels{display:flex;gap:14px;overflow-x:auto;padding:2px 2px 10px;margin-bottom:36px;scrollbar-width:thin;}
+.storefront-reels::-webkit-scrollbar{height:5px;}
+.storefront-reels::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px;}
+.storefront-reel{
+  position:relative;flex:0 0 120px;aspect-ratio:9/16;border-radius:var(--radius-sm);overflow:hidden;
+  background:#000;border:none;cursor:pointer;padding:0;
+}
+.storefront-reel video{width:100%;height:100%;object-fit:cover;pointer-events:none;}
+.storefront-reel__play{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;
+  background:rgba(0,0,0,.15);transition:background .15s ease;
+}
+.storefront-reel:hover .storefront-reel__play{background:rgba(0,0,0,.35);}
+.storefront-reel__tag{
+  position:absolute;left:6px;right:6px;bottom:6px;padding:4px 7px;border-radius:6px;
+  background:rgba(0,0,0,.6);color:#fff;font-size:.68rem;font-weight:600;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+
+/* ---- product page reel embed ---- */
+.product-reel{margin-top:28px;}
+.product-reel__label{display:flex;align-items:center;gap:6px;font-weight:600;margin-bottom:10px;font-size:.92rem;}
+.product-reel__label svg{color:var(--green-glow);}
+.product-reel__video{width:100%;max-height:420px;border-radius:var(--radius);background:#000;display:block;}
+
+/* ---- dashboard: reels management ---- */
+.reels-manage-grid{display:grid;gap:var(--sp-4);grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));}
+.reel-manage-card{overflow:hidden;}
+.reel-manage-card__video{width:100%;aspect-ratio:9/16;object-fit:cover;background:#000;display:block;}
+.reel-manage-card__body{padding:12px 14px;}
+.reel-manage-card__product{font-size:.8rem;font-weight:600;color:var(--green-glow);margin-bottom:4px;}
+.reel-manage-card__caption{
+  font-size:.82rem;color:var(--muted);line-height:1.4;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.reel-manage-card__footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;}
+
+/* =========================================================
+   Responsive
+   ========================================================= */
+@media (max-width:960px){
+  .steps{grid-template-columns:1fr;gap:var(--sp-6);}
+  .features-grid{grid-template-columns:repeat(2, 1fr);}
+}
+
+@media (max-width:840px){
+  .product-layout{grid-template-columns:1fr;}
+  .buy-panel{position:static;}
+}
+
+@media (max-width:640px){
+  .features-grid{grid-template-columns:1fr;}
+  .role-grid{grid-template-columns:1fr;}
+  .hero{padding:56px 0 72px;}
+  .section{padding:var(--sp-7) 0;}
+  .category-grid{grid-template-columns:repeat(auto-fill, minmax(84px, 1fr));gap:var(--sp-3);}
+  .category-tile__icon{width:48px;height:48px;font-size:1.25rem;}
+  .shop-hero{padding:28px 0 24px;}
+  /* The desktop glow blobs are sized in fixed px against a ~1160px-wide
+     hero — unscaled, they read as a huge, off-center smear of color on a
+     360-400px phone screen instead of a subtle accent. Scaled down and
+     re-centered so the same two-tone sunset glow still reads as intentional
+     at phone width. */
+  .shop-hero{
+    background:
+      radial-gradient(280px 200px at 20% -10%, rgba(var(--gold-rgb),.22), transparent 70%),
+      radial-gradient(240px 180px at 90% 100%, rgba(var(--green-glow-rgb),.2), transparent 70%),
+      var(--green-dark);
+  }
+  .shop-hero__badge{font-size:.66rem;padding:5px 11px 5px 10px;}
+  .shop-hero__title{font-size:1.4rem;}
+  .shop-hero__sub{font-size:.92rem;}
+  .shop-hero__actions{gap:12px;}
+
+  /* Homepage rails (Meet the creators, Trending, category rows) — tighter
+     gap and a smaller row title so a horizontal scroll row doesn't feel
+     like it's fighting the screen width for space. */
+  .rail-head__title{font-size:.95rem;}
+  .rail-head__link{font-size:.8rem;}
+  .creator-spotlight{gap:14px;}
+  .creator-spotlight__ring{width:60px;height:60px;}
+  .creator-spotlight__item{flex-basis:60px;}
+  .creator-spotlight__name{max-width:64px;font-size:.74rem;}
+}
+
+@media (max-width:720px){
+  .wrap{padding-inline:16px;}
+}
+
+@media (max-width:480px){
+  .card--pad{padding:var(--sp-4);}
+  .btn{padding:.75rem 1.1rem;font-size:.88rem;}
+  .btn-row{flex-direction:column;}
+  .btn-row .btn{flex:1 1 auto !important;}
+  /* Full-bleed on a real phone screen instead of a floating padded card —
+     reads as a native full-screen player, not a modal shrunk to fit. */
+  .reel-viewer{padding:0;}
+  .reel-viewer__stage{width:100%;height:100%;border-radius:0;}
+}

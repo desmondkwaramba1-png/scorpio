@@ -1,0 +1,35 @@
+# app name must be globally unique on Fly.io — `fly launch` will prompt you
+# to change this if "scorpio-api" is already taken, or edit it here first.
+app = "scorpio-api"
+primary_region = "jnb"
+
+[build]
+
+[env]
+  PORT = "4000"
+  DATA_DIR = "/data"
+
+# One machine only: SQLite on a single mounted volume can't be safely
+# written to from more than one machine at once, so this app must never be
+# scaled beyond 1 machine in 1 region.
+[[mounts]]
+  source = "scorpio_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/api/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

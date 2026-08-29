@@ -1,0 +1,292 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext.jsx';
+import { api } from '../../lib/api';
+import { formatMoney } from '../../lib/money';
+import FileUpload from '../../components/FileUpload.jsx';
+import Seal from '../../components/Seal.jsx';
+import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../../lib/launchScope.js';
+
+export default function NewProduct() {
+  const { creator } = useAuth();
+  const navigate = useNavigate();
+  const lockedCategory = ACTIVE_CATEGORIES.length === 1 ? ACTIVE_CATEGORIES[0].value : '';
+  const [form, setForm] = useState({
+    title: '', description: '', type: 'single', category: lockedCategory, price: '', currency: 'USD',
+    pay_what_you_want: false, min_price: '', quantity_limit: '', external_url: '', license_keys: '',
+    portfolio_url: '', delivery_days: '', service_terms: ''
+  });
+  const [cover, setCover] = useState(null);
+  const [coverPreview, setCoverPreview] = useState(null);
+  const [file, setFile] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
+  const [previewVideo, setPreviewVideo] = useState(null);
+  const [previewVideoName, setPreviewVideoName] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  const update = (key) => (e) => {
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    setForm(f => ({ ...f, [key]: value }));
+  };
+
+  function handleCover(e) {
+    const f = e.target.files[0];
+    setCover(f);
+    setCoverPreview(f ? URL.createObjectURL(f) : null);
+  }
+
+  function handleFile(e) {
+    const f = e.target.files[0];
+    setFile(f);
+    setFilePreview(f ? f.name : null);
+  }
+
+  function handlePreviewVideo(e) {
+    const f = e.target.files[0];
+    setPreviewVideo(f);
+    setPreviewVideoName(f ? f.name : null);
+  }
+
+  const isService = form.type === 'service';
+  const isSoftware = form.category === 'software';
+  const isCourse = form.category === 'courses';
+
+  async function submit(status) {
+    setError(null);
+    if (!cover) {
+      setError("A cover image is required. It's the first thing buyers see.");
+      return;
+    }
+    if (!form.category) {
+      setError('Pick a category. It\'s how buyers find this when browsing.');
+      return;
+    }
+    if (!isService) {
+      const hasKeys = form.license_keys.trim().length > 0;
+      if (status === 'published' && !file && !form.external_url && !hasKeys) {
+        setError('Attach a file, an external link, or paste license keys before publishing. Buyers need something to actually receive after paying.');
+        return;
+      }
+    }
+    setSubmitting(true);
+    const body = new FormData();
+    Object.entries(form).forEach(([k, v]) => body.append(k, v));
+    body.append('status', status);
+    body.append('cover', cover);
+    if (file) body.append('file', file);
+    if (previewVideo) body.append('preview_video', previewVideo);
+
+    try {
+      const data = await api.post('/api/products', body);
+      navigate(creator ? `/@${creator.handle}/${data.slug}` : '/dashboard/products');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const price = form.price ? formatMoney(Math.round(parseFloat(form.price || '0') * 100), form.currency) : null;
+
+  return (
+    <div>
+      <h1 style={{ fontSize: '1.5rem', marginBottom: 10 }}>New product</h1>
+      <p style={{ color: 'var(--muted)', marginBottom: 28 }}>
+        Add a cover, set a price, and you're live. No separate website to build.
+      </p>
+
+      <div className="form-layout">
+        <form onSubmit={e => { e.preventDefault(); submit('published'); }} style={{ maxWidth: 480 }}>
+          <div className="field">
+            <label htmlFor="cover">Cover image</label>
+            <FileUpload id="cover" accept="image/*" onChange={handleCover}
+              label={cover ? cover.name : 'Choose a cover image'}
+              hint="This is what people see first on the marketplace and when you share your link."
+              preview={coverPreview} previewKind="image" />
+          </div>
+
+          <div className="field">
+            <label htmlFor="title">Title</label>
+            <input id="title" required value={form.title} onChange={update('title')} placeholder={EBOOKS_ONLY ? 'e.g. 30-Day Business Plan Template' : 'e.g. Excel for Small Business'} />
+          </div>
+
+          <div className="field">
+            <label htmlFor="description">Description</label>
+            <textarea id="description" value={form.description} onChange={update('description')}
+              placeholder="What is it, and why should someone buy it?" />
+          </div>
+
+          <div className="field">
+            <label htmlFor="category">Category</label>
+            {ACTIVE_CATEGORIES.length === 1 ? (
+              <>
+                <input value={ACTIVE_CATEGORIES[0].label} disabled />
+                <small>We're starting focused with guides &amp; templates. More categories are coming soon.</small>
+              </>
+            ) : (
+              <select id="category" required value={form.category} onChange={update('category')}>
+                <option value="" disabled>Choose a category</option>
+                {ACTIVE_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            )}
+            {ACTIVE_CATEGORIES.length > 1 && <small>This is how buyers find it when browsing. Pick the closest fit.</small>}
+          </div>
+
+          <div className="field">
+            <label htmlFor="type">Type</label>
+            <select id="type" value={form.type} onChange={update('type')}>
+              <option value="single">{EBOOKS_ONLY ? 'Single item (guide, template, one-off)' : 'Single item (ebook, course, one-off)'}</option>
+              <option value="serial">Serial (recurring, e.g. a weekly publication)</option>
+              {!EBOOKS_ONLY && <option value="service">Service (bespoke work, paid via escrow)</option>}
+            </select>
+            {isService && (
+              <small>
+                No file to attach. Buyers pay based on your portfolio, the payment is held safely,
+                and you deliver the actual work per order once they've paid.
+              </small>
+            )}
+          </div>
+
+          {!isService && (
+            <div className="field">
+              <label style={{ display: 'flex', alignItems: 'center', fontWeight: 400 }}>
+                <input type="checkbox" checked={form.pay_what_you_want} onChange={update('pay_what_you_want')}
+                  style={{ width: 'auto', marginRight: 8 }} />
+                Let buyers pay what they want
+              </label>
+            </div>
+          )}
+
+          <div className="field" style={{ display: 'flex', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label htmlFor="price">{form.pay_what_you_want ? 'Suggested price' : 'Price'}</label>
+              <input id="price" type="number" min="0" step="0.01" required={!form.pay_what_you_want}
+                value={form.price} onChange={update('price')} placeholder="5.00" />
+            </div>
+            <div style={{ width: 90 }}>
+              <label htmlFor="currency">Currency</label>
+              <select id="currency" value={form.currency} onChange={update('currency')}>
+                <option value="USD">USD</option>
+                <option value="ZWG">ZiG</option>
+              </select>
+            </div>
+          </div>
+
+          {form.pay_what_you_want && (
+            <div className="field">
+              <label htmlFor="min_price">Minimum price</label>
+              <input id="min_price" type="number" min="0" step="0.01" value={form.min_price} onChange={update('min_price')} placeholder="0.00" />
+            </div>
+          )}
+
+          <div className="field">
+            <label htmlFor="quantity_limit">{isService ? 'Order limit (optional)' : 'Limited quantity (optional)'}</label>
+            <input id="quantity_limit" type="number" min="1" value={form.quantity_limit} onChange={update('quantity_limit')}
+              placeholder="Leave blank for unlimited" />
+            {isService && <small>Cap how many of these you'll take on at once. Good for bespoke work with real turnaround time.</small>}
+          </div>
+
+          {isService ? (
+            <>
+              <div className="field">
+                <label htmlFor="portfolio_url">Portfolio links</label>
+                <textarea id="portfolio_url" value={form.portfolio_url} onChange={update('portfolio_url')}
+                  placeholder={'One per line, e.g.\nhttps://behance.net/you\nhttps://drive.google.com/your-past-work'}
+                  style={{ minHeight: 80 }} />
+                <small>This is what buyers trust instead of a fixed product, so make it count. Add a few examples, not just one.</small>
+              </div>
+              <div className="field">
+                <label htmlFor="delivery_days">Typical delivery time (days)</label>
+                <input id="delivery_days" type="number" min="1" value={form.delivery_days} onChange={update('delivery_days')} placeholder="3" />
+                <small>Shown to buyers, and used to tell them when they're entitled to report a late order.</small>
+              </div>
+              <div className="field">
+                <label htmlFor="service_terms">What's included &amp; terms</label>
+                <textarea id="service_terms" value={form.service_terms} onChange={update('service_terms')}
+                  placeholder={'e.g.\n- 2 rounds of revisions included\n- You\'ll need to send your brand colors and any reference images upfront\n- No refunds once work has started, only for non-delivery'}
+                  style={{ minHeight: 110 }} />
+                <small>Revisions, what you need from the buyer, cancellation policy. Set expectations before they pay, not after.</small>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="field">
+                <label htmlFor="file">{isCourse ? 'Course video' : EBOOKS_ONLY ? 'PDF file' : 'Product file'}</label>
+                <FileUpload id="file" accept={isCourse ? 'video/mp4,video/webm,video/quicktime' : EBOOKS_ONLY ? 'application/pdf' : undefined} onChange={handleFile}
+                  label={filePreview || (isCourse ? 'Choose a video' : EBOOKS_ONLY ? 'Choose a PDF' : 'Choose a file')}
+                  hint={isCourse ? 'MP4, WebM, or MOV. Or paste a link below instead, an unlisted YouTube/Vimeo link works well for a single-video course.' : EBOOKS_ONLY ? 'Or paste a link below instead: a Google Drive link, anything external.' : 'Or paste a link below instead: a Google Drive link, a video, anything external.'} />
+              </div>
+
+              {isCourse && (
+                <div className="field">
+                  <label htmlFor="preview_video">Free preview clip (optional)</label>
+                  <FileUpload id="preview_video" accept="video/mp4,video/webm,video/quicktime" onChange={handlePreviewVideo}
+                    label={previewVideoName || 'Choose a short clip'}
+                    hint="A short, real sample anyone can watch free, no purchase needed. This is what actually earns a buyer's trust on a course they've never seen, not the full paid video with playback cut off." />
+                </div>
+              )}
+
+              <div className="field">
+                <label htmlFor="external_url">External link</label>
+                <input id="external_url" value={form.external_url} onChange={update('external_url')} placeholder="https://" />
+                <small>
+                  A file or an external link is required to publish. It's what the buyer actually gets. Skip both to save as a draft for now.
+                  {!EBOOKS_ONLY && !isSoftware && ' Selling software with an activation key? Pick "Software & apps" as the category above.'}
+                </small>
+              </div>
+
+              {isSoftware && (
+                <div className="field">
+                  <label htmlFor="license_keys">License keys (optional)</label>
+                  <textarea id="license_keys" value={form.license_keys} onChange={update('license_keys')}
+                    placeholder={'One key per line, e.g.\nABCD-1234-EFGH-5678\nWXYZ-9876-IJKL-4321'} style={{ minHeight: 110 }} />
+                  <small>
+                    Each sale claims one unused key from this list. "Left in stock" becomes however many you paste
+                    here, whatever you set above. You can add more later.
+                  </small>
+                </div>
+              )}
+            </>
+          )}
+
+          {error && <p className="error-text">{error}</p>}
+
+          <div className="btn-row">
+            <button className="btn btn--ghost" disabled={submitting} type="button" onClick={() => submit('draft')}>
+              Save as draft
+            </button>
+            <button className="btn btn--primary" style={{ flex: 1 }} disabled={submitting} type="submit">
+              {submitting ? 'Publishing...' : 'Publish and get my link'}
+            </button>
+          </div>
+        </form>
+
+        <div className="form-layout__preview">
+          <p className="muted" style={{ fontSize: '.8rem', fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+            Live preview
+          </p>
+          <div className="product-card" style={{ cursor: 'default' }}>
+            <div
+              className={`product-card__cover${coverPreview ? '' : ' product-card__cover--empty'}`}
+              style={coverPreview ? { backgroundImage: `url(${coverPreview})` } : undefined}
+            >
+              {!coverPreview && (form.title ? form.title.charAt(0).toUpperCase() : '?')}
+              {creator?.avatar_path && (
+                <div className="product-card__watermark" style={{ backgroundImage: `url(${creator.avatar_path})` }} />
+              )}
+            </div>
+            <div className="product-card__body">
+              <p className="product-card__title">{form.title || 'Your product title'}</p>
+              <div className="product-card__meta">
+                <span className="product-card__creator">{creator?.name}</span>
+                {!!creator?.verified && <Seal />}
+              </div>
+              <p className="mono product-card__price">{price || 'Set a price'}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

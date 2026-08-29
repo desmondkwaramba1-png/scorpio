@@ -723,9 +723,10 @@ img{max-width:100%;display:block;}
     radial-gradient(1px 1px at 78% 18%, rgba(255,255,255,.5) 0, transparent 60%),
     radial-gradient(1.5px 1.5px at 65% 62%, rgba(255,255,255,.6) 0, transparent 60%),
     radial-gradient(1px 1px at 25% 75%, rgba(255,255,255,.4) 0, transparent 60%),
-    radial-gradient(900px 500px at 30% 20%, rgba(var(--gold-rgb),.18), transparent 65%),
-    radial-gradient(700px 420px at 80% 85%, rgba(var(--green-glow-rgb),.16), transparent 65%),
-    var(--green-dark);
+    /* A real sunset glow behind the scorpion — same palette as the shop
+       hero, but radial and centered so it reads as light source rather
+       than a wash, fading to navy at the edges to keep the frame dark. */
+    radial-gradient(950px 750px at 50% 48%, #d1522f 0%, #8a3050 32%, #3d1f3d 58%, #131921 82%);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
   opacity:1;transition:opacity .45s ease;
 }

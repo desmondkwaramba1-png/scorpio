@@ -75,11 +75,7 @@ export default function SplashScreen() {
         <circle cx="100" cy="40" r="5" fill="var(--gold)" className={ready ? 'is-glowing' : ''} opacity={ready ? 1 : 0} />
       </svg>
 
-      <p className="splash__name">
-        {NAME.split('').map((ch, i) => (
-          <span key={i} className={ready ? 'is-in' : ''} style={{ transitionDelay: `${900 + i * 60}ms` }}>{ch}</span>
-        ))}
-      </p>
+      <p className={`splash__name${ready ? ' is-in' : ''}`}>{NAME}</p>
     </div>
   );
 }

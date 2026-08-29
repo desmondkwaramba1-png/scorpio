@@ -12,6 +12,7 @@ const { EBOOKS_ONLY, ACTIVE_CATEGORY_VALUES } = require('../lib/launchScope');
 const { isPromoActive, applyDiscount } = require('../lib/promotions');
 const { addKeys, keyStats } = require('../lib/licenseKeys');
 const { runVerification } = require('../lib/contentVerification');
+const { optimizeImage } = require('../lib/imageProcessing');
 const { UPLOADS_DIR } = require('../lib/paths');
 
 const router = express.Router();
@@ -487,6 +488,12 @@ router.post('/', requireAuth, requireCreator, upload.fields([
   const keyList = parseKeyList(license_keys);
   const isService = type === 'service';
 
+  if (cover) {
+    // Best-effort: a resize failure shouldn't block a legitimate listing
+    // from publishing, just leave the cover at its original size.
+    try { await optimizeImage(cover.path, { maxWidth: 1600 }); } catch (err) { console.error('[image optimize]', err); }
+  }
+
   if (!title || !type || !category) {
     return res.status(400).json({ error: 'title, type, and category are required.' });
   }
@@ -608,6 +615,11 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
   const cover = req.files?.cover?.[0];
   const file = req.files?.file?.[0];
   const previewVideo = req.files?.preview_video?.[0];
+
+  if (cover) {
+    try { await optimizeImage(cover.path, { maxWidth: 1600 }); } catch (err) { console.error('[image optimize]', err); }
+  }
+
   const coverPath = cover ? `/uploads/${cover.filename}` : product.cover_path;
   const isService = product.type === 'service';
 

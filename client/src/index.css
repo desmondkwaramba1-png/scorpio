@@ -35,8 +35,8 @@
   --field-bg:#FFFFFF;
   --line-strong:#888C8C;
   --red:#CC0C39;
-  --radius:12px;
-  --radius-sm:8px;
+  --radius:14px;
+  --radius-sm:10px;
   --max-w:1160px;
 
   /* The text color that reads correctly ON TOP of a solid var(--ink) fill
@@ -48,8 +48,15 @@
 
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px; --sp-8:64px;
 
-  --shadow-1:0 1px 2px rgba(20,24,27,.06), 0 1px 1px rgba(20,24,27,.04);
-  --shadow-2:0 8px 24px rgba(20,24,27,.10), 0 2px 6px rgba(20,24,27,.06);
+  /* Tinted with --green-dark's own RGB rather than generic black — a
+     deliberately "branded" shadow instead of the same neutral drop-shadow
+     every template uses, layered close+far for real depth instead of one
+     flat blur. --shadow-3 is for the handful of surfaces meant to feel
+     genuinely lifted off the page (the buy panel, hero CTAs), not a
+     default. */
+  --shadow-1:0 1px 2px rgba(19,25,33,.05), 0 3px 8px rgba(19,25,33,.04);
+  --shadow-2:0 4px 12px rgba(19,25,33,.07), 0 14px 32px rgba(19,25,33,.12);
+  --shadow-3:0 8px 20px rgba(19,25,33,.10), 0 28px 56px rgba(19,25,33,.16);
 }
 
 /* Dark theme — opt-in via the nav toggle, not the default anymore. Ground
@@ -82,6 +89,14 @@
   --ink-contrast:var(--green-dark);
   --skeleton-base:var(--ink-800);
   --skeleton-shine:#383838;
+
+  /* A shadow tinted for a light ground is close to invisible against a
+     near-black one — dark mode needs real opacity to read as elevation at
+     all, plus a faint light rim standing in for the highlight a shadow
+     alone can't provide here. */
+  --shadow-1:0 1px 2px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.04);
+  --shadow-2:0 4px 12px rgba(0,0,0,.4), 0 16px 36px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.05);
+  --shadow-3:0 8px 20px rgba(0,0,0,.45), 0 30px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.06);
 }
 
 *,*::before,*::after{box-sizing:border-box;}
@@ -697,7 +712,7 @@ img{max-width:100%;display:block;}
    and a firmer shadow to lift it off the page as "the decision," not just
    another content block. */
 .buy-panel .card{
-  border-top:3px solid var(--gold);box-shadow:var(--shadow-2);
+  border-top:3px solid var(--gold);box-shadow:var(--shadow-3);
 }
 
 /* ---- creator storefront ---- */

@@ -5,6 +5,7 @@ const { randomUUID } = require('crypto');
 const db = require('../db/schema');
 const { requireAuth } = require('../middleware/auth');
 const { getVerificationCriteria, checkAndUpdateVerification } = require('../lib/verification');
+const { optimizeImage } = require('../lib/imageProcessing');
 const { UPLOADS_DIR } = require('../lib/paths');
 
 const router = express.Router();
@@ -43,7 +44,7 @@ function publicCreator(row) {
 // POST /api/creators — onboarding. Logged-in only, one creator profile per
 // user. what_selling and who_for are the qualification questions: light
 // friction, real signal, asked once.
-router.post('/', requireAuth, upload.single('avatar'), (req, res) => {
+router.post('/', requireAuth, upload.single('avatar'), async (req, res) => {
   const { handle, name, bio, what_selling, who_for, payout_ecocash_number, payout_bank_details } = req.body;
 
   if (!handle || !name || !what_selling || !who_for) {
@@ -60,6 +61,10 @@ router.post('/', requireAuth, upload.single('avatar'), (req, res) => {
 
   const existing = db.prepare('SELECT id FROM creators WHERE user_id = ?').get(req.user.id);
   if (existing) return res.status(409).json({ error: 'You already have a creator profile.' });
+
+  if (req.file) {
+    try { await optimizeImage(req.file.path, { maxWidth: 480 }); } catch (err) { console.error('[image optimize]', err); }
+  }
 
   try {
     const avatarPath = req.file ? `/uploads/${req.file.filename}` : null;
@@ -86,8 +91,12 @@ router.post('/', requireAuth, upload.single('avatar'), (req, res) => {
 
 // PATCH /api/creators/me — edit your own profile. Handle is intentionally
 // not editable here to keep published product links stable.
-router.patch('/me', requireAuth, upload.single('avatar'), (req, res) => {
+router.patch('/me', requireAuth, upload.single('avatar'), async (req, res) => {
   if (!req.creator) return res.status(404).json({ error: 'No creator profile yet.' });
+
+  if (req.file) {
+    try { await optimizeImage(req.file.path, { maxWidth: 480 }); } catch (err) { console.error('[image optimize]', err); }
+  }
 
   const { name, bio, what_selling, who_for, payout_ecocash_number, payout_bank_details } = req.body;
   const avatarPath = req.file ? `/uploads/${req.file.filename}` : req.creator.avatar_path;

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { FiShield, FiCompass, FiShare2, FiCheck, FiGrid, FiShoppingCart, FiLock, FiZap, FiFileText, FiPlay } from 'react-icons/fi';
+import { FiShield, FiCompass, FiShare2, FiCheck, FiEdit2, FiShoppingCart, FiLock, FiZap, FiFileText, FiPlay } from 'react-icons/fi';
 import Seal from '../components/Seal.jsx';
 import EngagementBar from '../components/EngagementBar.jsx';
 import CommentsSection from '../components/CommentsSection.jsx';
@@ -297,8 +297,8 @@ export default function Product() {
               <button onClick={shareProduct} className="btn btn--gold btn--block">
                 {copied ? <><FiCheck size={15} /> Link copied</> : <><FiShare2 size={15} /> Share this product</>}
               </button>
-              <Link to="/dashboard/products" className="btn btn--ghost btn--block" style={{ marginTop: 10 }}>
-                <FiGrid size={15} /> View all my listings
+              <Link to={`/dashboard/products/${product.id}/edit`} className="btn btn--ghost btn--block" style={{ marginTop: 10 }}>
+                <FiEdit2 size={15} /> Edit this listing
               </Link>
             </>
           ) : (

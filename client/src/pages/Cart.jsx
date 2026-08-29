@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiTrash2, FiShoppingCart, FiCompass } from 'react-icons/fi';
+import { FiTrash2, FiShoppingCart, FiCompass, FiShield, FiLock } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { api } from '../lib/api';
@@ -59,30 +59,40 @@ export default function Cart() {
   const total = items.reduce((sum, p) => sum + (p.promo_active ? p.discounted_price_minor : p.price_minor), 0);
 
   return (
-    <div className="wrap" style={{ maxWidth: 640, padding: '40px 20px 80px' }}>
-      <h1 style={{ fontSize: '1.6rem', marginBottom: 4 }}>Your cart</h1>
-      <p className="muted" style={{ marginBottom: 24 }}>
-        {items.length} item{items.length === 1 ? '' : 's'}
+    <div className="wrap" style={{ maxWidth: 680, padding: '40px 20px 80px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+        <FiShoppingCart size={22} color="var(--green)" />
+        <h1 style={{ fontSize: '1.6rem' }}>Your cart</h1>
+      </div>
+      <p className="muted" style={{ marginBottom: 28 }}>
+        {items.length} item{items.length === 1 ? '' : 's'} ready to check out
       </p>
 
       {items.length === 0 ? (
         <div className="empty-state">
           <FiCompass size={26} color="var(--muted)" style={{ marginBottom: 10 }} />
           <strong>Your cart is empty.</strong>
-          <Link to="/discover" style={{ color: 'var(--green)', fontWeight: 600 }}>Browse the marketplace</Link>
+          <p className="muted" style={{ fontSize: '.88rem', marginTop: 4, marginBottom: 16 }}>
+            Find something worth having and it'll show up here.
+          </p>
+          <Link to="/discover" className="btn btn--gold btn--sm">
+            <FiCompass size={14} /> Browse the marketplace
+          </Link>
         </div>
       ) : (
-        <>
-          <div style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 32 }}>
+          <div style={{ display: 'grid', gap: 12 }}>
             {items.map(p => {
               const price = formatMoney(p.price_minor, p.currency);
               const discounted = p.promo_active ? formatMoney(p.discounted_price_minor, p.currency) : null;
               return (
                 <div key={p.id} className="card card--pad cart-item">
                   <div
-                    className="order-summary__cover"
+                    className={`cart-item__cover${p.cover_path ? '' : ' cart-item__cover--empty'}`}
                     style={p.cover_path ? { backgroundImage: `url(${p.cover_path})` } : undefined}
-                  />
+                  >
+                    {!p.cover_path && p.title.charAt(0).toUpperCase()}
+                  </div>
                   <div className="cart-item__info" style={{ minWidth: 0 }}>
                     <Link to={`/@${p.creator_handle}/${p.slug}`} style={{ fontWeight: 600, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {p.title}
@@ -99,7 +109,7 @@ export default function Cart() {
                       <span style={{ color: 'var(--green-glow)' }}>{price}</span>
                     )}
                   </p>
-                  <button onClick={() => remove(p.id)} className="btn btn--ghost btn--sm cart-item__remove" title="Remove from cart">
+                  <button onClick={() => remove(p.id)} className="btn btn--ghost btn--sm cart-item__remove" title="Remove from cart" aria-label="Remove from cart">
                     <FiTrash2 size={14} />
                   </button>
                 </div>
@@ -108,25 +118,29 @@ export default function Cart() {
           </div>
 
           {currencies.size > 1 && (
-            <p className="error-text" style={{ marginBottom: 16 }}>
+            <p className="error-text" style={{ marginTop: -20 }}>
               Your cart has items priced in different currencies. You'll need to check out one currency at a time, so remove the others for now.
             </p>
           )}
 
-          <div className="card card--pad" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <div>
-              <p className="muted" style={{ fontSize: '.82rem' }}>Total</p>
-              <p className="mono" style={{ fontWeight: 700, fontSize: '1.2rem' }}>{formatMoney(total, items[0].currency)}</p>
+          <div className="card card--pad cart-summary">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <span className="muted" style={{ fontSize: '.9rem' }}>Total ({items.length} item{items.length === 1 ? '' : 's'})</span>
+              <span className="mono" style={{ fontWeight: 700, fontSize: '1.35rem' }}>{formatMoney(total, items[0].currency)}</span>
             </div>
             <button
               onClick={() => navigate('/checkout')}
-              className="btn btn--gold"
+              className="btn btn--gold btn--block"
               disabled={currencies.size > 1}
             >
-              Proceed to checkout
+              <FiLock size={15} /> Proceed to checkout
             </button>
+            <div className="trust-line" style={{ marginTop: 16, marginBottom: 0 }}>
+              <FiShield size={16} />
+              <span>Every order carries 5-day buyer protection. Not what you expected? Report it for a refund.</span>
+            </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

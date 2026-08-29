@@ -26,7 +26,12 @@ function AccountMenu({ creator, logout }) {
 
   return (
     <div className="nav__account" ref={ref}>
-      <button type="button" className="nav__icon-link" onClick={() => setOpen(o => !o)} aria-expanded={open}>
+      <button
+        type="button"
+        className={`nav__icon-link${open ? ' nav__icon-link--active' : ''}`}
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+      >
         <FiGrid /> <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>Account <FiChevronDown size={11} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s ease' }} /></span>
       </button>
       {open && (

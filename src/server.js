@@ -30,6 +30,17 @@ const reelsRouter = require('./routes/reels');
 // and isn't meant to police.
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const ALLOWED_ORIGINS = new Set([FRONTEND_URL, 'http://localhost:5173', 'http://127.0.0.1:5173']);
+// A domain is reachable at both its apex and its www subdomain (Vercel
+// redirects one to the other), so the browser's actual Origin header can be
+// either depending on which one FRONTEND_URL happens to be set to — allow
+// both instead of requiring them to match exactly.
+try {
+  const frontendHost = new URL(FRONTEND_URL);
+  const altHost = frontendHost.hostname.startsWith('www.')
+    ? frontendHost.hostname.slice(4)
+    : `www.${frontendHost.hostname}`;
+  ALLOWED_ORIGINS.add(`${frontendHost.protocol}//${altHost}`);
+} catch {}
 
 const app = express();
 app.use(cors({

@@ -38,12 +38,17 @@ export default function DashboardHome() {
 
       <div className="stat-grid">
         <div className="card stat-tile">
-          <span className="stat-tile__label"><FiBox size={13} /> Products</span>
-          <span className="stat-tile__value">{productCount}</span>
-        </div>
-        <div className="card stat-tile">
           <span className="stat-tile__label"><FiCheckCircle size={13} /> Published</span>
           <span className="stat-tile__value">{publishedCount}</span>
+        </div>
+        <div className="card stat-tile">
+          <span className="stat-tile__label"><FiBox size={13} /> Total listings</span>
+          <span className="stat-tile__value">
+            {productCount}
+            {typeof productCount === 'number' && typeof publishedCount === 'number' && productCount > publishedCount && (
+              <span className="muted" style={{ fontSize: '.7rem', fontWeight: 500 }}> ({productCount - publishedCount} draft{productCount - publishedCount === 1 ? '' : 's'})</span>
+            )}
+          </span>
         </div>
         <div className="card stat-tile">
           <span className="stat-tile__label"><FiDollarSign size={13} /> Revenue</span>

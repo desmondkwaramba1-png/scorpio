@@ -1,29 +1,15 @@
 import { useEffect, useState } from 'react';
-import { FiDollarSign, FiMinusCircle, FiCreditCard, FiClock } from 'react-icons/fi';
+import { FiDollarSign, FiMinusCircle, FiCreditCard, FiClock, FiCalendar } from 'react-icons/fi';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
 
 export default function Wallet() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
-  const [notice, setNotice] = useState(null);
 
   useEffect(() => {
-    load();
-  }, []);
-
-  function load() {
     api.get('/api/wallet/me').then(setData).catch(err => setError(err.message));
-  }
-
-  async function withdraw() {
-    setNotice(null);
-    try {
-      await api.post('/api/wallet/withdraw');
-    } catch (err) {
-      setNotice(err.message);
-    }
-  }
+  }, []);
 
   if (error) return <p className="error-text">{error}</p>;
 
@@ -68,19 +54,21 @@ export default function Wallet() {
 
       <p className="muted" style={{ fontSize: '.85rem', marginBottom: 24 }}>Fee policy: {data.fee_policy}.</p>
 
-      <div className="card card--pad" style={{ marginBottom: 28 }}>
-        <p style={{ fontWeight: 600, marginBottom: 6 }}>Request a withdrawal</p>
-        <p className="muted" style={{ fontSize: '.9rem', marginBottom: 14 }}>
-          {data.payout_number
-            ? `Sent to your EcoCash number on file (${data.payout_number}).`
-            : 'Add an EcoCash number in Settings first.'}
-        </p>
-        <button className="btn btn--gold btn--sm" onClick={withdraw}>Request withdrawal</button>
-        <p className="muted" style={{ fontSize: '.78rem', marginTop: 10 }}>
-          Your available balance settles to your EcoCash number every Friday. On-demand withdrawal isn't
-          automated yet, so this button won't move money instantly, but you're still paid out weekly.
-        </p>
-        {notice && <p className="error-text" style={{ fontSize: '.85rem', marginTop: 10 }}>{notice}</p>}
+      <div className="card card--pad" style={{ marginBottom: 28, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{
+          width: 36, height: 36, borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'var(--gold-tint)', color: 'var(--gold-ink)'
+        }}>
+          <FiCalendar size={17} />
+        </span>
+        <div>
+          <p style={{ fontWeight: 600, marginBottom: 2 }}>Paid out every Friday</p>
+          <p className="muted" style={{ fontSize: '.88rem' }}>
+            {data.payout_number
+              ? `Your available balance settles to ${data.payout_number} weekly.`
+              : 'Add an EcoCash number in Settings so we know where to send it.'}
+          </p>
+        </div>
       </div>
 
       <p style={{ fontWeight: 600, marginBottom: 16 }}>Transactions</p>

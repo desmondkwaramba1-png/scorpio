@@ -1,9 +1,8 @@
 const express = require('express');
 const db = require('../db/schema');
 const { requireAuth, requireCreator } = require('../middleware/auth');
-const { format: formatMoney } = require('../lib/money');
 const { sweepAutoReleases } = require('../lib/escrow');
-const { PLATFORM_FEE_PERCENT, PLATFORM_FEE_FIXED_MINOR, netOf } = require('../lib/fees');
+const { PLATFORM_FEE_PERCENT, netOf } = require('../lib/fees');
 
 const router = express.Router();
 
@@ -42,23 +41,9 @@ router.get('/me', requireAuth, requireCreator, (req, res) => {
     fee_minor: feeMinor,
     available_minor: netMinor,
     escrowed_minor: escrowedMinor,
-    fee_policy: `${PLATFORM_FEE_PERCENT}% + ${formatMoney(PLATFORM_FEE_FIXED_MINOR, 'USD')} per paid order`,
+    fee_policy: `${PLATFORM_FEE_PERCENT}% per paid order`,
     payout_number: req.creator.payout_ecocash_number || null,
     transactions
-  });
-});
-
-// POST /api/wallet/withdraw — payouts aren't connected to a real processor
-// yet (same stub-first approach as services/payment.js). Available balance
-// still settles weekly on the stated Friday schedule, it's just sent by the
-// SCORPIO team by hand for now rather than an automated transfer. This
-// records intent honestly rather than pretending money moved.
-router.post('/withdraw', requireAuth, requireCreator, (req, res) => {
-  if (!req.creator.payout_ecocash_number) {
-    return res.status(400).json({ error: 'Add an EcoCash number in Settings before requesting a withdrawal.' });
-  }
-  res.status(501).json({
-    error: 'On-demand withdrawal isn\'t automated yet. Your available balance is still settled to your EcoCash number every Friday, sent manually by the SCORPIO team in the meantime.'
   });
 });
 

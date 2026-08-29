@@ -30,7 +30,7 @@ export default function Terms() {
       <div className="stat-grid">
         <div className="card stat-tile">
           <span className="stat-tile__label"><FiPercent size={13} /> Platform fee</span>
-          <span className="mono stat-tile__value">8% + $0.30</span>
+          <span className="mono stat-tile__value">8%</span>
         </div>
         <div className="card stat-tile">
           <span className="stat-tile__label"><FiCalendar size={13} /> Payouts</span>
@@ -56,16 +56,14 @@ export default function Terms() {
         </Section>
 
         <Section icon={FiPercent} title="Platform fee">
-          SCORPIO takes 8% of the order amount plus a fixed $0.30, deducted from what a creator sees as
-          their available balance. This is a stated policy computed on real order amounts, shown on
-          every order in your Wallet.
+          SCORPIO takes 8% of the order amount, deducted from what a creator sees as their available
+          balance. This is a stated policy computed on real order amounts, shown on every order in your
+          Wallet.
         </Section>
 
         <Section icon={FiCalendar} title="When creators get paid">
           Once an order clears its 5-day buyer-protection window (below), it's added to your available
-          balance and settled to your EcoCash number on file every Friday. Automated on-demand
-          withdrawal isn't live yet, so payouts are currently sent manually by the SCORPIO team on that
-          same weekly schedule while the automated flow is built.
+          balance and paid out to your EcoCash number on file every Friday.
         </Section>
 
         <Section icon={FiShieldOff} title="Buyer protection">

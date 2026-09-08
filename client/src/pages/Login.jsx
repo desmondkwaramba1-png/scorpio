@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { FiShoppingBag, FiShoppingCart, FiEye, FiEyeOff } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
-import { FaFacebook } from 'react-icons/fa';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -169,9 +168,12 @@ export default function Login() {
             <a href={`/api/auth/google?role=${oauthRole}${nextQuery}`} className="btn btn--ghost btn--block">
               <FcGoogle size={18} /> Continue with Google
             </a>
-            <a href={`/api/auth/facebook?role=${oauthRole}${nextQuery}`} className="btn btn--ghost btn--block">
-              <FaFacebook size={18} color="#1877F2" /> Continue with Facebook
-            </a>
+            {/* Facebook Login is temporarily off the UI, not deleted — the
+                backend route in oauth.js already safely no-ops without
+                FACEBOOK_APP_ID/SECRET set, and Meta requires App Review
+                before it works for anyone but the app's own testers, which
+                is on Meta's timeline, not something to keep half-shipping
+                around. Re-add this <a> once that's sorted. */}
           </div>
           <p className="muted" style={{ fontSize: '.78rem', textAlign: 'center', marginTop: -10 }}>
             Continuing means you'll be asked to agree to the <Link to="/terms" target="_blank" style={{ color: 'var(--green)' }}>terms</Link> on your first visit.

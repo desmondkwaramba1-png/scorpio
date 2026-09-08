@@ -39,12 +39,13 @@ router.get('/disputes', requireAdmin, (req, res) => {
            pu.id AS purchase_id, pu.amount_minor, pu.currency, pu.created_at AS purchased_at,
            p.title AS product_title, p.slug AS product_slug,
            buyer.name AS buyer_name, buyer.email AS buyer_email,
-           c.name AS seller_name, c.handle AS seller_handle, c.email AS seller_email
+           c.name AS seller_name, c.handle AS seller_handle, cu.email AS seller_email
     FROM service_disputes d
     JOIN purchases pu ON pu.id = d.purchase_id
     JOIN products p ON p.id = pu.product_id
     JOIN buyers buyer ON buyer.id = pu.buyer_id
     JOIN creators c ON c.id = p.creator_id
+    LEFT JOIN users cu ON cu.id = c.user_id
     WHERE d.status = 'open'
     ORDER BY d.created_at ASC
   `).all();
@@ -144,9 +145,10 @@ router.get('/overview', requireAdmin, (req, res) => {
   `).all();
 
   const topCreators = db.prepare(`
-    SELECT c.id, c.name, c.handle, c.email, c.verified,
+    SELECT c.id, c.name, c.handle, u.email, c.verified,
            COUNT(pu.id) AS order_count, COALESCE(SUM(pu.amount_minor),0) AS revenue_minor
     FROM creators c
+    LEFT JOIN users u ON u.id = c.user_id
     JOIN products p ON p.creator_id = c.id
     JOIN purchases pu ON pu.product_id = p.id AND pu.payment_status = 'paid'
     GROUP BY c.id
@@ -181,7 +183,7 @@ router.get('/sellers', requireAdmin, (req, res) => {
   sweepAutoReleases();
 
   const creators = db.prepare(`
-    SELECT c.id, c.name, c.handle, c.email, c.payout_ecocash_number, c.verified, c.created_at,
+    SELECT c.id, c.name, c.handle, u.email, c.payout_ecocash_number, c.verified, c.created_at,
            u.phone,
            (SELECT COUNT(*) FROM products WHERE creator_id = c.id) AS product_count,
            (SELECT COUNT(*) FROM products WHERE creator_id = c.id AND status = 'published') AS published_count

@@ -108,7 +108,7 @@ router.get('/mine', requireAuth, (req, res) => {
   const purchases = db.prepare(`
     SELECT pu.*, p.title AS product_title, p.slug AS product_slug, p.cover_path AS product_cover_path,
            p.delivery_days AS delivery_days,
-           c.name AS creator_name, c.handle AS creator_handle, c.email AS creator_email, u.phone AS creator_phone
+           c.name AS creator_name, c.handle AS creator_handle, u.email AS creator_email, u.phone AS creator_phone
     FROM purchases pu
     JOIN buyers b ON b.id = pu.buyer_id
     JOIN products p ON p.id = pu.product_id

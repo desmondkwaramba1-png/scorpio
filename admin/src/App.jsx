@@ -19,7 +19,7 @@ const TABS = [
 ];
 
 function KeyGate() {
-  const { setKey, adminFetch } = useAdmin();
+  const { setKey } = useAdmin();
   const [input, setInput] = useState('');
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState(null);
@@ -30,10 +30,18 @@ function KeyGate() {
     setError(null);
     // Verify the key actually works before committing to it, rather than
     // storing it optimistically and letting every subsequent page load
-    // fail one at a time.
-    sessionStorage.setItem('scorpio_admin_key', input);
+    // fail one at a time. This has to be its own direct fetch with the
+    // just-typed `input` value — the shared adminFetch() reads adminKey
+    // from AdminContext's React state via closure, which on this very
+    // first check is still whatever it was before (null), not what was
+    // just typed. Using it here meant the correct key always failed on
+    // first entry, since the request went out with an empty key.
     try {
-      await adminFetch('/api/admin/overview');
+      const res = await fetch('/api/admin/overview', { headers: { 'X-Admin-Key': input } });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(res.status === 403 ? 'Invalid admin key.' : (data?.error || 'Could not verify the key.'));
+      }
       setKey(input);
     } catch (err) {
       setError(err.message);

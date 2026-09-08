@@ -298,9 +298,15 @@ img{max-width:100%;display:block;}
 }
 .card--pad{padding:var(--sp-5);}
 
-.stat-grid{display:grid;gap:var(--sp-3);grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:var(--sp-5);}
-.stat-tile{padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
-.stat-tile__value{font-family:'JetBrains Mono',monospace;font-size:1.05rem;font-weight:700;color:var(--ink);line-height:1;}
+.stat-grid{display:grid;gap:var(--sp-3);grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:var(--sp-5);}
+/* Stacked, not the row layout this class started as — the admin
+   dashboard's tiles carry a third "in the last 7 days" sub-line the
+   original row layout was never built for, which overlapped label/value/
+   sub into each other in a single flex row. This is its own copy of the
+   file (admin has a separate index.css from the main site), so it's safe
+   to change here without touching the main site's simpler 2-item tiles. */
+.stat-tile{padding:12px 14px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;}
+.stat-tile__value{font-family:'JetBrains Mono',monospace;font-size:1.05rem;font-weight:700;color:var(--ink);line-height:1.2;}
 .stat-tile__label{color:var(--muted);font-size:.76rem;font-weight:600;display:flex;align-items:center;gap:6px;}
 
 /* ---- product grid + card ---- */

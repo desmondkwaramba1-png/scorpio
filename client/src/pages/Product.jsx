@@ -162,7 +162,14 @@ export default function Product() {
           <p style={{ marginTop: 20, fontSize: '1rem', lineHeight: 1.7, maxWidth: '68ch' }}>{product.description}</p>
         )}
 
-        {product.preview_video_path && (
+        {/* At most one video here, never both — a product with both a
+            course preview clip AND a separately-tagged reel used to stack
+            two players back to back with near-identical "watch this"
+            labels, which is exactly the "products, previews, reels all
+            mixed together" clutter on what should be a single buy
+            decision. The purpose-built course preview wins when both
+            exist; the reel is the fallback when there's no formal preview. */}
+        {product.preview_video_path ? (
           <div className="product-reel">
             <p className="product-reel__label"><FiPlay size={13} /> Free preview, watch before you buy</p>
             <video src={product.preview_video_path} controls playsInline className="product-reel__video" />
@@ -170,9 +177,7 @@ export default function Product() {
               A real sample from the course, not the full paid content. No account or payment needed to watch it.
             </p>
           </div>
-        )}
-
-        {productReel && (
+        ) : productReel && (
           <div className="product-reel">
             <p className="product-reel__label"><FiPlay size={13} /> See it from {product.creator_name}</p>
             <video src={productReel.video_path} controls playsInline className="product-reel__video" />

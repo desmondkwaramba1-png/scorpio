@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 
+// Only reachable via the emailed reset link's ?token= — the WhatsApp-coded
+// fallback path this used to support was removed along with the rest of
+// the WhatsApp notification stub (see notify.js), since it never actually
+// sent anything.
 export default function ResetPassword() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const tokenFromLink = searchParams.get('token');
+  const token = searchParams.get('token');
 
-  const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -23,13 +26,23 @@ export default function ResetPassword() {
     }
     setSubmitting(true);
     try {
-      await api.post('/api/auth/reset-password', { token: tokenFromLink || code, password });
+      await api.post('/api/auth/reset-password', { token, password });
       setDone(true);
     } catch (err) {
       setError(err.message);
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (!token) {
+    return (
+      <div className="wrap" style={{ maxWidth: 420, padding: '56px 20px 80px', textAlign: 'center' }}>
+        <h1 style={{ fontSize: '1.5rem', marginBottom: 10 }}>This link is missing its token</h1>
+        <p className="muted" style={{ marginBottom: 24 }}>Use the reset link from your email, or request a new one.</p>
+        <Link to="/forgot-password" className="btn btn--primary">Request a new link</Link>
+      </div>
+    );
   }
 
   if (done) {
@@ -45,17 +58,9 @@ export default function ResetPassword() {
   return (
     <div className="wrap" style={{ maxWidth: 420, padding: '56px 20px 80px' }}>
       <h1 style={{ fontSize: '1.7rem', marginBottom: 10 }}>Set a new password</h1>
-      <p className="muted" style={{ marginBottom: 28 }}>
-        {tokenFromLink ? 'You followed a reset link. Choose a new password.' : 'Enter the code we sent you on WhatsApp, and your new password.'}
-      </p>
+      <p className="muted" style={{ marginBottom: 28 }}>You followed a reset link. Choose a new password.</p>
 
       <form onSubmit={handleSubmit}>
-        {!tokenFromLink && (
-          <div className="field">
-            <label htmlFor="code">Reset code</label>
-            <input id="code" required value={code} onChange={e => setCode(e.target.value)} inputMode="numeric" placeholder="123456" />
-          </div>
-        )}
         <div className="field">
           <label htmlFor="password">New password</label>
           <input id="password" type="password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)} />

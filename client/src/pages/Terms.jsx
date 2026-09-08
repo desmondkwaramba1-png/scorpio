@@ -58,8 +58,7 @@ export default function Terms() {
 
         <Section icon={FiUser} title="Your account">
           You're responsible for keeping your password private. Email verification and password reset
-          exist so you can recover access. Email delivery is real. WhatsApp delivery for password reset
-          codes is not implemented yet; use the email option until it is.
+          exist so you can recover access, both delivered by real email.
         </Section>
 
         <Section icon={FiDatabase} title="Data">

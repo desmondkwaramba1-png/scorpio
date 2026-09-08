@@ -1,7 +1,9 @@
 // Email: real delivery via Resend once RESEND_API_KEY is set — falls back
 // to a console stub otherwise, so the app never crashes on a missing key.
-// WhatsApp stays a stub for now (real delivery needs a Meta Business/
-// WhatsApp Cloud API setup, a separate, bigger integration).
+// (WhatsApp notifications were removed — they were a stub that only ever
+// logged to the console, never actually sent anything. The wa.me contact-
+// seller links elsewhere in the app are unrelated and stay: those are
+// plain deep links the buyer's own browser opens, no API or stub involved.)
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'SCORPIO <onboarding@resend.dev>';
@@ -27,8 +29,4 @@ async function sendEmail(to, subject, body) {
   }
 }
 
-function sendWhatsApp(phone, message) {
-  console.log(`[STUB WHATSAPP] To: ${phone}\n${message}\n`);
-}
-
-module.exports = { sendEmail, sendWhatsApp };
+module.exports = { sendEmail };

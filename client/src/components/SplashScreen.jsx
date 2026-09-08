@@ -1,7 +1,32 @@
 import { useEffect, useRef, useState } from 'react';
+import { FiBookOpen, FiFileText, FiPlayCircle } from 'react-icons/fi';
 
 const SEEN_KEY = 'scorpio_splash_seen';
 const NAME = 'Scorpio';
+
+// Small ambient marks for what's actually on the marketplace — a book, a
+// template/guide page, a course play button — plus a tiny scorpion
+// silhouette, each gently floating in a fixed spot. Positioned to frame
+// the mark rather than crowd it: nothing sits within ~35% of center.
+const FLOATERS = [
+  { Icon: FiBookOpen, top: '20%', left: '14%', size: 22, duration: 6, delay: 0 },
+  { Icon: FiFileText, top: '74%', left: '18%', size: 18, duration: 7, delay: .9 },
+  { Icon: FiPlayCircle, top: '24%', left: '84%', size: 24, duration: 6.5, delay: .4 },
+  { Icon: 'scorpion', top: '76%', left: '82%', size: 20, duration: 7.5, delay: 1.3 }
+];
+
+// A simplified, single-path silhouette (not the full multi-stroke hero
+// mark) — plenty of detail at 20px, and cheap to render several times
+// over as a small ambient icon.
+function MiniScorpion({ size }) {
+  return (
+    <svg viewBox="0 0 220 200" width={size} height={size * (200 / 220)} fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M150 150 Q160 118 138 96 Q118 78 96 84 Q70 92 74 66 Q77 46 100 40" />
+      <path d="M160 150 A42 26 0 1 1 76 150 A42 26 0 1 1 160 150" />
+      <path d="M84 146 A18 15 0 1 1 48 146 A18 15 0 1 1 84 146" />
+    </svg>
+  );
+}
 
 export default function SplashScreen() {
   const [phase, setPhase] = useState(() => (sessionStorage.getItem(SEEN_KEY) ? 'done' : 'showing'));
@@ -52,6 +77,15 @@ export default function SplashScreen() {
 
   return (
     <div className={`splash${phase === 'leaving' ? ' splash--leaving' : ''}`} aria-hidden="true">
+      {FLOATERS.map((f, i) => (
+        <span
+          key={i} className="splash__floater"
+          style={{ top: f.top, left: f.left, animationDuration: `${f.duration}s`, animationDelay: `${f.delay}s` }}
+        >
+          {f.Icon === 'scorpion' ? <MiniScorpion size={f.size} /> : <f.Icon size={f.size} />}
+        </span>
+      ))}
+
       <svg viewBox="0 0 220 200" width="140" height="127" className={`splash__scorpion${ready ? ' is-glowing' : ''}`}>
         <g fill="none" stroke="var(--green-dark)" strokeLinecap="round" strokeLinejoin="round">
           {/* tail, curling from the body's rear up and over to the stinger */}

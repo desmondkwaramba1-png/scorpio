@@ -4,8 +4,8 @@ const multer = require('multer');
 const path = require('path');
 const { randomUUID } = require('crypto');
 const db = require('../db/schema');
-const { sendEmail, sendWhatsApp } = require('../lib/notify');
-const { generateToken, generateCode } = require('../lib/tokens');
+const { sendEmail } = require('../lib/notify');
+const { generateToken } = require('../lib/tokens');
 const { createSession, destroySession, TTL_DAYS } = require('../lib/session');
 const { requireAuth, COOKIE_NAME } = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimit');
@@ -162,31 +162,23 @@ router.post('/verify-email', (req, res) => {
 // of whether the account exists, so this endpoint can't be used to check
 // which usernames/emails are registered.
 router.post('/forgot-password', authLimiter, (req, res) => {
-  const { identifier, method } = req.body;
-  if (!identifier || !['email', 'whatsapp'].includes(method)) {
-    return res.status(400).json({ error: 'identifier and a valid method are required.' });
+  const { identifier } = req.body;
+  if (!identifier) {
+    return res.status(400).json({ error: 'identifier is required.' });
   }
 
   const user = db.prepare('SELECT * FROM users WHERE username = ? OR email = ?').get(identifier, identifier);
 
   if (user) {
-    if (method === 'email') {
-      const token = generateToken();
-      db.prepare(
-        'INSERT INTO password_reset_tokens (user_id, method, token, expires_at) VALUES (?, ?, ?, ?)'
-      ).run(user.id, 'email', token, futureTimestamp(RESET_TOKEN_TTL_MINUTES));
-      sendEmail(
-        user.email,
-        'Reset your SCORPIO password',
-        `Reset your password: ${FRONTEND_URL}/reset-password?token=${token}`
-      );
-    } else if (user.phone) {
-      const code = generateCode();
-      db.prepare(
-        'INSERT INTO password_reset_tokens (user_id, method, token, expires_at) VALUES (?, ?, ?, ?)'
-      ).run(user.id, 'whatsapp', code, futureTimestamp(RESET_TOKEN_TTL_MINUTES));
-      sendWhatsApp(user.phone, `Your SCORPIO password reset code is ${code}. It expires in ${RESET_TOKEN_TTL_MINUTES} minutes.`);
-    }
+    const token = generateToken();
+    db.prepare(
+      'INSERT INTO password_reset_tokens (user_id, method, token, expires_at) VALUES (?, ?, ?, ?)'
+    ).run(user.id, 'email', token, futureTimestamp(RESET_TOKEN_TTL_MINUTES));
+    sendEmail(
+      user.email,
+      'Reset your SCORPIO password',
+      `Reset your password: ${FRONTEND_URL}/reset-password?token=${token}`
+    );
   }
 
   res.json({ sent: true });

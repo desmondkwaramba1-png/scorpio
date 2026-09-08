@@ -217,7 +217,7 @@ export default function Login() {
               <div className="field">
                 <label htmlFor="phone">Phone number</label>
                 <input id="phone" required value={form.phone} onChange={update('phone')} placeholder="+263 77 123 4567" />
-                <small>Used for WhatsApp password reset and payouts.</small>
+                <small>Shown to buyers or sellers you have an order with, so they can reach you on WhatsApp.</small>
               </div>
               <PasswordField
                 id="signup_password" label="Password" value={form.password} onChange={update('password')}

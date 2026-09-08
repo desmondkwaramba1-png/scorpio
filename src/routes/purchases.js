@@ -11,7 +11,7 @@ const { requireAuth, requireCreator } = require('../middleware/auth');
 const { createDownloadToken, getActiveTokenForPurchase, productHasFile, getProductFile, isVideoFilename, isAudioFilename } = require('../lib/downloads');
 const { productHasKeys, unclaimedCount, keyForPurchase } = require('../lib/licenseKeys');
 const { sweepAutoReleases, deliveryFor, disputeFor, markDelivered, confirmDelivery, openDispute } = require('../lib/escrow');
-const { sendEmail, sendWhatsApp } = require('../lib/notify');
+const { sendEmail } = require('../lib/notify');
 const { markPurchasePaid, markPurchaseFailed } = require('../lib/purchaseCompletion');
 const { UPLOADS_DIR } = require('../lib/paths');
 
@@ -216,7 +216,6 @@ router.post('/:id/resend-download', requireAuth, (req, res) => {
   const token = createDownloadToken(purchase.id);
   const url = `${FRONTEND_URL}/api/downloads/${token}`;
   sendEmail(req.user.email, `Your download: ${purchase.product_title}`, `Here's your link: ${url}`);
-  if (req.user.phone) sendWhatsApp(req.user.phone, `Your SCORPIO download for "${purchase.product_title}": ${url}`);
 
   res.json({ download_url: `/api/downloads/${token}` });
 });

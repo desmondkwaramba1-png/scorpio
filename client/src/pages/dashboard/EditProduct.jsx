@@ -40,10 +40,9 @@ export default function EditProduct() {
         setProduct(p);
         setForm({
           title: p.title, description: p.description || '', category: p.category || '',
-          price: p.pay_what_you_want ? '' : (p.price_minor / 100).toString(),
-          currency: p.currency, pay_what_you_want: !!p.pay_what_you_want,
-          min_price: p.min_price_minor ? (p.min_price_minor / 100).toString() : '',
-          quantity_limit: p.quantity_limit ?? '', external_url: '',
+          price: (p.price_minor / 100).toString(),
+          currency: p.currency,
+          quantity_limit: p.quantity_limit ?? '',
           discount_enabled: !!p.discount_percent,
           discount_percent: p.discount_percent ?? '',
           discount_limit: p.discount_limit ?? '',
@@ -85,10 +84,10 @@ export default function EditProduct() {
       return;
     }
     if (product.type !== 'service') {
-      const willHaveFile = file || form.external_url || product.file_kind;
+      const willHaveFile = file || product.file_kind;
       const willHaveKeys = product.total_keys > 0;
       if (status === 'published' && !willHaveFile && !willHaveKeys) {
-        setError('Attach a file, an external link, or add license keys before publishing. Buyers need something to actually receive.');
+        setError('Attach a file, or add license keys, before publishing. Buyers need something to actually receive.');
         return;
       }
     }
@@ -222,20 +221,10 @@ export default function EditProduct() {
             </p>
           </div>
 
-          {product.type !== 'service' && (
-            <div className="field">
-              <label style={{ display: 'flex', alignItems: 'center', fontWeight: 400 }}>
-                <input type="checkbox" checked={form.pay_what_you_want} onChange={update('pay_what_you_want')}
-                  style={{ width: 'auto', marginRight: 8 }} />
-                Let buyers pay what they want
-              </label>
-            </div>
-          )}
-
           <div className="field" style={{ display: 'flex', gap: 12 }}>
             <div style={{ flex: 1 }}>
-              <label htmlFor="price">{form.pay_what_you_want ? 'Suggested price' : 'Price'}</label>
-              <input id="price" type="number" min="0" step="0.01" required={!form.pay_what_you_want}
+              <label htmlFor="price">Price</label>
+              <input id="price" type="number" min="0" step="0.01" required
                 value={form.price} onChange={update('price')} />
             </div>
             <div style={{ width: 90 }}>
@@ -246,13 +235,6 @@ export default function EditProduct() {
               </select>
             </div>
           </div>
-
-          {form.pay_what_you_want && (
-            <div className="field">
-              <label htmlFor="min_price">Minimum price</label>
-              <input id="min_price" type="number" min="0" step="0.01" value={form.min_price} onChange={update('min_price')} />
-            </div>
-          )}
 
           <div className="field">
             <label htmlFor="quantity_limit">Limited quantity (optional)</label>
@@ -274,15 +256,12 @@ export default function EditProduct() {
             <div className="field" style={{ marginBottom: form.discount_enabled ? 16 : 0 }}>
               <label style={{ display: 'flex', alignItems: 'center', fontWeight: 400 }}>
                 <input type="checkbox" checked={form.discount_enabled} onChange={update('discount_enabled')}
-                  disabled={form.pay_what_you_want} style={{ width: 'auto', marginRight: 8 }} />
+                  style={{ width: 'auto', marginRight: 8 }} />
                 Run a promotion
               </label>
-              {form.pay_what_you_want && (
-                <small>Not available on pay-what-you-want products.</small>
-              )}
             </div>
 
-            {form.discount_enabled && !form.pay_what_you_want && (
+            {form.discount_enabled && (
               <>
                 <div className="field" style={{ display: 'flex', gap: 12 }}>
                   <div style={{ flex: 1 }}>
@@ -372,9 +351,9 @@ export default function EditProduct() {
                   label={filePreview || 'Replace file'}
                   hint={
                     product.file_kind === 'upload' ? `Current file: ${product.file_name}. Choose a new one to replace it.`
-                      : product.file_kind === 'external_link' ? `Current link is set. Choose a file to replace it.`
+                      : product.file_kind === 'external_link' ? `Currently delivered via an external link. Choose a file to replace it.`
                         : product.total_keys > 0 ? 'No file attached. Delivery is by license key only, which is fine.'
-                          : 'No file attached yet. Or paste a link below instead.'
+                          : 'No file attached yet.'
                   } />
               </div>
 
@@ -386,13 +365,6 @@ export default function EditProduct() {
                     hint="A short, real sample anyone can watch free, no purchase needed." />
                 </div>
               )}
-
-              <div className="field">
-                <label htmlFor="external_url">External link</label>
-                <input id="external_url" value={form.external_url} onChange={update('external_url')}
-                  placeholder={product.file_kind === 'external_link' ? product.file_external_url : 'https://'} />
-                <small>Leave blank to keep the current file/link. Fill in to replace it with a new link.</small>
-              </div>
             </>
           )}
 

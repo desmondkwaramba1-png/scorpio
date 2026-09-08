@@ -38,7 +38,6 @@ export default function Login() {
   const [searchParams] = useSearchParams();
   const presetRole = searchParams.get('role');
   const next = searchParams.get('next');
-  const nextQuery = next ? `&next=${encodeURIComponent(next)}` : '';
 
   // Role only matters for a brand-new signup (does this new account want
   // to land in onboarding right away?) — it's not something a RETURNING
@@ -71,8 +70,12 @@ export default function Login() {
   // account or sign into an existing one, so a role picked in the login
   // tab is meaningless either way — afterAuth/OAuthComplete decide purely
   // from data.creator once control comes back. Only the signup tab's
-  // explicit choice is real intent worth sending through.
-  const oauthRole = tab === 'signup' && signupRole ? signupRole : 'buyer';
+  // explicit choice is real intent worth sending through; anything else is
+  // left unset (not defaulted to 'buyer') so OAuthComplete.jsx knows to
+  // actually ask a genuinely new account rather than silently guessing.
+  const oauthRole = tab === 'signup' && signupRole ? signupRole : null;
+  const googleQuery = [oauthRole && `role=${oauthRole}`, next && `next=${encodeURIComponent(next)}`]
+    .filter(Boolean).join('&');
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -165,7 +168,7 @@ export default function Login() {
           )}
 
           <div style={{ display: 'grid', gap: 10, marginBottom: 20 }}>
-            <a href={`/api/auth/google?role=${oauthRole}${nextQuery}`} className="btn btn--ghost btn--block">
+            <a href={`/api/auth/google${googleQuery ? `?${googleQuery}` : ''}`} className="btn btn--ghost btn--block">
               <FcGoogle size={18} /> Continue with Google
             </a>
             {/* Facebook Login is temporarily off the UI, not deleted — the

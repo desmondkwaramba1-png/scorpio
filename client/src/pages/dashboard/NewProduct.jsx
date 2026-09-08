@@ -25,8 +25,7 @@ export default function NewProduct() {
   const lockedCategory = ACTIVE_CATEGORIES.length === 1 ? ACTIVE_CATEGORIES[0].value : '';
   const [form, setForm] = useState({
     title: '', description: '', type: 'single', category: lockedCategory, price: '', currency: 'USD',
-    pay_what_you_want: false, min_price: '', quantity_limit: '', external_url: '', license_keys: '',
-    portfolio_url: '', delivery_days: '', service_terms: ''
+    quantity_limit: '', license_keys: '', portfolio_url: '', delivery_days: '', service_terms: ''
   });
   const [cover, setCover] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
@@ -76,8 +75,8 @@ export default function NewProduct() {
     }
     if (!isService) {
       const hasKeys = form.license_keys.trim().length > 0;
-      if (status === 'published' && !file && !form.external_url && !hasKeys) {
-        setError('Attach a file, an external link, or paste license keys before publishing. Buyers need something to actually receive after paying.');
+      if (status === 'published' && !file && !hasKeys) {
+        setError('Attach a file, or paste license keys, before publishing. Buyers need something to actually receive after paying.');
         return;
       }
     }
@@ -173,20 +172,10 @@ export default function NewProduct() {
               )}
             </div>
 
-            {!isService && (
-              <div className="field">
-                <label style={{ display: 'flex', alignItems: 'center', fontWeight: 400 }}>
-                  <input type="checkbox" checked={form.pay_what_you_want} onChange={update('pay_what_you_want')}
-                    style={{ width: 'auto', marginRight: 8 }} />
-                  Let buyers pay what they want
-                </label>
-              </div>
-            )}
-
             <div className="field" style={{ display: 'flex', gap: 12 }}>
               <div style={{ flex: 1 }}>
-                <label htmlFor="price">{form.pay_what_you_want ? 'Suggested price' : 'Price'}</label>
-                <input id="price" type="number" min="0" step="0.01" required={!form.pay_what_you_want}
+                <label htmlFor="price">Price</label>
+                <input id="price" type="number" min="0" step="0.01" required
                   value={form.price} onChange={update('price')} placeholder="5.00" />
               </div>
               <div style={{ width: 90 }}>
@@ -197,13 +186,6 @@ export default function NewProduct() {
                 </select>
               </div>
             </div>
-
-            {form.pay_what_you_want && (
-              <div className="field">
-                <label htmlFor="min_price">Minimum price</label>
-                <input id="min_price" type="number" min="0" step="0.01" value={form.min_price} onChange={update('min_price')} placeholder="0.00" />
-              </div>
-            )}
 
             <div className="field" style={{ marginBottom: 0 }}>
               <label htmlFor="quantity_limit">{isService ? 'Order limit (optional)' : 'Limited quantity (optional)'}</label>
@@ -247,7 +229,7 @@ export default function NewProduct() {
                   <label htmlFor="file">{isCourse ? 'Course video' : EBOOKS_ONLY ? 'PDF file' : 'Product file'}</label>
                   <FileUpload id="file" accept={isCourse ? 'video/mp4,video/webm,video/quicktime' : EBOOKS_ONLY ? 'application/pdf' : undefined} onChange={handleFile}
                     label={filePreview || (isCourse ? 'Choose a video' : EBOOKS_ONLY ? 'Choose a PDF' : 'Choose a file')}
-                    hint={isCourse ? 'MP4, WebM, or MOV. Or paste a link below instead, an unlisted YouTube/Vimeo link works well for a single-video course.' : EBOOKS_ONLY ? 'Or paste a link below instead: a Google Drive link, anything external.' : 'Or paste a link below instead: a Google Drive link, a video, anything external.'} />
+                    hint={isSoftware ? 'Required to publish, unless you paste license keys below instead.' : 'Required to publish. It\'s what the buyer actually gets.'} />
                 </div>
 
                 {isCourse && (
@@ -258,15 +240,6 @@ export default function NewProduct() {
                       hint="A short, real sample anyone can watch free, no purchase needed. This is what actually earns a buyer's trust on a course they've never seen, not the full paid video with playback cut off." />
                   </div>
                 )}
-
-                <div className="field">
-                  <label htmlFor="external_url">External link</label>
-                  <input id="external_url" value={form.external_url} onChange={update('external_url')} placeholder="https://" />
-                  <small>
-                    A file or an external link is required to publish. It's what the buyer actually gets. Skip both to save as a draft for now.
-                    {!EBOOKS_ONLY && !isSoftware && ' Selling software with an activation key? Pick "Software & apps" as the category above.'}
-                  </small>
-                </div>
 
                 {isSoftware && (
                   <div className="field" style={{ marginBottom: 0 }}>

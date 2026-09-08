@@ -19,11 +19,15 @@ function cookieOptions() {
 
 const IDENTITY_COLUMN = { google: 'google_id', facebook: 'facebook_id' };
 
+// Returns { user, isNew } — isNew is what lets the callback below decide
+// whether this Google/Facebook sign-in needs to ask "buyer or seller?" at
+// all. A returning user already has an answer (their creator profile, or
+// lack of one); only a genuinely brand-new account has no answer yet.
 function findOrCreateUser(provider, profile) {
   const column = IDENTITY_COLUMN[provider];
 
   let user = db.prepare(`SELECT * FROM users WHERE ${column} = ?`).get(profile.providerId);
-  if (user) return user;
+  if (user) return { user, isNew: false };
 
   // Same email already registered a different way — link this provider to it
   // rather than creating a duplicate account.
@@ -31,7 +35,7 @@ function findOrCreateUser(provider, profile) {
     user = db.prepare('SELECT * FROM users WHERE email = ?').get(profile.email);
     if (user) {
       db.prepare(`UPDATE users SET ${column} = ? WHERE id = ?`).run(profile.providerId, user.id);
-      return db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+      return { user: db.prepare('SELECT * FROM users WHERE id = ?').get(user.id), isNew: false };
     }
   }
 
@@ -47,7 +51,7 @@ function findOrCreateUser(provider, profile) {
     profile.emailVerified ? new Date().toISOString() : null,
     profile.providerId
   );
-  return db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+  return { user: db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid), isNew: true };
 }
 
 // OAuth `state` has to survive a round trip through Google/Facebook's own
@@ -55,18 +59,27 @@ function findOrCreateUser(provider, profile) {
 // them back" get packed into it together — there's nowhere else to carry
 // a return path through that hop. base64url keeps it a single URL-safe
 // token regardless of what characters are in the return path.
+//
+// role is null unless the buyer/seller choice was made explicitly (Login.jsx
+// only sends one when the signup tab's role card was actually clicked) — it
+// used to default to 'buyer' silently the moment someone clicked Google from
+// the plain login tab, which meant a brand-new visitor could end up with a
+// buyer-only account without ever having been asked. null here is what lets
+// the callback below tell "explicitly chose buyer" apart from "never asked."
 function encodeState(role, next) {
-  return Buffer.from(JSON.stringify({ role, next: next || null })).toString('base64url');
+  return Buffer.from(JSON.stringify({ role: role || null, next: next || null })).toString('base64url');
 }
 function decodeState(state) {
   try {
     const parsed = JSON.parse(Buffer.from(state, 'base64url').toString());
-    return { role: parsed.role === 'buyer' ? 'buyer' : 'creator', next: parsed.next || null };
+    const role = parsed.role === 'buyer' || parsed.role === 'creator' ? parsed.role : null;
+    return { role, next: parsed.next || null };
   } catch {
     // Pre-existing links (or a tampered/garbage state param) had a plain
     // 'buyer'/'creator' string here — still honor those rather than
     // treating every unparseable state as an error.
-    return { role: state === 'buyer' ? 'buyer' : 'creator', next: null };
+    const role = state === 'buyer' || state === 'creator' ? state : null;
+    return { role, next: null };
   }
 }
 
@@ -75,7 +88,7 @@ function registerProvider(provider) {
   // return the user afterward) is passed through as OAuth `state` so the
   // frontend knows where to route once control comes back.
   router.get(`/${provider}`, (req, res) => {
-    const role = req.query.role === 'buyer' ? 'buyer' : 'creator';
+    const role = req.query.role === 'buyer' || req.query.role === 'creator' ? req.query.role : null;
     const next = typeof req.query.next === 'string' ? req.query.next : null;
 
     if (!isConfigured(provider)) {
@@ -101,11 +114,13 @@ function registerProvider(provider) {
     try {
       const accessToken = await exchangeCode(provider, code);
       const profile = await PROVIDERS[provider].fetchProfile(accessToken);
-      const user = findOrCreateUser(provider, profile);
+      const { user, isNew } = findOrCreateUser(provider, profile);
 
       const session = createSession(user.id);
       res.cookie(COOKIE_NAME, session.id, cookieOptions());
-      res.redirect(`${FRONTEND_URL}/oauth-complete?role=${role}${nextParam}`);
+      const roleParam = role ? `&role=${role}` : '';
+      const isNewParam = isNew ? '&is_new=1' : '';
+      res.redirect(`${FRONTEND_URL}/oauth-complete?ok=1${roleParam}${isNewParam}${nextParam}`);
     } catch (err) {
       console.error(`[oauth:${provider}]`, err.message);
       res.redirect(`${FRONTEND_URL}/login?oauth_error=1${nextParam}`);

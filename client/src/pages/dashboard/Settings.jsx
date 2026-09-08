@@ -4,6 +4,7 @@ import { FiUser, FiCreditCard, FiCheck, FiCamera } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import Seal from '../../components/Seal.jsx';
+import ThemeToggle from '../../components/ThemeToggle.jsx';
 
 function SectionIcon({ children }) {
   return (
@@ -150,6 +151,8 @@ export default function Settings() {
               <small>Where your earnings get paid out. Also required to unlock verification.</small>
             </div>
           </div>
+
+          <ThemeToggle />
 
           {error && <p className="error-text">{error}</p>}
           {saved && (

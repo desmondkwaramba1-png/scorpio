@@ -4,6 +4,7 @@ import { FiDownload, FiRefreshCw, FiUser, FiPackage, FiCompass, FiPlay, FiX, FiC
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api';
 import { formatMoney } from '../lib/money';
+import ThemeToggle from '../components/ThemeToggle.jsx';
 
 function formatDate(sqliteDatetime) {
   const d = new Date(sqliteDatetime.replace(' ', 'T'));
@@ -418,8 +419,12 @@ export default function Account() {
         </>
       )}
 
+      <div style={{ marginTop: 28 }}>
+        <ThemeToggle />
+      </div>
+
       {!creator && (
-        <p className="muted" style={{ fontSize: '.82rem', marginTop: 32, textAlign: 'center' }}>
+        <p className="muted" style={{ fontSize: '.82rem', marginTop: 20, textAlign: 'center' }}>
           Also selling something? <Link to="/onboarding" style={{ color: 'var(--green)', fontWeight: 600 }}>Start a storefront</Link>
         </p>
       )}

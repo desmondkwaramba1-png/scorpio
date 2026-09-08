@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { FiCompass, FiUsers, FiGrid, FiUser, FiLogIn, FiLogOut, FiShoppingBag, FiShoppingCart, FiSun, FiMoon, FiSearch, FiPackage, FiChevronDown } from 'react-icons/fi';
+import { FiCompass, FiUsers, FiGrid, FiUser, FiLogIn, FiLogOut, FiShoppingBag, FiShoppingCart, FiSearch, FiPackage, FiChevronDown } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useTheme } from '../context/ThemeContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 
 // A creator has two real destinations (their storefront dashboard, and
@@ -53,7 +52,6 @@ function AccountMenu({ creator, logout }) {
 
 export default function Nav() {
   const { user, creator, loading, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const { count } = useCart();
   const navigate = useNavigate();
   const [q, setQ] = useState('');
@@ -85,10 +83,6 @@ export default function Nav() {
           <NavLink to="/creators" className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')}>
             <FiUsers /> <span>Creators</span>
           </NavLink>
-          <button onClick={toggleTheme} className="nav__icon-link" style={{ border: 'none', background: 'none', cursor: 'pointer' }}
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
-            {theme === 'dark' ? <FiSun /> : <FiMoon />} <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
-          </button>
           {!loading && user && (
             <NavLink to="/cart" className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')} style={{ position: 'relative' }}>
               <FiShoppingCart /> <span>Cart</span>

@@ -53,7 +53,7 @@ export default function SplashScreen() {
   return (
     <div className={`splash${phase === 'leaving' ? ' splash--leaving' : ''}`} aria-hidden="true">
       <svg viewBox="0 0 220 200" width="140" height="127" className={`splash__scorpion${ready ? ' is-glowing' : ''}`}>
-        <g fill="none" stroke="var(--gold)" strokeLinecap="round" strokeLinejoin="round">
+        <g fill="none" stroke="var(--green-dark)" strokeLinecap="round" strokeLinejoin="round">
           {/* tail, curling from the body's rear up and over to the stinger */}
           <path ref={el => (pathRefs.current[0] = el)} strokeWidth="7"
             d="M150 150 Q160 118 138 96 Q118 78 96 84 Q70 92 74 66 Q77 46 100 40" />

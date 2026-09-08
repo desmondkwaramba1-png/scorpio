@@ -789,47 +789,43 @@ img{max-width:100%;display:block;}
 .creator-header__meta{color:rgba(255,255,255,.55);font-size:.82rem;margin-top:4px;}
 
 /* ---- splash screen (first open only) ---- */
-/* Redesigned from scratch around one rule: fewer decisions, not more
-   clever ones. The old version had a 5-stop gradient, 4 sparkle dots, a
-   pulsing background glow, a stroke-draw animation, a separate icon glow
-   pulse, AND letter-by-letter text — six simultaneous effects competing
-   for attention, which reads as busy no matter what colors go into it.
-   This keeps exactly one focal animation (the scorpion glowing) inside a
-   calm, confident navy field, with a single static light pool behind it —
-   not a background gradient trying to cover the whole screen, which is
-   what forced an ugly color transition in the first place. Warm light
-   simply fading to transparent has no "which color goes in the middle"
-   problem to get wrong. */
+/* Third and (hopefully) final pass: near-white and professional, per
+   explicit direction. Warm off-white ground (not stark #fff, which reads
+   sterile) with mostly-navy line art — a dark confident mark on a light
+   field, the classic professional-logo-reveal pairing — and gold kept to
+   exactly one accent point (the stinger tip) instead of coloring the whole
+   mark. Glows read as light-in-darkness, so they don't work on a light
+   ground; replaced with an ordinary soft drop-shadow for depth instead. */
 .splash{
   position:fixed;inset:0;z-index:1000;overflow:hidden;
-  background:var(--green-dark);
+  background:#FAF7F2;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
   opacity:1;transition:opacity .5s ease;
 }
 .splash::before{
-  content:'';position:absolute;left:50%;top:44%;width:620px;height:620px;
+  content:'';position:absolute;left:50%;top:44%;width:520px;height:520px;
   transform:translate(-50%,-50%);pointer-events:none;
-  background:radial-gradient(circle, rgba(255,162,77,.32) 0%, rgba(255,140,66,.1) 45%, transparent 72%);
+  background:radial-gradient(circle, rgba(255,140,66,.14) 0%, rgba(255,140,66,.04) 45%, transparent 72%);
 }
 .splash--leaving{opacity:0;pointer-events:none;}
 .splash__scorpion{
   position:relative;z-index:1;
-  filter:drop-shadow(0 0 0 rgba(var(--gold-rgb),0));transition:filter .6s ease;
+  filter:drop-shadow(0 2px 6px rgba(19,25,33,.1));transition:filter .6s ease;
 }
-.splash__scorpion.is-glowing{filter:drop-shadow(0 0 12px rgba(var(--gold-rgb),.65));animation:splash-pulse 2.6s ease-in-out .9s infinite;}
+.splash__scorpion.is-glowing{filter:drop-shadow(0 4px 14px rgba(19,25,33,.16));animation:splash-pulse 2.6s ease-in-out .9s infinite;}
 .splash__name{
   position:relative;z-index:1;
-  font-family:'Alex Brush',cursive;font-weight:400;font-size:3.2rem;line-height:1;color:var(--gold);
-  text-shadow:0 0 20px rgba(var(--gold-rgb),.5);margin:0;
+  font-family:'Alex Brush',cursive;font-weight:400;font-size:3.2rem;line-height:1;color:var(--gold-dark);
+  margin:0;
   opacity:0;transform:translateY(8px);transition:opacity .7s ease .9s, transform .7s ease .9s;
 }
 .splash__name.is-in{opacity:1;transform:translateY(0);}
 @keyframes splash-pulse{
-  0%,100%{filter:drop-shadow(0 0 10px rgba(var(--gold-rgb),.6));}
-  50%{filter:drop-shadow(0 0 22px rgba(var(--gold-rgb),.95));}
+  0%,100%{filter:drop-shadow(0 2px 6px rgba(19,25,33,.1));}
+  50%{filter:drop-shadow(0 5px 16px rgba(19,25,33,.2));}
 }
 @media (prefers-reduced-motion: reduce){
-  .splash__scorpion, .splash__scorpion.is-glowing{animation:none;filter:drop-shadow(0 0 10px rgba(var(--gold-rgb),.55));}
+  .splash__scorpion, .splash__scorpion.is-glowing{animation:none;filter:drop-shadow(0 2px 6px rgba(19,25,33,.12));}
   .splash__name{transition:none;opacity:1;transform:none;}
 }
 

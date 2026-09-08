@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://scorpio-api.fly.dev/api/:path*" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}

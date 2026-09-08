@@ -3,6 +3,7 @@ const db = require('../db/schema');
 const { requireAuth, requireCreator } = require('../middleware/auth');
 const { sweepAutoReleases } = require('../lib/escrow');
 const { PLATFORM_FEE_PERCENT, netOf } = require('../lib/fees');
+const { balancesFor } = require('../lib/walletBalances');
 
 const router = express.Router();
 
@@ -24,23 +25,9 @@ router.get('/me', requireAuth, requireCreator, (req, res) => {
     ...netOf(r.payment_status === 'paid' ? r.amount_minor : 0)
   }));
 
-  const paid = rows.filter(r => r.payment_status === 'paid');
-  // A service order (fulfillment_status set) only counts as available once
-  // it's actually released — before that it's real money, but it's the
-  // buyer's until delivery is confirmed, not the seller's to withdraw yet.
-  const available = paid.filter(r => !r.fulfillment_status || r.fulfillment_status === 'released');
-  const escrowed = paid.filter(r => r.fulfillment_status && !['released', 'refunded'].includes(r.fulfillment_status));
-
-  const grossMinor = paid.reduce((sum, r) => sum + r.amount_minor, 0);
-  const { fee_minor: feeMinor, net_minor: netMinor } = netOf(available.reduce((sum, r) => sum + r.amount_minor, 0));
-  const escrowedMinor = escrowed.reduce((sum, r) => sum + r.amount_minor, 0);
-
   res.json({
     currency: 'USD',
-    gross_minor: grossMinor,
-    fee_minor: feeMinor,
-    available_minor: netMinor,
-    escrowed_minor: escrowedMinor,
+    ...balancesFor(req.creator.id),
     fee_policy: `${PLATFORM_FEE_PERCENT}% per paid order`,
     payout_number: req.creator.payout_ecocash_number || null,
     transactions

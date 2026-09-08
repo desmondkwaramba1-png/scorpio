@@ -733,6 +733,17 @@ img{max-width:100%;display:block;}
 .tab:hover{background:var(--green-tint);color:var(--green-glow);}
 .tab--active{background:var(--ink);color:var(--ink-contrast);}
 
+/* ---- admin ---- */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);}
+.admin-table{width:100%;border-collapse:collapse;font-size:.86rem;white-space:nowrap;}
+.admin-table th{
+  text-align:left;padding:11px 14px;font-size:.74rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--muted);border-bottom:1px solid var(--line);background:var(--paper);position:sticky;top:0;
+}
+.admin-table td{padding:11px 14px;border-bottom:1px solid var(--line);}
+.admin-table tbody tr:last-child td{border-bottom:none;}
+.admin-table tbody tr:hover{background:var(--paper);}
+
 /* ---- product page ---- */
 .product-layout{
   display:grid;gap:var(--sp-7);grid-template-columns:1.15fr .85fr;align-items:start;

@@ -93,11 +93,11 @@ export default function Overview() {
           <tbody>
             {data.recent_signups.map(u => (
               <tr key={u.id}>
-                <td>{u.name || u.username}</td>
-                <td>{u.email || '—'}</td>
-                <td>{u.phone || '—'}</td>
-                <td><span className={`badge ${u.is_creator ? 'badge--gold' : 'badge--neutral'}`}>{u.is_creator ? 'Creator' : 'Buyer'}</span></td>
-                <td className="muted">{u.created_at}</td>
+                <td data-label="Name">{u.name || u.username}</td>
+                <td data-label="Email">{u.email || '—'}</td>
+                <td data-label="Phone">{u.phone || '—'}</td>
+                <td data-label="Role"><span className={`badge ${u.is_creator ? 'badge--gold' : 'badge--neutral'}`}>{u.is_creator ? 'Creator' : 'Buyer'}</span></td>
+                <td data-label="Joined" className="muted">{u.created_at}</td>
               </tr>
             ))}
           </tbody>

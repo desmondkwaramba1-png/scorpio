@@ -1116,3 +1116,27 @@ img{max-width:100%;display:block;}
   .reel-viewer{padding:0;}
   .reel-viewer__stage{width:100%;height:100%;border-radius:0;}
 }
+
+/* ---- admin: responsive tables ---- */
+/* A 9-column table (Sellers) doesn't just need to scroll on a phone, it
+   needs to stop being a table at all — each row becomes a labeled card
+   instead, using the classic data-label CSS trick so no separate mobile
+   JSX render path is needed. */
+@media (max-width:640px){
+  .table-wrap{overflow-x:visible;border:none;background:none;}
+  .admin-table, .admin-table thead, .admin-table tbody, .admin-table th, .admin-table td, .admin-table tr{display:block;}
+  .admin-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);}
+  .admin-table tr{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    margin-bottom:10px;padding:4px 14px;box-shadow:var(--shadow-1);
+  }
+  .admin-table td{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+    padding:9px 0;border-bottom:1px solid var(--line);text-align:right;white-space:normal;
+  }
+  .admin-table td:last-child{border-bottom:none;}
+  .admin-table td::before{
+    content:attr(data-label);font-weight:600;font-size:.72rem;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.03em;text-align:left;flex-shrink:0;
+  }
+}

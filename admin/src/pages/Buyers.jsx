@@ -34,12 +34,12 @@ export default function Buyers() {
           <tbody>
             {filtered.map(b => (
               <tr key={b.id}>
-                <td style={{ fontWeight: 600 }}>{b.name || '—'}</td>
-                <td>{b.email}</td>
-                <td>{b.phone || '—'}</td>
-                <td>{b.order_count}</td>
-                <td className="mono" style={{ fontWeight: 600 }}>{formatMoney(b.total_spent_minor, 'USD')}</td>
-                <td className="muted">{b.created_at}</td>
+                <td data-label="Name" style={{ fontWeight: 600 }}>{b.name || '—'}</td>
+                <td data-label="Email">{b.email}</td>
+                <td data-label="Phone">{b.phone || '—'}</td>
+                <td data-label="Orders">{b.order_count}</td>
+                <td data-label="Total spent" className="mono" style={{ fontWeight: 600 }}>{formatMoney(b.total_spent_minor, 'USD')}</td>
+                <td data-label="Joined" className="muted">{b.created_at}</td>
               </tr>
             ))}
           </tbody>

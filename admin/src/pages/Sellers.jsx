@@ -38,18 +38,18 @@ export default function Sellers() {
           <tbody>
             {filtered.map(s => (
               <tr key={s.id}>
-                <td><a href={`${SITE_ORIGIN}/@${s.handle}`} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600 }}>{s.name}</a></td>
-                <td>{s.email}</td>
-                <td>{s.phone || '—'}</td>
-                <td>{s.published_count} / {s.product_count}</td>
-                <td className="mono" style={{ color: 'var(--green-glow)', fontWeight: 600 }}>{formatMoney(s.available_minor, 'USD')}</td>
-                <td className="mono muted">{formatMoney(s.escrowed_minor, 'USD')}</td>
-                <td>{s.payout_ecocash_number
+                <td data-label="Creator"><a href={`${SITE_ORIGIN}/@${s.handle}`} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600 }}>{s.name}</a></td>
+                <td data-label="Email">{s.email}</td>
+                <td data-label="Phone">{s.phone || '—'}</td>
+                <td data-label="Products">{s.published_count} / {s.product_count}</td>
+                <td data-label="Available" className="mono" style={{ color: 'var(--green-glow)', fontWeight: 600 }}>{formatMoney(s.available_minor, 'USD')}</td>
+                <td data-label="Held (escrow)" className="mono muted">{formatMoney(s.escrowed_minor, 'USD')}</td>
+                <td data-label="Payout number">{s.payout_ecocash_number
                   ? <span className="mono">{s.payout_ecocash_number}</span>
                   : <span className="badge badge--neutral">None on file</span>}
                 </td>
-                <td>{s.verified ? <span className="badge badge--green">Verified</span> : <span className="badge badge--neutral">Not yet</span>}</td>
-                <td className="muted">{s.created_at}</td>
+                <td data-label="Verified">{s.verified ? <span className="badge badge--green">Verified</span> : <span className="badge badge--neutral">Not yet</span>}</td>
+                <td data-label="Joined" className="muted">{s.created_at}</td>
               </tr>
             ))}
           </tbody>

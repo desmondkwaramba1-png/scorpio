@@ -70,6 +70,23 @@ export default function Product() {
       .catch(() => setError('This product could not be found. The link may be wrong or it may have been removed.'));
   }, [slug]);
 
+  // Called unconditionally, before the early returns below — a hook can
+  // never sit after a return that only fires on some renders (the loading
+  // skeleton fires on the very first render, before `product` exists, then
+  // never again once it loads), or React throws "rendered more hooks than
+  // during the previous render" (error #310) the moment the count changes.
+  const productUrlForSeo = product ? `/@${product.creator_handle}/${product.slug}` : null;
+  useSEO({
+    title: product ? `${product.title} by ${product.creator_name} — SCORPIO` : undefined,
+    description: product
+      ? (product.description
+        ? product.description.slice(0, 160)
+        : `${product.title} — ${formatMoney(product.price_minor, product.currency)} on SCORPIO. Real work from ${product.creator_name}, not scraped off the internet.`)
+      : undefined,
+    image: product?.cover_path,
+    url: productUrlForSeo ? `${SITE_ORIGIN}${productUrlForSeo}` : undefined
+  });
+
   if (error) {
     return <div className="wrap" style={{ padding: '80px 20px', textAlign: 'center' }}><p className="error-text">{error}</p></div>;
   }
@@ -100,15 +117,6 @@ export default function Product() {
   const checkoutUrl = `${productUrl}/checkout`;
   const isOwner = creator?.id === product.creator_id;
   const fileFormat = fileFormatLabel(product.files);
-
-  useSEO({
-    title: `${product.title} by ${product.creator_name} — SCORPIO`,
-    description: product.description
-      ? product.description.slice(0, 160)
-      : `${product.title} — ${price} on SCORPIO. Real work from ${product.creator_name}, not scraped off the internet.`,
-    image: product.cover_path,
-    url: `${SITE_ORIGIN}${productUrl}`
-  });
 
   async function handleAddToCart() {
     if (!user) { navigate(`/login?role=buyer&next=${encodeURIComponent(productUrl)}`); return; }

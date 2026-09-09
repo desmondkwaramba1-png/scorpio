@@ -23,25 +23,48 @@ function AccountMenu({ creator, logout }) {
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, []);
 
+  const initial = creator.name ? creator.name.charAt(0).toUpperCase() : 'A';
+
   return (
     <div className="nav__account" ref={ref}>
       <button
         type="button"
-        className={`nav__icon-link${open ? ' nav__icon-link--active' : ''}`}
+        className={`nav__account-trigger${open ? ' nav__account-trigger--active' : ''}`}
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
       >
-        <FiGrid /> <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>Account <FiChevronDown size={11} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s ease' }} /></span>
+        <span
+          className="nav__account-avatar"
+          style={creator.avatar_path ? { backgroundImage: `url(${creator.avatar_path})` } : undefined}
+        >
+          {!creator.avatar_path && initial}
+        </span>
+        <span className="nav__account-trigger__label">Account</span>
+        <FiChevronDown size={13} className="nav__account-trigger__chevron" style={{ transform: open ? 'rotate(180deg)' : 'none' }} />
       </button>
       {open && (
         <div className="nav__account-menu">
+          <div className="nav__account-menu__header">
+            <span
+              className="nav__account-avatar nav__account-avatar--lg"
+              style={creator.avatar_path ? { backgroundImage: `url(${creator.avatar_path})` } : undefined}
+            >
+              {!creator.avatar_path && initial}
+            </span>
+            <div className="nav__account-menu__who">
+              <p className="nav__account-menu__name">{creator.name || 'Your storefront'}</p>
+              {creator.handle && <p className="nav__account-menu__handle">@{creator.handle}</p>}
+            </div>
+          </div>
+          <div className="nav__account-menu__divider" />
           <Link to="/dashboard" onClick={() => setOpen(false)} className="nav__account-menu__item">
             <FiGrid size={15} /> Dashboard
           </Link>
           <Link to="/account" onClick={() => setOpen(false)} className="nav__account-menu__item">
             <FiPackage size={15} /> My orders
           </Link>
-          <button type="button" onClick={() => { setOpen(false); logout(); }} className="nav__account-menu__item">
+          <div className="nav__account-menu__divider" />
+          <button type="button" onClick={() => { setOpen(false); logout(); }} className="nav__account-menu__item nav__account-menu__item--danger">
             <FiLogOut size={15} /> Log out
           </button>
         </div>

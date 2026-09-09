@@ -149,20 +149,22 @@ img{max-width:100%;display:block;}
 .btn:active:not(:disabled){transform:translateY(0) scale(.97);}
 
 /* ---- form fields ---- */
-.field{margin-bottom:18px;text-align:left;}
+.field{margin-bottom:20px;text-align:left;}
 .field label{
-  display:block;font-size:.82rem;font-weight:600;color:var(--muted);margin-bottom:6px;
+  display:block;font-size:.82rem;font-weight:700;color:var(--ink-dim);margin-bottom:7px;letter-spacing:.01em;
 }
 .field input,.field textarea,.field select{
-  width:100%;padding:.75rem .9rem;border:1.5px solid var(--line-strong);border-radius:var(--radius-sm);
-  font-size:1rem;color:var(--ink);background:var(--field-bg);transition:border-color .15s ease, box-shadow .15s ease;
+  width:100%;padding:.85rem 1rem;border:1.5px solid var(--line-strong);border-radius:var(--radius-sm);
+  font-size:1rem;color:var(--ink);background:var(--field-bg);box-shadow:var(--shadow-1);
+  transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
+.field input:hover,.field textarea:hover,.field select:hover{border-color:var(--muted);}
 .field input::placeholder,.field textarea::placeholder{color:var(--muted);opacity:1;}
 .field input:focus,.field textarea:focus,.field select:focus{
   border-color:var(--green-glow);outline:none;box-shadow:0 0 0 3px var(--green-tint);
 }
 .field textarea{min-height:90px;resize:vertical;}
-.field small{display:block;margin-top:5px;color:var(--muted);font-size:.78rem;}
+.field small{display:block;margin-top:6px;color:var(--muted);font-size:.78rem;line-height:1.4;}
 
 .field__password-wrap{position:relative;}
 .field__password-wrap input{padding-right:42px;}
@@ -185,9 +187,11 @@ img{max-width:100%;display:block;}
 .input-icon{position:relative;}
 .input-icon svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;}
 .input-icon input{
-  width:100%;padding:.75rem .9rem .75rem 36px;border:1.5px solid var(--line-strong);border-radius:var(--radius-sm);
-  font-size:1rem;color:var(--ink);background:var(--field-bg);transition:border-color .15s ease, box-shadow .15s ease;
+  width:100%;padding:.85rem 1rem .85rem 36px;border:1.5px solid var(--line-strong);border-radius:var(--radius-sm);
+  font-size:1rem;color:var(--ink);background:var(--field-bg);box-shadow:var(--shadow-1);
+  transition:border-color .15s ease, box-shadow .15s ease;
 }
+.input-icon input:hover{border-color:var(--muted);}
 .input-icon input::placeholder{color:var(--muted);opacity:1;}
 .input-icon input:focus{border-color:var(--green-glow);outline:none;box-shadow:0 0 0 3px var(--green-tint);}
 
@@ -667,27 +671,54 @@ img{max-width:100%;display:block;}
 
 /* ---- nav: account dropdown (Dashboard + My orders, for a creator who
    also buys — see the comment on AccountMenu in Nav.jsx) ---- */
-/* Solid gold text, same proven treatment as "Start selling" (.nav__icon-
-   link--cta) — not a translucent white chip, which depends on whatever
-   backdrop-filter happens to be blurring behind it and can wash out
-   instead of standing out. Gold-on-navy has reliable contrast regardless. */
+/* A real pill chip, not the same stacked icon-over-label treatment as the
+   other nav items — this is the one nav entry that represents a specific
+   person, not a destination, so it gets an avatar and reads like an
+   identity control (think any app's top-right account menu) rather than
+   one more nav icon competing for the same tiny label real estate. */
 .nav__account{position:relative;}
-.nav__account > .nav__icon-link{color:var(--gold);}
-.nav__account > .nav__icon-link:hover{background:rgba(var(--gold-rgb),.14);color:var(--gold);}
-.nav__account > .nav__icon-link.nav__icon-link--active{background:rgba(var(--gold-rgb),.16);}
+.nav__account-trigger{
+  display:flex;align-items:center;gap:8px;height:100%;padding:6px 12px 6px 6px;border-radius:999px;
+  background:rgba(var(--gold-rgb),.1);border:1px solid rgba(var(--gold-rgb),.28);cursor:pointer;
+  color:var(--gold);font-family:inherit;transition:background .15s ease,border-color .15s ease;
+}
+.nav__account-trigger:hover,.nav__account-trigger--active{background:rgba(var(--gold-rgb),.2);border-color:rgba(var(--gold-rgb),.5);}
+.nav__account-trigger__label{font-size:.82rem;font-weight:700;}
+.nav__account-trigger__chevron{transition:transform .18s ease;flex-shrink:0;}
+.nav__account-avatar{
+  width:26px;height:26px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background-color:var(--gold);background-size:cover;background-position:center;
+  color:var(--green-dark);font-weight:700;font-size:.78rem;font-family:'Cabinet Grotesk',sans-serif;
+}
+.nav__account-avatar--lg{width:38px;height:38px;font-size:1rem;}
+@media (max-width:780px){
+  .nav__account-trigger{padding:4px;background:none;border-color:transparent;}
+  .nav__account-trigger__label{display:none;}
+  .nav__account-trigger__chevron{display:none;}
+  .nav__account-avatar{width:30px;height:30px;}
+}
+
 .nav__account-menu{
-  position:absolute;top:calc(100% + 8px);right:0;min-width:180px;z-index:60;
-  background:#1A222D;border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-sm);
-  box-shadow:var(--shadow-3);padding:6px;
+  position:absolute;top:calc(100% + 10px);right:0;min-width:220px;z-index:60;
+  background:#1A222D;border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);
+  box-shadow:var(--shadow-3);padding:8px;
   animation:fade-in-up .18s cubic-bezier(.22,.7,.3,1) both;
 }
+.nav__account-menu__header{display:flex;align-items:center;gap:10px;padding:6px 8px 10px;}
+.nav__account-menu__who{min-width:0;}
+.nav__account-menu__name{font-size:.88rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.nav__account-menu__handle{font-size:.76rem;color:rgba(255,255,255,.5);font-family:'JetBrains Mono',monospace;}
+.nav__account-menu__divider{height:1px;background:rgba(255,255,255,.08);margin:4px 4px;}
 .nav__account-menu__item{
-  display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border-radius:8px;
+  display:flex;align-items:center;gap:10px;width:100%;padding:10px;border-radius:8px;
   background:none;border:none;cursor:pointer;font-family:inherit;font-size:.86rem;font-weight:600;
   color:rgba(255,255,255,.85);text-align:left;transition:background .15s ease,color .15s ease;
 }
 .nav__account-menu__item:hover{background:rgba(255,255,255,.08);color:#fff;}
 .nav__account-menu__item svg{flex-shrink:0;color:var(--gold);}
+.nav__account-menu__item--danger:hover{background:rgba(230,90,80,.14);color:#ff9f96;}
+.nav__account-menu__item--danger:hover svg{color:#ff9f96;}
 
 /* ---- hero ---- */
 .hero{

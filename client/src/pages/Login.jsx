@@ -191,10 +191,10 @@ export default function Login() {
             <form onSubmit={handleLogin}>
               <div className="field">
                 <label htmlFor="identifier">Username or email</label>
-                <input id="identifier" required value={form.identifier} onChange={update('identifier')} placeholder="myusername" />
+                <input id="identifier" required value={form.identifier} onChange={update('identifier')} placeholder="tendai_writes or you@example.com" />
               </div>
               <PasswordField
-                id="password" label="Password" value={form.password} onChange={update('password')} placeholder="mypassword"
+                id="password" label="Password" value={form.password} onChange={update('password')}
               />
               {error && <p className="error-text">{error}</p>}
               <button className="btn btn--primary btn--block" disabled={submitting} type="submit">
@@ -212,7 +212,7 @@ export default function Login() {
             <form onSubmit={handleSignup}>
               <div className="field">
                 <label htmlFor="username">Username</label>
-                <input id="username" required value={form.username} onChange={update('username')} placeholder="myusername" />
+                <input id="username" required value={form.username} onChange={update('username')} placeholder="e.g. tendai_writes" />
               </div>
               <div className="field">
                 <label htmlFor="email">Email</label>
@@ -226,10 +226,10 @@ export default function Login() {
               </div>
               <PasswordField
                 id="signup_password" label="Password" value={form.password} onChange={update('password')}
-                placeholder="mypassword" minLength={8} hint="At least 8 characters."
+                minLength={8} hint="At least 8 characters — pick something you don't use anywhere else."
               />
               <PasswordField
-                id="confirm" label="Confirm password" value={form.confirm} onChange={update('confirm')} placeholder="mypassword"
+                id="confirm" label="Confirm password" value={form.confirm} onChange={update('confirm')}
               />
               <div className="field">
                 <label style={{ display: 'flex', alignItems: 'flex-start', fontWeight: 400, gap: 8 }}>

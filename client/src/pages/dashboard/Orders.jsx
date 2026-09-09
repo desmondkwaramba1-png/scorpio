@@ -4,6 +4,7 @@ import { FiTrendingUp, FiMail, FiMessageCircle, FiShield, FiAlertTriangle } from
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
+import ReportProblem from '../../components/ReportProblem.jsx';
 
 function formatDate(sqliteDatetime) {
   const d = new Date(sqliteDatetime.replace(' ', 'T'));
@@ -119,6 +120,16 @@ function OrderRow({ o, creator }) {
 
       {delivering && fulfillment === 'awaiting_delivery' && (
         <DeliverForm purchaseId={o.id} onDelivered={() => { setFulfillment('delivered'); setDelivering(false); }} />
+      )}
+
+      {/* Service orders already surface problems through the dispute flow
+          above (buyer-initiated, held payment) — this covers everything
+          else, and gives sellers a way to flag something too (an abusive
+          buyer, a chargeback threat), which nothing did before. */}
+      {!fulfillment && (
+        <div style={{ marginTop: 10 }}>
+          <ReportProblem purchaseId={o.id} hasOpenReport={o.has_open_report} />
+        </div>
       )}
     </div>
   );

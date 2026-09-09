@@ -9,5 +9,6 @@ src/uploads/*
 !src/uploads/.gitkeep
 
 client/dist/
+admin/dist/
 
 *.log

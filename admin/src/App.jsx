@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Routes, Route, NavLink } from 'react-router-dom';
-import { FiLock, FiGrid, FiUsers, FiShoppingBag, FiCreditCard, FiAlertTriangle, FiFlag, FiLogOut } from 'react-icons/fi';
+import { FiLock, FiGrid, FiUsers, FiShoppingBag, FiCreditCard, FiAlertTriangle, FiFlag, FiMessageSquare, FiLogOut } from 'react-icons/fi';
 import { AdminProvider, useAdmin } from './context/AdminContext.jsx';
 import Overview from './pages/Overview.jsx';
 import Sellers from './pages/Sellers.jsx';
 import Buyers from './pages/Buyers.jsx';
 import Payouts from './pages/Payouts.jsx';
 import Disputes from './pages/Disputes.jsx';
+import Reports from './pages/Reports.jsx';
 import Flagged from './pages/Flagged.jsx';
 
 const TABS = [
@@ -15,6 +16,7 @@ const TABS = [
   ['/buyers', 'Buyers', FiUsers],
   ['/payouts', 'Payouts', FiCreditCard],
   ['/disputes', 'Disputes', FiAlertTriangle],
+  ['/reports', 'Reports', FiMessageSquare],
   ['/flagged', 'Flagged', FiFlag]
 ];
 
@@ -98,6 +100,7 @@ function AdminShell() {
         <Route path="/buyers" element={<Buyers />} />
         <Route path="/payouts" element={<Payouts />} />
         <Route path="/disputes" element={<Disputes />} />
+        <Route path="/reports" element={<Reports />} />
         <Route path="/flagged" element={<Flagged />} />
       </Routes>
     </div>

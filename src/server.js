@@ -18,6 +18,7 @@ const walletRouter = require('./routes/wallet');
 const downloadsRouter = require('./routes/downloads');
 const adminRouter = require('./routes/admin');
 const reelsRouter = require('./routes/reels');
+const reportsRouter = require('./routes/reports');
 const sitemapRouter = require('./routes/sitemap');
 
 // origin: true (reflect whatever Origin header showed up) plus
@@ -71,6 +72,7 @@ app.use('/api/wallet', walletRouter);
 app.use('/api/downloads', downloadsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/reels', reelsRouter);
+app.use('/api/reports', reportsRouter);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 // Mounted at root, not under /api — see client/vercel.json's dedicated

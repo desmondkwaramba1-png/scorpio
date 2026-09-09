@@ -87,7 +87,8 @@ router.get('/orders', requireAuth, requireCreator, (req, res) => {
     SELECT pu.id, pu.amount_minor, pu.currency, pu.created_at,
            pu.fulfillment_status, pu.delivered_at,
            p.id AS product_id, p.title AS product_title, p.slug AS product_slug, p.type AS product_type,
-           b.id AS buyer_id, b.name AS buyer_name, b.email AS buyer_email, u.phone AS buyer_phone
+           b.id AS buyer_id, b.name AS buyer_name, b.email AS buyer_email, u.phone AS buyer_phone,
+           EXISTS(SELECT 1 FROM reports r WHERE r.purchase_id = pu.id AND r.status = 'open') AS has_open_report
     FROM purchases pu
     JOIN products p ON p.id = pu.product_id
     JOIN buyers b ON b.id = pu.buyer_id

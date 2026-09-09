@@ -78,6 +78,46 @@ router.post('/disputes/:id/resolve', requireAdmin, (req, res) => {
   });
 });
 
+// GET /api/admin/reports — general problem reports on any order (see
+// migrations/027_reports.sql). Separate queue from /disputes above: this
+// covers ordinary digital-goods orders, which the escrow dispute system
+// never did — those only ever applied to 'service' orders.
+router.get('/reports', requireAdmin, (req, res) => {
+  const reports = db.prepare(`
+    SELECT rp.id AS report_id, rp.reason, rp.status AS report_status, rp.reporter_role, rp.created_at AS reported_at,
+           pu.id AS purchase_id, pu.amount_minor, pu.currency, pu.created_at AS purchased_at,
+           p.title AS product_title, p.slug AS product_slug,
+           buyer.name AS buyer_name, buyer.email AS buyer_email,
+           c.name AS seller_name, c.handle AS seller_handle, cu.email AS seller_email,
+           reporter.email AS reporter_email
+    FROM reports rp
+    JOIN purchases pu ON pu.id = rp.purchase_id
+    JOIN products p ON p.id = pu.product_id
+    JOIN buyers buyer ON buyer.id = pu.buyer_id
+    JOIN creators c ON c.id = p.creator_id
+    LEFT JOIN users cu ON cu.id = c.user_id
+    LEFT JOIN users reporter ON reporter.id = rp.reporter_user_id
+    WHERE rp.status = 'open'
+    ORDER BY rp.created_at ASC
+  `).all();
+
+  res.json(reports);
+});
+
+// POST /api/admin/reports/:id/resolve — { note }. This queue doesn't hold
+// or move any money (unlike /disputes, which sits on top of the escrow
+// system) — resolving just records that a human looked at it and closes
+// it out of the open queue.
+router.post('/reports/:id/resolve', requireAdmin, (req, res) => {
+  const note = (req.body.note || '').trim();
+  const result = db.prepare(`
+    UPDATE reports SET status = 'resolved', admin_note = ?, resolved_at = datetime('now')
+    WHERE id = ? AND status = 'open'
+  `).run(note || null, req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: 'Report not found, or already resolved.' });
+  res.json({ ok: true });
+});
+
 // GET /api/admin/flagged-products — the content-verification queue: real,
 // automated findings only (a duplicate file hash, a type/extension
 // mismatch, a page count that contradicts the listing's own description —

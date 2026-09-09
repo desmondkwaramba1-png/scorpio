@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api';
 import { formatMoney } from '../lib/money';
 import ThemeToggle from '../components/ThemeToggle.jsx';
+import ReportProblem from '../components/ReportProblem.jsx';
 
 function formatDate(sqliteDatetime) {
   const d = new Date(sqliteDatetime.replace(' ', 'T'));
@@ -283,6 +284,15 @@ function OrderRow({ purchase, onResend }) {
           sellerName={purchase.creator_name} sellerEmail={purchase.creator_email} sellerPhone={purchase.creator_phone}
           productTitle={purchase.product_title}
         />
+      )}
+      {/* Service orders already have their own dispute flow above (held
+          payment, refund/release resolution) — this is the equivalent for
+          every other order type, which never had any way to flag a
+          problem at all. */}
+      {!purchase.service && purchase.payment_status === 'paid' && (
+        <div style={{ marginTop: 12 }} onClick={e => e.stopPropagation()}>
+          <ReportProblem purchaseId={purchase.id} hasOpenReport={purchase.has_open_report} />
+        </div>
       )}
       {resendError && <p className="error-text" style={{ marginTop: 10 }}>{resendError}</p>}
     </div>

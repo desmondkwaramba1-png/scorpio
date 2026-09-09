@@ -1,4 +1,3 @@
-const fs = require('fs/promises');
 const sharp = require('sharp');
 
 // Uploaded covers and avatars come straight off a seller's phone — often
@@ -8,27 +7,27 @@ const sharp = require('sharp');
 // what actually moves the needle on page load speed; nothing on the CSS
 // side touches this.
 //
-// Re-encodes in the SAME format the file came in — the on-disk filename
-// (and therefore its extension) is already fixed by multer before this
-// runs, so switching formats here would leave a real mismatch between the
-// extension and the bytes on disk.
-async function optimizeImage(filePath, { maxWidth, maxHeight } = {}) {
+// Takes and returns a Buffer — nothing here touches disk. Uploads go
+// straight from multer.memoryStorage() to here to R2 (src/lib/storage.js),
+// so there's no local file to read or write back to at any point.
+// Re-encodes in the SAME format the file came in.
+async function optimizeImage(buffer, { maxWidth, maxHeight } = {}) {
   let meta;
   try {
-    meta = await sharp(filePath).metadata();
+    meta = await sharp(buffer).metadata();
   } catch {
     // Not a real image (or already corrupt) — the upload's own fileFilter
     // already gated on mimetype, so this is a defensive no-op, not the
-    // expected path.
-    return;
+    // expected path. Return the original buffer unchanged.
+    return buffer;
   }
 
   // An animated GIF loses its animation the moment it goes through this
   // still-image resize/encode pipeline — leave it exactly as uploaded
   // rather than silently breaking it.
-  if (meta.format === 'gif' && meta.pages > 1) return;
+  if (meta.format === 'gif' && meta.pages > 1) return buffer;
 
-  const pipeline = sharp(filePath).rotate(); // no args: auto-orient from EXIF, then strip the tag
+  const pipeline = sharp(buffer).rotate(); // no args: auto-orient from EXIF, then strip the tag
   if (maxWidth || maxHeight) {
     pipeline.resize({ width: maxWidth, height: maxHeight, fit: 'inside', withoutEnlargement: true });
   }
@@ -40,15 +39,7 @@ async function optimizeImage(filePath, { maxWidth, maxHeight } = {}) {
     gif: () => pipeline.gif()
   }[meta.format] || (() => pipeline.jpeg({ quality: 82, mozjpeg: true }));
 
-  const buffer = await encode().toBuffer();
-
-  // Not a direct overwrite: sharp/libvips can still hold the source file
-  // open at this point (confirmed on Windows — writeFile straight back to
-  // filePath throws EBUSY-equivalent), so this writes to a sibling temp
-  // file and atomically renames it over the original instead.
-  const tmpPath = `${filePath}.tmp`;
-  await fs.writeFile(tmpPath, buffer);
-  await fs.rename(tmpPath, filePath);
+  return encode().toBuffer();
 }
 
 module.exports = { optimizeImage };

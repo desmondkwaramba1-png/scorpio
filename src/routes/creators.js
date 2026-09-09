@@ -6,20 +6,22 @@ const db = require('../db/schema');
 const { requireAuth } = require('../middleware/auth');
 const { getVerificationCriteria, checkAndUpdateVerification } = require('../lib/verification');
 const { optimizeImage } = require('../lib/imageProcessing');
-const { UPLOADS_DIR } = require('../lib/paths');
+const storage = require('../lib/storage');
 
 const router = express.Router();
 
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: UPLOADS_DIR,
-    filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname);
-      cb(null, `avatar-${randomUUID()}${ext}`);
-    }
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB, this is a profile photo, not a product file
 });
+
+async function uploadAvatar(file) {
+  const key = `avatars/${randomUUID()}${path.extname(file.originalname)}`;
+  let buffer = file.buffer;
+  try { buffer = await optimizeImage(file.buffer, { maxWidth: 480 }); } catch (err) { console.error('[image optimize]', err); }
+  await storage.uploadBuffer(key, buffer, file.mimetype);
+  return storage.publicUrl(key);
+}
 
 const HANDLE_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])?$/;
 
@@ -62,12 +64,8 @@ router.post('/', requireAuth, upload.single('avatar'), async (req, res) => {
   const existing = db.prepare('SELECT id FROM creators WHERE user_id = ?').get(req.user.id);
   if (existing) return res.status(409).json({ error: 'You already have a creator profile.' });
 
-  if (req.file) {
-    try { await optimizeImage(req.file.path, { maxWidth: 480 }); } catch (err) { console.error('[image optimize]', err); }
-  }
-
   try {
-    const avatarPath = req.file ? `/uploads/${req.file.filename}` : null;
+    const avatarPath = req.file ? await uploadAvatar(req.file) : null;
     const result = db.prepare(`
       INSERT INTO creators
         (user_id, handle, name, bio, what_selling, who_for, avatar_path, payout_ecocash_number, payout_bank_details)
@@ -94,12 +92,8 @@ router.post('/', requireAuth, upload.single('avatar'), async (req, res) => {
 router.patch('/me', requireAuth, upload.single('avatar'), async (req, res) => {
   if (!req.creator) return res.status(404).json({ error: 'No creator profile yet.' });
 
-  if (req.file) {
-    try { await optimizeImage(req.file.path, { maxWidth: 480 }); } catch (err) { console.error('[image optimize]', err); }
-  }
-
   const { name, bio, what_selling, who_for, payout_ecocash_number, payout_bank_details } = req.body;
-  const avatarPath = req.file ? `/uploads/${req.file.filename}` : req.creator.avatar_path;
+  const avatarPath = req.file ? await uploadAvatar(req.file) : req.creator.avatar_path;
 
   db.prepare(`
     UPDATE creators SET

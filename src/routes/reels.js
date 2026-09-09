@@ -4,7 +4,7 @@ const path = require('path');
 const { randomUUID } = require('crypto');
 const db = require('../db/schema');
 const { requireAuth, requireCreator } = require('../middleware/auth');
-const { UPLOADS_DIR } = require('../lib/paths');
+const storage = require('../lib/storage');
 
 const router = express.Router();
 
@@ -13,13 +13,10 @@ const router = express.Router();
 // someone uploading a full-length video course through the wrong endpoint
 // (that's what a product file is for). Same reasoning as products.js's
 // cover/file fileFilter: only real video types get past this, since
-// whatever lands here is served straight back out as a static file.
+// whatever lands here is served straight back out as a public R2 object.
 const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: UPLOADS_DIR,
-    filename: (req, file, cb) => cb(null, `reel-${randomUUID()}${path.extname(file.originalname)}`)
-  }),
+  storage: multer.memoryStorage(),
   fileFilter(req, file, cb) {
     if (VIDEO_TYPES.has(file.mimetype)) return cb(null, true);
     cb(new Error('That file must be a video (MP4, WebM, or MOV).'));
@@ -68,11 +65,12 @@ router.get('/', (req, res) => {
 // POST /api/reels — creator_id always comes from the session. product_id
 // (optional) is validated as one of THIS creator's own products — a reel
 // can't be planted pointing at someone else's listing.
-router.post('/', requireAuth, requireCreator, upload.single('video'), (req, res) => {
+router.post('/', requireAuth, requireCreator, upload.single('video'), async (req, res) => {
   const { caption, product_id } = req.body;
   const video = req.file;
 
   if (!video) return res.status(400).json({ error: 'A video file is required.' });
+  if (!storage.isConfigured()) return res.status(503).json({ error: 'File storage is not configured yet. Try again shortly.' });
 
   let productId = null;
   if (product_id) {
@@ -81,10 +79,13 @@ router.post('/', requireAuth, requireCreator, upload.single('video'), (req, res)
     productId = product.id;
   }
 
+  const key = `reels/${randomUUID()}${path.extname(video.originalname)}`;
+  await storage.uploadBuffer(key, video.buffer, video.mimetype);
+
   const result = db.prepare(`
     INSERT INTO reels (creator_id, product_id, video_path, caption)
     VALUES (?, ?, ?, ?)
-  `).run(req.creator.id, productId, `/uploads/${video.filename}`, caption || null);
+  `).run(req.creator.id, productId, storage.publicUrl(key), caption || null);
 
   const reel = db.prepare(`${FEED_SELECT} WHERE r.id = ?`).get(result.lastInsertRowid);
   res.status(201).json(reel);

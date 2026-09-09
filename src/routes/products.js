@@ -1,7 +1,6 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const { randomUUID } = require('crypto');
 const db = require('../db/schema');
 const { requireAuth, requireCreator } = require('../middleware/auth');
@@ -13,7 +12,7 @@ const { isPromoActive, applyDiscount } = require('../lib/promotions');
 const { addKeys, keyStats } = require('../lib/licenseKeys');
 const { runVerification } = require('../lib/contentVerification');
 const { optimizeImage } = require('../lib/imageProcessing');
-const { UPLOADS_DIR } = require('../lib/paths');
+const storage = require('../lib/storage');
 
 const router = express.Router();
 
@@ -48,29 +47,25 @@ function productFileFilter(req, file, cb) {
 }
 
 // The strict, category-aware pass productFileFilter above can't safely do.
-// Deletes the already-saved file on rejection — multer wrote it to disk
-// before this ever runs, so a rejection has to clean up after itself or
-// leave an orphaned upload behind.
+// Nothing to clean up on rejection anymore — memoryStorage below never
+// wrote the file to this server's disk (or to R2) in the first place, so
+// there's no orphan to delete, unlike the old disk-based version of this.
 function checkDeliverableType(file, category) {
   if (!file || !EBOOKS_ONLY) return null;
   const isCourseVideo = category === 'courses' && VIDEO_TYPES.has(file.mimetype);
   const isDocPdf = category !== 'courses' && file.mimetype === PDF_TYPE;
   if (isCourseVideo || isDocPdf) return null;
-  fs.unlink(file.path, () => {});
   return category === 'courses'
     ? "A course's file must be a video (MP4, WebM, or MOV)."
     : 'The product file must be a PDF.';
 }
 
+// req.file.buffer, never a path on this server's own disk — validated here,
+// then either uploaded to R2 (storage.js) as a public object (cover,
+// preview clip) or a private one (the paid deliverable, only ever reached
+// again through a presigned URL — see routes/downloads.js).
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: UPLOADS_DIR,
-    filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname);
-      const prefix = file.fieldname === 'cover' ? 'cover' : file.fieldname === 'preview_video' ? 'preview' : 'file';
-      cb(null, `${prefix}-${randomUUID()}${ext}`);
-    }
-  }),
+  storage: multer.memoryStorage(),
   fileFilter: productFileFilter,
   // A cover is always a small image; the deliverable can now be a real
   // course video. One shared limit since multer applies it per-upload-
@@ -78,6 +73,13 @@ const upload = multer({
   // course video at reasonable compression.
   limits: { fileSize: 500 * 1024 * 1024 }
 });
+
+// R2 object keys — prefix says which bucket "folder" and whether it's a
+// public or private object, extension kept for a sane Content-Type/browser
+// hint, uuid keeps two uploads from ever colliding.
+function objectKey(prefix, originalname) {
+  return `${prefix}/${randomUUID()}${path.extname(originalname)}`;
+}
 
 // Attaches the buyer-facing promo fields every product response needs:
 // whether a promo is currently active, and what it actually charges. Also
@@ -118,7 +120,7 @@ function parseKeyList(raw) {
 // here rather than left to accidentally self-flag on every edit.
 async function verifyAndRecordFile(productId, creatorId, file, title, description) {
   const result = await runVerification({
-    filePath: file.path, claimedMimeType: file.mimetype, title, description
+    buffer: file.buffer, claimedMimeType: file.mimetype, title, description
   });
 
   const duplicate = db.prepare(`
@@ -488,12 +490,6 @@ router.post('/', requireAuth, requireCreator, upload.fields([
   const keyList = parseKeyList(license_keys);
   const isService = type === 'service';
 
-  if (cover) {
-    // Best-effort: a resize failure shouldn't block a legitimate listing
-    // from publishing, just leave the cover at its original size.
-    try { await optimizeImage(cover.path, { maxWidth: 1600 }); } catch (err) { console.error('[image optimize]', err); }
-  }
-
   if (!title || !type || !category) {
     return res.status(400).json({ error: 'title, type, and category are required.' });
   }
@@ -538,8 +534,18 @@ router.post('/', requireAuth, requireCreator, upload.fields([
       return res.status(400).json({ error: 'min_price must be zero or a positive number.' });
     }
   }
+  if (!storage.isConfigured()) {
+    return res.status(503).json({ error: 'File storage is not configured yet. Try again shortly.' });
+  }
 
-  const coverPath = `/uploads/${cover.filename}`;
+  // Every validation above has passed — only now do the actual R2 uploads,
+  // so a request that was going to be rejected anyway never wastes one.
+  let coverBuffer = cover.buffer;
+  try { coverBuffer = await optimizeImage(cover.buffer, { maxWidth: 1600 }); } catch (err) { console.error('[image optimize]', err); }
+  const coverKey = objectKey('covers', cover.originalname);
+  await storage.uploadBuffer(coverKey, coverBuffer, cover.mimetype);
+  const coverPath = storage.publicUrl(coverKey);
+
   const slug = slugify(title);
   const productCurrency = ['USD', 'ZWG'].includes(currency) ? currency : 'USD';
   const qtyLimit = quantity_limit ? parseInt(quantity_limit, 10) : null;
@@ -548,7 +554,12 @@ router.post('/', requireAuth, requireCreator, upload.fields([
   // Only meaningful for courses, but not restricted to them at the DB
   // level — a free sample clip is a reasonable thing for any video
   // deliverable, not something worth a CHECK constraint over.
-  const previewVideoPath = previewVideo ? `/uploads/${previewVideo.filename}` : null;
+  let previewVideoPath = null;
+  if (previewVideo) {
+    const previewKey = objectKey('previews', previewVideo.originalname);
+    await storage.uploadBuffer(previewKey, previewVideo.buffer, previewVideo.mimetype);
+    previewVideoPath = storage.publicUrl(previewKey);
+  }
 
   const result = db.prepare(`
     INSERT INTO products
@@ -567,10 +578,17 @@ router.post('/', requireAuth, requireCreator, upload.fields([
   const productId = result.lastInsertRowid;
 
   if (file) {
+    // Private object — stored as just its R2 key, not a public URL. The
+    // only way back to these bytes is routes/downloads.js minting a
+    // short-lived presigned URL after checking a valid, unexpired,
+    // not-over-its-download-limit token, exactly like it checked a local
+    // file existed before this migration.
+    const fileKey = objectKey('product-files', file.originalname);
+    await storage.uploadBuffer(fileKey, file.buffer, file.mimetype);
     db.prepare(`
       INSERT INTO product_files (product_id, kind, storage_path, original_filename, size_bytes)
       VALUES (?, 'upload', ?, ?, ?)
-    `).run(productId, `/uploads/${file.filename}`, file.originalname, file.size);
+    `).run(productId, fileKey, file.originalname, file.size);
     try {
       await verifyAndRecordFile(productId, req.creator.id, file, title, description);
     } catch (err) {
@@ -615,19 +633,15 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
   const cover = req.files?.cover?.[0];
   const file = req.files?.file?.[0];
   const previewVideo = req.files?.preview_video?.[0];
-
-  if (cover) {
-    try { await optimizeImage(cover.path, { maxWidth: 1600 }); } catch (err) { console.error('[image optimize]', err); }
-  }
-
-  const coverPath = cover ? `/uploads/${cover.filename}` : product.cover_path;
   const isService = product.type === 'service';
 
   const deliverableError = checkDeliverableType(file, category !== undefined ? category : product.category);
   if (deliverableError) return res.status(400).json({ error: deliverableError });
   if (previewVideo && !VIDEO_TYPES.has(previewVideo.mimetype)) {
-    fs.unlink(previewVideo.path, () => {});
     return res.status(400).json({ error: 'The free preview clip must be a video (MP4, WebM, or MOV).' });
+  }
+  if ((cover || file || previewVideo) && !storage.isConfigured()) {
+    return res.status(503).json({ error: 'File storage is not configured yet. Try again shortly.' });
   }
 
   const isPWYW = pay_what_you_want !== undefined
@@ -701,7 +715,22 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
     }
   }
 
-  const previewVideoPath = previewVideo ? `/uploads/${previewVideo.filename}` : product.preview_video_path;
+  // All validation above has passed — only now do the actual R2 uploads.
+  let coverPath = product.cover_path;
+  if (cover) {
+    let coverBuffer = cover.buffer;
+    try { coverBuffer = await optimizeImage(cover.buffer, { maxWidth: 1600 }); } catch (err) { console.error('[image optimize]', err); }
+    const coverKey = objectKey('covers', cover.originalname);
+    await storage.uploadBuffer(coverKey, coverBuffer, cover.mimetype);
+    coverPath = storage.publicUrl(coverKey);
+  }
+
+  let previewVideoPath = product.preview_video_path;
+  if (previewVideo) {
+    const previewKey = objectKey('previews', previewVideo.originalname);
+    await storage.uploadBuffer(previewKey, previewVideo.buffer, previewVideo.mimetype);
+    previewVideoPath = storage.publicUrl(previewKey);
+  }
 
   db.prepare(`
     UPDATE products SET
@@ -734,10 +763,12 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
   if (file || external_url) {
     db.prepare('DELETE FROM product_files WHERE product_id = ?').run(product.id);
     if (file) {
+      const fileKey = objectKey('product-files', file.originalname);
+      await storage.uploadBuffer(fileKey, file.buffer, file.mimetype);
       db.prepare(`
         INSERT INTO product_files (product_id, kind, storage_path, original_filename, size_bytes)
         VALUES (?, 'upload', ?, ?, ?)
-      `).run(product.id, `/uploads/${file.filename}`, file.originalname, file.size);
+      `).run(product.id, fileKey, file.originalname, file.size);
       // A replaced file is a genuinely new upload, worth re-checking —
       // review_status resets to 'clear' first so an old flag from a
       // previous file doesn't linger on a file that's since been swapped out.

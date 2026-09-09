@@ -15,14 +15,15 @@
 //      matching on digits next to the word "page", not comprehension —
 //      it will miss claims phrased differently, and that's an honestly
 //      stated limitation, not a hidden one.
-const fs = require('fs');
+//
+// Operates on an in-memory Buffer, not a file path — uploads go straight
+// from multer.memoryStorage() to here and then to R2 (src/lib/storage.js),
+// never touching this server's own disk at any point.
 const crypto = require('crypto');
 const { PDFDocument } = require('pdf-lib');
 
-function sha256File(filePath) {
-  const hash = crypto.createHash('sha256');
-  hash.update(fs.readFileSync(filePath));
-  return hash.digest('hex');
+function sha256Buffer(buffer) {
+  return crypto.createHash('sha256').update(buffer).digest('hex');
 }
 
 // Signatures are the first bytes of the file, in hex. ftyp-box MP4/MOV
@@ -41,19 +42,14 @@ const SIGNATURES = [
 // null means "not one of the types we know how to fingerprint" — not an
 // error, just not a signature this function checks. Doesn't mean the file
 // is fake, only that mismatch detection can't be run on it.
-function detectRealType(filePath) {
-  const fd = fs.openSync(filePath, 'r');
-  const buf = Buffer.alloc(16);
-  fs.readSync(fd, buf, 0, 16, 0);
-  fs.closeSync(fd);
-  const match = SIGNATURES.find(s => s.check(buf));
+function detectRealType(buffer) {
+  const match = SIGNATURES.find(s => s.check(buffer));
   return match ? match.mime : null;
 }
 
-async function getPdfPageCount(filePath) {
+async function getPdfPageCount(buffer) {
   try {
-    const bytes = fs.readFileSync(filePath);
-    const doc = await PDFDocument.load(bytes, { updateMetadata: false });
+    const doc = await PDFDocument.load(buffer, { updateMetadata: false });
     return doc.getPageCount();
   } catch {
     // A file that claims to be a PDF (passed the magic-byte check) but
@@ -86,9 +82,9 @@ function extractClaimedPageCount(text) {
 //     yet because the schema only supports one file per product. That's a
 //     bigger, separate feature (multi-file products) than verification
 //     itself.
-async function runVerification({ filePath, claimedMimeType, title, description }) {
-  const hash = sha256File(filePath);
-  const detectedMime = detectRealType(filePath);
+async function runVerification({ buffer, claimedMimeType, title, description }) {
+  const hash = sha256Buffer(buffer);
+  const detectedMime = detectRealType(buffer);
   const flags = [];
 
   if (detectedMime && detectedMime !== claimedMimeType) {
@@ -97,7 +93,7 @@ async function runVerification({ filePath, claimedMimeType, title, description }
 
   let pageCount = null;
   if (detectedMime === 'application/pdf') {
-    pageCount = await getPdfPageCount(filePath);
+    pageCount = await getPdfPageCount(buffer);
     if (pageCount === null) {
       flags.push('File has a PDF signature but could not actually be opened as a PDF.');
     } else {
@@ -111,4 +107,4 @@ async function runVerification({ filePath, claimedMimeType, title, description }
   return { hash, detectedMime, pageCount, flags };
 }
 
-module.exports = { sha256File, detectRealType, getPdfPageCount, extractClaimedPageCount, runVerification };
+module.exports = { sha256Buffer, detectRealType, getPdfPageCount, extractClaimedPageCount, runVerification };

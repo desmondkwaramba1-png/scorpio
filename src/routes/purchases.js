@@ -13,7 +13,7 @@ const { productHasKeys, unclaimedCount, keyForPurchase } = require('../lib/licen
 const { sweepAutoReleases, deliveryFor, disputeFor, markDelivered, confirmDelivery, openDispute } = require('../lib/escrow');
 const { sendEmail } = require('../lib/notify');
 const { markPurchasePaid, markPurchaseFailed } = require('../lib/purchaseCompletion');
-const { UPLOADS_DIR } = require('../lib/paths');
+const storage = require('../lib/storage');
 
 const router = express.Router();
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -21,15 +21,15 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 // A service delivery can legitimately be almost any file type (that's the
 // whole point — it's the seller's actual work product), so this can't take
 // the strict allowlist the product-listing uploads use. It can still block
-// the specific types that turn "static file served back out" into a real
-// vulnerability: browser-executable content (.html, .svg — see
-// products.js's comment for why) served from this domain's own origin.
+// the specific types that turn "served back out" into a real vulnerability:
+// browser-executable content (.html, .svg — see products.js's comment for
+// why). Uploaded as a public R2 object, same as before this migration —
+// the URL is only ever handed to the buyer who paid (file_url below), not
+// gated behind the token system product files use; that was already true
+// of the old /uploads link, not a change introduced by this migration.
 const BLOCKED_DELIVERY_TYPES = new Set(['text/html', 'image/svg+xml', 'application/xhtml+xml']);
 const deliveryUpload = multer({
-  storage: multer.diskStorage({
-    destination: UPLOADS_DIR,
-    filename: (req, file, cb) => cb(null, `delivery-${randomUUID()}${path.extname(file.originalname)}`)
-  }),
+  storage: multer.memoryStorage(),
   fileFilter(req, file, cb) {
     if (BLOCKED_DELIVERY_TYPES.has(file.mimetype)) {
       return cb(new Error("That file type isn't allowed here."));
@@ -128,7 +128,7 @@ router.get('/mine', requireAuth, (req, res) => {
 // POST /api/purchases/:id/deliver — seller marks a service order delivered.
 // Owner-only, and only from awaiting_delivery — a delivery is a one-time
 // event for v1, not something that can be edited or re-sent.
-router.post('/:id/deliver', requireAuth, requireCreator, deliveryUpload.single('file'), (req, res) => {
+router.post('/:id/deliver', requireAuth, requireCreator, deliveryUpload.single('file'), async (req, res) => {
   const purchase = db.prepare(`
     SELECT pu.*, p.creator_id, p.type AS product_type, p.title AS product_title
     FROM purchases pu JOIN products p ON p.id = pu.product_id
@@ -145,9 +145,18 @@ router.post('/:id/deliver', requireAuth, requireCreator, deliveryUpload.single('
   if (!message) return res.status(400).json({ error: "Describe what you delivered. It's the buyer's (and, if it ever comes to it, a dispute's) only record of what happened." });
 
   const file = req.file;
+  if (file && !storage.isConfigured()) {
+    return res.status(503).json({ error: 'File storage is not configured yet. Try again shortly.' });
+  }
+  let storagePath = null;
+  if (file) {
+    const key = `deliveries/${randomUUID()}${path.extname(file.originalname)}`;
+    await storage.uploadBuffer(key, file.buffer, file.mimetype);
+    storagePath = storage.publicUrl(key);
+  }
   markDelivered(purchase.id, {
     message,
-    storagePath: file ? `/uploads/${file.filename}` : null,
+    storagePath,
     originalFilename: file ? file.originalname : null,
     externalUrl: req.body.external_url || null
   });

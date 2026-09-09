@@ -10,14 +10,15 @@ const { createSession, destroySession, TTL_DAYS } = require('../lib/session');
 const { requireAuth, COOKIE_NAME } = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimit');
 const { checkAndUpdateVerification } = require('../lib/verification');
-const { UPLOADS_DIR } = require('../lib/paths');
+const { optimizeImage } = require('../lib/imageProcessing');
+const storage = require('../lib/storage');
 
 const router = express.Router();
 
-// Uploads are served back out as static files (see /uploads in server.js)
-// with whatever content-type the extension implies — an unrestricted
-// upload here means anyone could host an .html or .svg-with-a-script-tag
-// off this domain. A profile photo has one legitimate shape; enforce it.
+// R2 objects are only ever served back out as whatever Content-Type they
+// were uploaded with, but an unrestricted upload is still a stored-XSS
+// risk if it ever ends up served from this domain's own origin — a profile
+// photo has one legitimate shape, enforce it regardless.
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 function imageFileFilter(req, file, cb) {
   if (IMAGE_TYPES.has(file.mimetype)) return cb(null, true);
@@ -25,16 +26,18 @@ function imageFileFilter(req, file, cb) {
 }
 
 const avatarUpload = multer({
-  storage: multer.diskStorage({
-    destination: UPLOADS_DIR,
-    filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname);
-      cb(null, `avatar-${randomUUID()}${ext}`);
-    }
-  }),
+  storage: multer.memoryStorage(),
   fileFilter: imageFileFilter,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB, this is a profile photo, not a product file
 });
+
+async function uploadAvatar(file) {
+  const key = `avatars/${randomUUID()}${path.extname(file.originalname)}`;
+  let buffer = file.buffer;
+  try { buffer = await optimizeImage(file.buffer, { maxWidth: 480 }); } catch (err) { console.error('[image optimize]', err); }
+  await storage.uploadBuffer(key, buffer, file.mimetype);
+  return storage.publicUrl(key);
+}
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const EMAIL_TOKEN_TTL_HOURS = parseInt(process.env.EMAIL_TOKEN_TTL_HOURS || '24', 10);
@@ -238,8 +241,8 @@ router.post('/accept-terms', requireAuth, (req, res) => {
 // own profile photo. Separate from PATCH /api/creators/me, which only
 // exists for users who've completed creator onboarding — every account
 // should be able to add a photo, not just sellers.
-router.patch('/me', requireAuth, avatarUpload.single('avatar'), (req, res) => {
-  const avatarUrl = req.file ? `/uploads/${req.file.filename}` : req.user.avatar_url;
+router.patch('/me', requireAuth, avatarUpload.single('avatar'), async (req, res) => {
+  const avatarUrl = req.file ? await uploadAvatar(req.file) : req.user.avatar_url;
   const { name } = req.body;
 
   db.prepare('UPDATE users SET avatar_url = ?, name = ? WHERE id = ?')

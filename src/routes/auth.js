@@ -158,6 +158,26 @@ router.post('/verify-email', (req, res) => {
   res.json({ verified: true });
 });
 
+// POST /api/auth/resend-verification — the "check your email" gate's own
+// resend button, and what VerifyEmail.jsx points a dead/expired link back
+// to. Old unconsumed tokens are left alone (harmless — verify-email only
+// ever needs one to succeed) rather than deleted, since deleting rows out
+// from under a concurrent request is more risk than it's worth here.
+router.post('/resend-verification', authLimiter, requireAuth, (req, res) => {
+  if (req.user.email_verified_at) return res.json({ sent: true, already_verified: true });
+
+  const token = generateToken();
+  db.prepare(
+    'INSERT INTO email_verification_tokens (user_id, token, expires_at) VALUES (?, ?, ?)'
+  ).run(req.user.id, token, futureTimestamp(EMAIL_TOKEN_TTL_HOURS * 60));
+  sendEmail(
+    req.user.email,
+    'Verify your SCORPIO account',
+    `Verify your email: ${FRONTEND_URL}/verify-email?token=${token}`
+  );
+  res.json({ sent: true });
+});
+
 // POST /api/auth/forgot-password — always responds { sent: true } regardless
 // of whether the account exists, so this endpoint can't be used to check
 // which usernames/emails are registered.

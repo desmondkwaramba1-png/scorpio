@@ -10,6 +10,7 @@ import OAuthComplete from './pages/OAuthComplete.jsx';
 import ForgotPassword from './pages/ForgotPassword.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
 import VerifyEmail from './pages/VerifyEmail.jsx';
+import CheckEmail from './pages/CheckEmail.jsx';
 import Terms from './pages/Terms.jsx';
 import AcceptTerms from './pages/AcceptTerms.jsx';
 import Onboarding from './pages/Onboarding.jsx';
@@ -45,6 +46,7 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/check-email" element={<CheckEmail />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/accept-terms" element={<AcceptTerms />} />
         <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />

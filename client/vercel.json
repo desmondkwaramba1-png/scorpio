@@ -2,6 +2,7 @@
   "rewrites": [
     { "source": "/api/:path*", "destination": "https://scorpio-api.fly.dev/api/:path*" },
     { "source": "/uploads/:path*", "destination": "https://scorpio-api.fly.dev/uploads/:path*" },
-    { "source": "/((?!api/|uploads/).*)", "destination": "/index.html" }
+    { "source": "/sitemap.xml", "destination": "https://scorpio-api.fly.dev/sitemap.xml" },
+    { "source": "/((?!api/|uploads/|sitemap\\.xml).*)", "destination": "/index.html" }
   ]
 }

@@ -18,6 +18,7 @@ const walletRouter = require('./routes/wallet');
 const downloadsRouter = require('./routes/downloads');
 const adminRouter = require('./routes/admin');
 const reelsRouter = require('./routes/reels');
+const sitemapRouter = require('./routes/sitemap');
 
 // origin: true (reflect whatever Origin header showed up) plus
 // credentials: true used to mean any website could make an authenticated
@@ -72,6 +73,9 @@ app.use('/api/admin', adminRouter);
 app.use('/api/reels', reelsRouter);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+// Mounted at root, not under /api — see client/vercel.json's dedicated
+// /sitemap.xml rewrite, since that's the URL search engines expect.
+app.use('/', sitemapRouter);
 
 // Without this, a rejected upload (wrong file type, or over multer's
 // per-route size limit) throws past every route handler and lands on

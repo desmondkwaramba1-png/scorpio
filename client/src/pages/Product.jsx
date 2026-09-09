@@ -11,6 +11,8 @@ import { useCart } from '../context/CartContext.jsx';
 import { formatMoney } from '../lib/money';
 import { CATEGORY_LABELS } from '../lib/categories.js';
 import { shareOrCopy } from '../lib/share';
+import { useSEO } from '../lib/seo';
+import { SITE_ORIGIN } from '../lib/site';
 
 // A short extension read off the actual uploaded file, not a guess — real
 // specificity ("Delivered as PDF") reads as more trustworthy on a page
@@ -98,6 +100,15 @@ export default function Product() {
   const checkoutUrl = `${productUrl}/checkout`;
   const isOwner = creator?.id === product.creator_id;
   const fileFormat = fileFormatLabel(product.files);
+
+  useSEO({
+    title: `${product.title} by ${product.creator_name} — SCORPIO`,
+    description: product.description
+      ? product.description.slice(0, 160)
+      : `${product.title} — ${price} on SCORPIO. Real work from ${product.creator_name}, not scraped off the internet.`,
+    image: product.cover_path,
+    url: `${SITE_ORIGIN}${productUrl}`
+  });
 
   async function handleAddToCart() {
     if (!user) { navigate(`/login?role=buyer&next=${encodeURIComponent(productUrl)}`); return; }

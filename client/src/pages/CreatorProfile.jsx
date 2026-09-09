@@ -6,7 +6,8 @@ import { Stars } from '../components/ReviewsSection.jsx';
 import ProductCard from '../components/ProductCard.jsx';
 import ReelViewer from '../components/ReelViewer.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { SITE_HOST } from '../lib/site.js';
+import { useSEO } from '../lib/seo';
+import { SITE_HOST, SITE_ORIGIN } from '../lib/site.js';
 
 export default function CreatorProfile() {
   const { handle: rawHandle } = useParams();
@@ -31,6 +32,13 @@ export default function CreatorProfile() {
       .catch(() => setError('This creator could not be found.'));
     fetch(`/api/reels?creator=${handle}`).then(r => r.json()).then(setReels).catch(() => setReels([]));
   }, [handle]);
+
+  useSEO({
+    title: creator ? `${creator.name} (@${creator.handle}) — SCORPIO` : undefined,
+    description: creator?.bio || (creator ? `${creator.name}'s storefront on SCORPIO — real guides, templates, and courses.` : undefined),
+    image: creator?.avatar_path,
+    url: `${SITE_ORIGIN}/@${handle}`
+  });
 
   if (error) return <div className="wrap" style={{ padding: '80px 20px', textAlign: 'center' }}><p className="error-text">{error}</p></div>;
 

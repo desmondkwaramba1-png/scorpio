@@ -949,26 +949,26 @@ img{max-width:100%;display:block;}
 .method-btn--active{border-color:var(--ink);color:var(--ink);}
 
 /* ---- creators directory ---- */
-.creators-grid{display:grid;gap:var(--sp-5);grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));}
+.creators-grid{display:grid;gap:var(--sp-4);grid-template-columns:repeat(auto-fill, minmax(160px, 1fr));}
 .creator-card{
-  display:block;padding:22px 20px;text-align:center;border-radius:var(--radius);
+  display:block;padding:16px 14px;text-align:center;border-radius:var(--radius-sm);
   background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow-1);
   transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
 }
-.creator-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-2);border-color:var(--ink);}
+.creator-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-2);border-color:var(--ink);}
 .creator-card__avatar{
-  width:64px;height:64px;border-radius:50%;background-size:cover;background-position:center;margin:0 auto 14px;
-  display:flex;align-items:center;justify-content:center;color:var(--green-dark);font-weight:700;font-size:1.4rem;
-  box-shadow:0 0 0 3px var(--surface), 0 0 0 4.5px var(--line);
+  width:48px;height:48px;border-radius:50%;background-size:cover;background-position:center;margin:0 auto 10px;
+  display:flex;align-items:center;justify-content:center;color:var(--green-dark);font-weight:700;font-size:1.1rem;
+  box-shadow:0 0 0 2px var(--surface), 0 0 0 3.5px var(--line);
 }
-.creator-card__name{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:700;}
+.creator-card__name{display:flex;align-items:center;justify-content:center;gap:5px;font-weight:700;font-size:.92rem;}
 .creator-card__bio{
-  color:var(--muted);font-size:.85rem;line-height:1.5;margin-top:10px;
+  color:var(--muted);font-size:.78rem;line-height:1.45;margin-top:6px;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
 }
 .creator-card__count{
-  margin-top:12px;font-size:.78rem;color:var(--muted);font-weight:600;
-  display:flex;align-items:center;justify-content:center;gap:5px;
+  margin-top:8px;font-size:.72rem;color:var(--muted);font-weight:600;
+  display:flex;align-items:center;justify-content:center;gap:4px;
 }
 
 /* ---- homepage creator spotlight (story-bubble tray) ---- */

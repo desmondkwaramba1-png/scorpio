@@ -16,7 +16,7 @@ function CreatorCard({ creator }) {
         <span>{creator.name}</span>
         {!!creator.verified && <Seal />}
       </div>
-      <p className="muted" style={{ fontSize: '.82rem', marginTop: 2 }}>@{creator.handle}</p>
+      <p className="muted" style={{ fontSize: '.76rem', marginTop: 2 }}>@{creator.handle}</p>
       {creator.bio && <p className="creator-card__bio">{creator.bio}</p>}
       <p className="creator-card__count">
         <FiPackage size={12} /> {creator.product_count} product{creator.product_count === 1 ? '' : 's'}

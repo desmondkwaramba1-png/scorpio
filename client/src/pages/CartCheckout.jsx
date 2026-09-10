@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FiUser, FiMail, FiPhone, FiSmartphone, FiArrowLeft, FiLogIn } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiSmartphone, FiArrowLeft, FiLogIn, FiZap, FiLock, FiShield } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
+import { api } from '../lib/api';
 import { formatMoney } from '../lib/money';
 
 export default function CartCheckout() {
@@ -16,10 +17,7 @@ export default function CartCheckout() {
 
   useEffect(() => {
     if (!user) return;
-    fetch('/api/cart', { credentials: 'include' })
-      .then(r => r.json())
-      .then(setItems)
-      .catch(() => setError('Could not load your cart.'));
+    api.get('/api/cart').then(setItems).catch(err => setError(err.message));
   }, [user]);
 
   useEffect(() => {
@@ -31,14 +29,12 @@ export default function CartCheckout() {
     e.preventDefault();
     setStatus('submitting');
     try {
-      const res = await fetch('/api/cart/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(checkout)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      // 30s, not the usual 15s default — this waits on Dischub actually
+      // triggering the EcoCash prompt, which can genuinely take longer
+      // than a normal API call. Not retried on failure either way (POST),
+      // so this only changes how long a still-working request gets before
+      // being wrongly reported as failed.
+      const data = await api.post('/api/cart/checkout', checkout, 30000);
       navigate(`/payment/return?order_id=${data.order_id}`);
     } catch (err) {
       setCheckoutError(err.message);
@@ -136,6 +132,12 @@ export default function CartCheckout() {
             <div className="pay-methods">
               <span className="pay-method"><FiSmartphone size={13} /> EcoCash</span>
             </div>
+
+            <ul className="buy-benefits">
+              <li><FiZap size={14} /> Instant access to everything, the moment payment clears</li>
+              <li><FiShield size={14} /> 5-day buyer protection on every item</li>
+              <li><FiLock size={14} /> Secure payment via EcoCash</li>
+            </ul>
 
             {status === 'failed' && <p className="error-text">{checkoutError || "Payment didn't go through. Try again."}</p>}
             <button className="btn btn--gold btn--block" disabled={status === 'submitting'} type="submit">

@@ -58,7 +58,12 @@ async function request(path, { method = 'GET', body, timeoutMs = DEFAULT_TIMEOUT
 
 export const api = {
   get: (path) => request(path),
-  post: (path, body) => request(path, { method: 'POST', body }),
-  patch: (path, body) => request(path, { method: 'PATCH', body }),
+  // timeoutMs is optional and only worth overriding for a request that's
+  // genuinely expected to take longer than the 15s default — e.g. a
+  // checkout POST that waits on Dischub triggering a real EcoCash prompt,
+  // where the default would abort (and report "failed") a request that
+  // was actually still working.
+  post: (path, body, timeoutMs) => request(path, { method: 'POST', body, ...(timeoutMs && { timeoutMs }) }),
+  patch: (path, body, timeoutMs) => request(path, { method: 'PATCH', body, ...(timeoutMs && { timeoutMs }) }),
   delete: (path) => request(path, { method: 'DELETE' })
 };

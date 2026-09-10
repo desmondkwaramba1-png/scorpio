@@ -9,6 +9,7 @@ import CompactProductCard from '../components/CompactProductCard.jsx';
 import ReportProblem from '../components/ReportProblem.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
+import { api } from '../lib/api';
 import { formatMoney } from '../lib/money';
 import { CATEGORY_LABELS } from '../lib/categories.js';
 import { shareOrCopy } from '../lib/share';
@@ -49,17 +50,15 @@ export default function Product() {
     setError(null);
     setMoreFromCreator(null);
     setProductReel(null);
-    fetch(`/api/reels?product=${slug}&limit=1`).then(r => r.json()).then(reels => setProductReel(reels[0] || null)).catch(() => {});
-    fetch(`/api/products/${slug}`, { credentials: 'include' })
-      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+    api.get(`/api/reels?product=${slug}&limit=1`).then(reels => setProductReel(reels[0] || null)).catch(() => {});
+    api.get(`/api/products/${slug}`)
       .then(product => {
         setProduct(product);
         // /api/creators/:handle doesn't repeat creator_handle on each
         // product row (every item in that list is obviously the same
         // creator) — CompactProductCard needs it to build a link, so it's
         // stitched back on here from the outer product we already have.
-        fetch(`/api/creators/${product.creator_handle}`)
-          .then(r => r.json())
+        api.get(`/api/creators/${product.creator_handle}`)
           .then(({ products }) => setMoreFromCreator(
             (products || [])
               .filter(p => p.id !== product.id)

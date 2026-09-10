@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
 import { FiUser, FiMail, FiPhone, FiSmartphone, FiArrowLeft, FiLogIn, FiShield } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
+import { api } from '../lib/api';
 import { formatMoney } from '../lib/money';
 import { CATEGORY_LABELS } from '../lib/categories.js';
 
@@ -19,8 +20,7 @@ export default function Checkout() {
   useEffect(() => {
     setProduct(null);
     setError(null);
-    fetch(`/api/products/${slug}`, { credentials: 'include' })
-      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+    api.get(`/api/products/${slug}`)
       .then(setProduct)
       .catch(() => setError('This product could not be found.'));
   }, [slug]);
@@ -40,14 +40,10 @@ export default function Checkout() {
     e.preventDefault();
     setStatus('submitting');
     try {
-      const res = await fetch('/api/purchases', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...checkout, product_slug: slug })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      // 30s, not the usual 15s default — see the identical note in
+      // CartCheckout.jsx: this waits on Dischub actually triggering the
+      // EcoCash prompt, which can genuinely take longer than a normal call.
+      const data = await api.post('/api/purchases', { ...checkout, product_slug: slug }, 30000);
       // Non-redirecting flow: an EcoCash prompt was just pushed straight to
       // their phone, no external page to send them to. This is a client-
       // side route change to the same polling page PaymentReturn.jsx

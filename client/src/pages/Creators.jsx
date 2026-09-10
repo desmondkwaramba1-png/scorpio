@@ -5,22 +5,25 @@ import Seal from '../components/Seal.jsx';
 
 function CreatorCard({ creator }) {
   return (
-    <Link to={`/@${creator.handle}`} className="creator-card">
-      <div
-        className="creator-card__avatar"
-        style={{ background: creator.avatar_path ? `url(${creator.avatar_path}) center/cover` : 'linear-gradient(135deg, var(--gold) 0%, var(--green-glow) 100%)' }}
-      >
-        {!creator.avatar_path && creator.name.charAt(0).toUpperCase()}
+    <Link to={`/@${creator.handle}`} className={`creator-card${creator.verified ? ' creator-card--verified' : ''}`}>
+      <div className="creator-card__banner" />
+      <div className="creator-card__body">
+        <div
+          className="creator-card__avatar"
+          style={creator.avatar_path ? { backgroundImage: `url(${creator.avatar_path})` } : undefined}
+        >
+          {!creator.avatar_path && creator.name.charAt(0).toUpperCase()}
+        </div>
+        <div className="creator-card__name">
+          <span>{creator.name}</span>
+          {!!creator.verified && <Seal />}
+        </div>
+        <p className="muted" style={{ fontSize: '.74rem' }}>@{creator.handle}</p>
+        {creator.bio && <p className="creator-card__bio">{creator.bio}</p>}
+        <p className="creator-card__count">
+          <FiPackage size={11} /> {creator.product_count} product{creator.product_count === 1 ? '' : 's'}
+        </p>
       </div>
-      <div className="creator-card__name">
-        <span>{creator.name}</span>
-        {!!creator.verified && <Seal />}
-      </div>
-      <p className="muted" style={{ fontSize: '.76rem', marginTop: 2 }}>@{creator.handle}</p>
-      {creator.bio && <p className="creator-card__bio">{creator.bio}</p>}
-      <p className="creator-card__count">
-        <FiPackage size={12} /> {creator.product_count} product{creator.product_count === 1 ? '' : 's'}
-      </p>
     </Link>
   );
 }
@@ -50,11 +53,14 @@ export default function Creators() {
 
       {!creators && !error && (
         <div className="creators-grid">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="skeleton-card" style={{ padding: 20 }}>
-              <div className="skeleton" style={{ width: 64, height: 64, borderRadius: '50%', marginBottom: 14 }} />
-              <div className="skeleton" style={{ height: 14, width: '70%', marginBottom: 8 }} />
-              <div className="skeleton" style={{ height: 12, width: '45%' }} />
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className="skeleton-card">
+              <div className="skeleton" style={{ height: 44 }} />
+              <div style={{ padding: '0 12px 14px' }}>
+                <div className="skeleton" style={{ width: 52, height: 52, borderRadius: '50%', margin: '-26px auto 10px' }} />
+                <div className="skeleton" style={{ height: 12, width: '70%', margin: '0 auto 8px' }} />
+                <div className="skeleton" style={{ height: 10, width: '45%', margin: '0 auto' }} />
+              </div>
             </div>
           ))}
         </div>

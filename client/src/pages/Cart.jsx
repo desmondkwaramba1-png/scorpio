@@ -133,7 +133,7 @@ export default function Cart() {
               className="btn btn--gold btn--block"
               disabled={currencies.size > 1}
             >
-              <FiLock size={15} /> Proceed to checkout
+              <FiLock size={15} /> Checkout &mdash; {formatMoney(total, items[0].currency)}
             </button>
             <div className="trust-line" style={{ marginTop: 16, marginBottom: 0 }}>
               <FiShield size={16} />

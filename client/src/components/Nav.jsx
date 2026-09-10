@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { FiCompass, FiUsers, FiGrid, FiUser, FiLogIn, FiLogOut, FiShoppingBag, FiShoppingCart, FiSearch, FiPackage, FiChevronDown } from 'react-icons/fi';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { FiCompass, FiUsers, FiGrid, FiUser, FiLogIn, FiLogOut, FiShoppingBag, FiShoppingCart, FiSearch, FiPackage, FiChevronDown, FiMail } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 
@@ -77,6 +77,7 @@ export default function Nav() {
   const { user, creator, loading, logout } = useAuth();
   const { count } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
   const [q, setQ] = useState('');
 
   function submitSearch(e) {
@@ -84,8 +85,23 @@ export default function Nav() {
     navigate(q ? `/discover?q=${encodeURIComponent(q)}` : '/discover');
   }
 
+  // The only route to /check-email now that ProtectedRoute doesn't force
+  // anyone there (see its comment — Resend is still unverified, so a hard
+  // block there meant no new signup could ever get in at all). Without
+  // this, a real logged-in-but-unverified user had no way to even find
+  // the page that lets them verify or resend the email — not a real fix,
+  // just a permanent nag instead of a wall.
+  const showVerifyBanner = !loading && user && !user.email_verified_at && location.pathname !== '/check-email';
+
   return (
     <nav className="nav">
+      {showVerifyBanner && (
+        <div className="wrap nav__verify-banner">
+          <FiMail size={14} />
+          <span>Verify your email to keep your account secure.</span>
+          <Link to="/check-email">Verify now</Link>
+        </div>
+      )}
       <div className="wrap nav__inner">
         <Link to="/" className="nav__brand">
           <span className="nav__name">Scorpio</span>

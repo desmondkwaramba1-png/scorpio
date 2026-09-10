@@ -629,6 +629,16 @@ img{max-width:100%;display:block;}
   border-bottom:1px solid var(--ink-800);
 }
 .nav__inner{display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:6px 20px;gap:16px;}
+
+/* ---- nav: email verification nag (permanent, not a modal/wall — see
+   Nav.jsx's comment on showVerifyBanner) ---- */
+.nav__verify-banner{
+  display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;
+  padding:7px 20px;background:rgba(var(--gold-rgb),.14);border-bottom:1px solid rgba(var(--gold-rgb),.25);
+  color:var(--gold);font-size:.8rem;font-weight:600;text-align:center;
+}
+.nav__verify-banner a{color:var(--gold);text-decoration:underline;text-underline-offset:2px;flex-shrink:0;}
+.nav__verify-banner svg{flex-shrink:0;}
 .nav__brand{display:flex;align-items:center;gap:9px;flex-shrink:0;justify-self:start;}
 .nav__name{
   font-family:'Alex Brush',cursive;font-weight:400;font-size:2rem;line-height:1;

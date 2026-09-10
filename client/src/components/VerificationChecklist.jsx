@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { FiCheck } from 'react-icons/fi';
 import Seal from './Seal.jsx';
 import { api } from '../lib/api';
@@ -56,7 +57,11 @@ export default function VerificationChecklist() {
         {CRITERIA.map(c => (
           <div key={c.key} className={`checklist-item${status.criteria[c.key] ? ' checklist-item--done' : ''}`}>
             <span className="checklist-item__icon">{status.criteria[c.key] && <FiCheck size={12} />}</span>
-            <span>{c.label}</span>
+            {c.key === 'email_verified' && !status.criteria[c.key] ? (
+              <Link to="/check-email" style={{ color: 'var(--green-glow)', fontWeight: 600, textDecoration: 'underline' }}>{c.label}</Link>
+            ) : (
+              <span>{c.label}</span>
+            )}
           </div>
         ))}
       </div>

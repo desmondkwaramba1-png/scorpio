@@ -61,7 +61,7 @@ function markPurchasePaid(purchaseId) {
     const lines = [];
     if (hasFile) {
       const token = createDownloadToken(purchaseId);
-      lines.push(`Download: ${FRONTEND_URL}/api/downloads/${token}`);
+      lines.push(`Here's your download link:\n${FRONTEND_URL}/api/downloads/${token}`);
     }
     if (claimedKey) lines.push(`Your license key: ${claimedKey.key_value}`);
     sendEmail(

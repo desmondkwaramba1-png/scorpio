@@ -104,7 +104,7 @@ router.post('/signup', authLimiter, (req, res) => {
   sendEmail(
     email,
     'Verify your SCORPIO account',
-    `Welcome to SCORPIO. Verify your email: ${FRONTEND_URL}/verify-email?token=${token}`
+    `Welcome to SCORPIO. One quick step before you're all set — confirm this is really your email address.\n\n${FRONTEND_URL}/verify-email?token=${token}`
   );
 
   const session = createSession(user.id);
@@ -176,7 +176,7 @@ router.post('/resend-verification', authLimiter, requireAuth, (req, res) => {
   sendEmail(
     req.user.email,
     'Verify your SCORPIO account',
-    `Verify your email: ${FRONTEND_URL}/verify-email?token=${token}`
+    `Here's your verification link, as requested.\n\n${FRONTEND_URL}/verify-email?token=${token}`
   );
   res.json({ sent: true });
 });
@@ -200,7 +200,7 @@ router.post('/forgot-password', authLimiter, (req, res) => {
     sendEmail(
       user.email,
       'Reset your SCORPIO password',
-      `Reset your password: ${FRONTEND_URL}/reset-password?token=${token}`
+      `Someone (hopefully you) asked to reset the password on this account. This link expires in ${RESET_TOKEN_TTL_MINUTES} minutes — if that wasn't you, just ignore this.\n\n${FRONTEND_URL}/reset-password?token=${token}`
     );
   }
 

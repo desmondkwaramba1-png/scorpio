@@ -12,18 +12,20 @@ export default function ProtectedRoute({ children }) {
   if (!user.terms_accepted_at && location.pathname !== '/accept-terms') {
     return <Navigate to="/accept-terms" replace />;
   }
-  // NOT currently hard-blocking on email verification, even though the
-  // account genuinely isn't verified yet — Resend is still sandboxed
-  // (unverified sending domain), which means it can only deliver to the
-  // platform operator's own inbox and silently fails for every real
-  // signup. A hard redirect here, combined with that, meant literally no
-  // new user could ever get past signup — confirmed live, not assumed:
-  // production logs showed "[EMAIL FAILED] ... You can only send testing
-  // emails to your own email address" for every real test signup. Once a
-  // real sending domain is verified in Resend, re-enable the block below.
+  // Re-enabled: Resend's sending domain (scorpio.co.zw) is now verified —
+  // confirmed for real, not just by the dashboard's status label. A test
+  // send to a fake address came back with an actual SMTP bounce straight
+  // from Gmail ("no such user"), proof mail is genuinely reaching real
+  // providers now, not silently failing the way it was when this block
+  // was disabled (see git history on this file for that incident).
   //
-  // if (!user.email_verified_at && location.pathname !== '/check-email') {
-  //   return <Navigate to="/check-email" replace />;
-  // }
+  // Checked after terms, not before — a brand-new signup should agree to
+  // terms first, then verify. Google/Facebook accounts skip this gate
+  // entirely: findOrCreateUser (oauth.js) already sets email_verified_at
+  // immediately when the provider itself reports the email as verified,
+  // which is the normal case for those, so there's nothing to re-confirm.
+  if (!user.email_verified_at && location.pathname !== '/check-email') {
+    return <Navigate to="/check-email" replace />;
+  }
   return children;
 }

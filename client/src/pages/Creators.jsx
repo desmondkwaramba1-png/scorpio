@@ -1,29 +1,29 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiUsers, FiPackage } from 'react-icons/fi';
-import Seal from '../components/Seal.jsx';
 
+// No text Seal badge here on purpose — at this card's width there's no
+// room for "Verified" without shoving the name itself into truncation
+// (a real problem the first version of this card had). The gold avatar
+// ring (see .creator-card--verified in index.css) already carries that
+// signal; the full Seal with its label still shows on the creator's own
+// profile page, where there's room for it.
 function CreatorCard({ creator }) {
   return (
     <Link to={`/@${creator.handle}`} className={`creator-card${creator.verified ? ' creator-card--verified' : ''}`}>
-      <div className="creator-card__banner" />
-      <div className="creator-card__body">
-        <div
-          className="creator-card__avatar"
-          style={creator.avatar_path ? { backgroundImage: `url(${creator.avatar_path})` } : undefined}
-        >
-          {!creator.avatar_path && creator.name.charAt(0).toUpperCase()}
-        </div>
-        <div className="creator-card__name">
-          <span>{creator.name}</span>
-          {!!creator.verified && <Seal />}
-        </div>
-        <p className="muted" style={{ fontSize: '.74rem' }}>@{creator.handle}</p>
-        {creator.bio && <p className="creator-card__bio">{creator.bio}</p>}
-        <p className="creator-card__count">
-          <FiPackage size={11} /> {creator.product_count} product{creator.product_count === 1 ? '' : 's'}
-        </p>
+      <div
+        className="creator-card__avatar"
+        style={creator.avatar_path ? { backgroundImage: `url(${creator.avatar_path})` } : undefined}
+      >
+        {!creator.avatar_path && creator.name.charAt(0).toUpperCase()}
       </div>
+      <div className="creator-card__name">
+        <span>{creator.name}</span>
+      </div>
+      <p className="creator-card__handle">@{creator.handle}</p>
+      <p className="creator-card__count">
+        <FiPackage size={11} /> {creator.product_count} product{creator.product_count === 1 ? '' : 's'}
+      </p>
     </Link>
   );
 }
@@ -54,13 +54,10 @@ export default function Creators() {
       {!creators && !error && (
         <div className="creators-grid">
           {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} className="skeleton-card">
-              <div className="skeleton" style={{ height: 44 }} />
-              <div style={{ padding: '0 12px 14px' }}>
-                <div className="skeleton" style={{ width: 52, height: 52, borderRadius: '50%', margin: '-26px auto 10px' }} />
-                <div className="skeleton" style={{ height: 12, width: '70%', margin: '0 auto 8px' }} />
-                <div className="skeleton" style={{ height: 10, width: '45%', margin: '0 auto' }} />
-              </div>
+            <div key={i} className="skeleton-card" style={{ padding: '16px 10px 12px' }}>
+              <div className="skeleton" style={{ width: 52, height: 52, borderRadius: '50%', margin: '0 auto 10px' }} />
+              <div className="skeleton" style={{ height: 12, width: '70%', margin: '0 auto 8px' }} />
+              <div className="skeleton" style={{ height: 10, width: '45%', margin: '0 auto' }} />
             </div>
           ))}
         </div>

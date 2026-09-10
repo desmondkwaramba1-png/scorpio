@@ -1,8 +1,84 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      // Update the service worker (and reload) automatically on a new
+      // deploy — this app ships multiple times a day; a 'prompt' strategy
+      // would leave someone stuck on a stale cached version until they
+      // notice and click something.
+      registerType: 'autoUpdate',
+      includeAssets: ['brand/mark.svg', 'brand/apple-touch-icon.png'],
+      manifest: {
+        name: 'SCORPIO — Create, Sell, Empower',
+        short_name: 'SCORPIO',
+        description: 'Buy and sell digital products in Zimbabwe. Pay with EcoCash.',
+        // Matches --green-dark (the app's fixed navy chrome, see index.css)
+        // — the color a browser/OS paints behind the splash/status bar
+        // before the page's own CSS has loaded.
+        theme_color: '#131921',
+        background_color: '#131921',
+        display: 'standalone',
+        start_url: '/',
+        icons: [
+          { src: '/brand/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/brand/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/brand/icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: '/brand/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+        ]
+      },
+      workbox: {
+        // Everything NOT matched by a rule below is a plain network
+        // passthrough, never touched by the service worker — this is
+        // deliberately an allowlist, not a blocklist, so anything
+        // session/payment-sensitive (auth, cart, checkout, downloads) is
+        // safe by default just by never being mentioned here, not because
+        // of an exclusion I have to remember to keep correct.
+        runtimeCaching: [
+          {
+            // Product/creator listings: try the network first (prices and
+            // stock need to be real), but don't make someone on a
+            // congested connection wait forever for it — fall back to the
+            // last good response after 4s instead of hanging.
+            urlPattern: ({ url, request }) => request.method === 'GET' && /^\/api\/(products|creators)(\/|\?|$)/.test(url.pathname + url.search),
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-reads',
+              networkTimeoutSeconds: 4,
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 6 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          },
+          {
+            // Product covers, creator avatars, reels thumbnails — served
+            // from R2, essentially immutable once uploaded (a new upload
+            // gets a new key, see storage.js), and the single biggest
+            // piece of data weight on this app. Safe to cache aggressively
+            // and exactly where "reduce network demand" actually pays off.
+            urlPattern: ({ url }) => /\.r2\.(dev|cloudflarestorage\.com)$/.test(url.hostname),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'r2-media',
+              expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          },
+          {
+            urlPattern: ({ url }) => url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com' || url.hostname === 'api.fontshare.com',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'fonts',
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          }
+        ]
+      }
+    })
+  ],
   server: {
     port: 5173,
     // Lets the Cloudflare quick tunnel (a random *.trycloudflare.com host

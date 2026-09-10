@@ -1,18 +1,11 @@
-import { Link } from 'react-router-dom';
-
 // The shared frame for every auth-flow screen — login, signup, onboarding,
-// the post-OAuth role question, password reset, email verification. Just
-// the scorpion mark (not the wordmark — the nav already carries that, and
-// "Scorpio" spelled out twice on one screen read as shouting) above a
-// bordered card, so each of these still reads as a deliberate, focused
-// moment rather than a bare form on the page.
+// the post-OAuth role question, password reset, email verification. Just a
+// bordered card on a soft background; no logo up top (the nav already
+// carries the wordmark, and anything more read as shouting).
 export default function AuthShell({ children, wide = false, cardStyle }) {
   return (
     <div className="auth-page">
       <div className={`auth-shell${wide ? ' auth-shell--wide' : ''}`}>
-        <Link to="/" className="auth-shell__brand" aria-label="Scorpio home">
-          <img src="/brand/mark.svg" alt="" width="40" height="40" />
-        </Link>
         <div className="auth-card" style={cardStyle}>{children}</div>
       </div>
     </div>

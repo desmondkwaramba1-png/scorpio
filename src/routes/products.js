@@ -540,26 +540,45 @@ router.post('/', requireAuth, requireCreator, upload.fields([
 
   // Every validation above has passed — only now do the actual R2 uploads,
   // so a request that was going to be rejected anyway never wastes one.
-  let coverBuffer = cover.buffer;
-  try { coverBuffer = await optimizeImage(cover.buffer, { maxWidth: 1600 }); } catch (err) { console.error('[image optimize]', err); }
-  const coverKey = objectKey('covers', cover.originalname);
-  await storage.uploadBuffer(coverKey, coverBuffer, cover.mimetype);
-  const coverPath = storage.publicUrl(coverKey);
+  //
+  // These three are independent of each other (each is its own R2 object,
+  // none reads what another writes), so they run concurrently instead of
+  // one-after-another — a course with a cover, a free preview clip, and
+  // the real video file used to pay for all three uploads' latency added
+  // together in serial; now it pays for whichever one is slowest.
+  const uploadCover = (async () => {
+    let coverBuffer = cover.buffer;
+    try { coverBuffer = await optimizeImage(cover.buffer, { maxWidth: 1600 }); } catch (err) { console.error('[image optimize]', err); }
+    const coverKey = objectKey('covers', cover.originalname);
+    await storage.uploadBuffer(coverKey, coverBuffer, cover.mimetype);
+    return storage.publicUrl(coverKey);
+  })();
+
+  // Only meaningful for courses, but not restricted to them at the DB
+  // level — a free sample clip is a reasonable thing for any video
+  // deliverable, not something worth a CHECK constraint over.
+  const uploadPreview = previewVideo ? (async () => {
+    const previewKey = objectKey('previews', previewVideo.originalname);
+    await storage.uploadBuffer(previewKey, previewVideo.buffer, previewVideo.mimetype);
+    return storage.publicUrl(previewKey);
+  })() : Promise.resolve(null);
+
+  // The main deliverable's R2 upload doesn't actually need productId —
+  // only the product_files row it feeds does — so it can run alongside
+  // the two above instead of waiting for the INSERT below.
+  const uploadFile = file ? (async () => {
+    const fileKey = objectKey('product-files', file.originalname);
+    await storage.uploadBuffer(fileKey, file.buffer, file.mimetype);
+    return fileKey;
+  })() : Promise.resolve(null);
+
+  const [coverPath, previewVideoPath, fileKey] = await Promise.all([uploadCover, uploadPreview, uploadFile]);
 
   const slug = slugify(title);
   const productCurrency = ['USD', 'ZWG'].includes(currency) ? currency : 'USD';
   const qtyLimit = quantity_limit ? parseInt(quantity_limit, 10) : null;
   const productStatus = status === 'draft' ? 'draft' : 'published';
   const deliveryDays = isService && delivery_days ? parseInt(delivery_days, 10) : null;
-  // Only meaningful for courses, but not restricted to them at the DB
-  // level — a free sample clip is a reasonable thing for any video
-  // deliverable, not something worth a CHECK constraint over.
-  let previewVideoPath = null;
-  if (previewVideo) {
-    const previewKey = objectKey('previews', previewVideo.originalname);
-    await storage.uploadBuffer(previewKey, previewVideo.buffer, previewVideo.mimetype);
-    previewVideoPath = storage.publicUrl(previewKey);
-  }
 
   const result = db.prepare(`
     INSERT INTO products
@@ -582,21 +601,20 @@ router.post('/', requireAuth, requireCreator, upload.fields([
     // only way back to these bytes is routes/downloads.js minting a
     // short-lived presigned URL after checking a valid, unexpired,
     // not-over-its-download-limit token, exactly like it checked a local
-    // file existed before this migration.
-    const fileKey = objectKey('product-files', file.originalname);
-    await storage.uploadBuffer(fileKey, file.buffer, file.mimetype);
+    // file existed before this migration. (Upload itself already
+    // happened above, in parallel with the cover/preview uploads.)
     db.prepare(`
       INSERT INTO product_files (product_id, kind, storage_path, original_filename, size_bytes)
       VALUES (?, 'upload', ?, ?, ?)
     `).run(productId, fileKey, file.originalname, file.size);
-    try {
-      await verifyAndRecordFile(productId, req.creator.id, file, title, description);
-    } catch (err) {
-      // Verification is a real check, but not one that should block a
-      // legitimate upload if it hits a bug of its own — the product still
-      // gets created; it just won't have a hash/page-count recorded.
-      console.error('[content verification]', err);
-    }
+    // Fire-and-forget, deliberately not awaited: verification (hashing
+    // the whole file, PDF page-counting) is real work with nothing in
+    // this response depending on its result — it already wasn't allowed
+    // to fail the request (see the catch below), so there's no reason to
+    // make the seller sit through it too. Same "not critical enough to
+    // block on" logic, just applied to speed as well as failure.
+    verifyAndRecordFile(productId, req.creator.id, file, title, description)
+      .catch(err => console.error('[content verification]', err));
   } else if (external_url) {
     db.prepare(`
       INSERT INTO product_files (product_id, kind, external_url)
@@ -716,21 +734,33 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
   }
 
   // All validation above has passed — only now do the actual R2 uploads.
-  let coverPath = product.cover_path;
-  if (cover) {
+  // Same reasoning as the POST handler above: whichever of these are
+  // actually present are independent of each other, so they run
+  // concurrently rather than one-after-another.
+  const uploadCover = cover ? (async () => {
     let coverBuffer = cover.buffer;
     try { coverBuffer = await optimizeImage(cover.buffer, { maxWidth: 1600 }); } catch (err) { console.error('[image optimize]', err); }
     const coverKey = objectKey('covers', cover.originalname);
     await storage.uploadBuffer(coverKey, coverBuffer, cover.mimetype);
-    coverPath = storage.publicUrl(coverKey);
-  }
+    return storage.publicUrl(coverKey);
+  })() : Promise.resolve(product.cover_path);
 
-  let previewVideoPath = product.preview_video_path;
-  if (previewVideo) {
+  const uploadPreview = previewVideo ? (async () => {
     const previewKey = objectKey('previews', previewVideo.originalname);
     await storage.uploadBuffer(previewKey, previewVideo.buffer, previewVideo.mimetype);
-    previewVideoPath = storage.publicUrl(previewKey);
-  }
+    return storage.publicUrl(previewKey);
+  })() : Promise.resolve(product.preview_video_path);
+
+  // The main deliverable's R2 upload doesn't need anything the DELETE/
+  // INSERT below does, so it runs alongside cover/preview too instead of
+  // waiting its turn.
+  const uploadFile = file ? (async () => {
+    const fileKey = objectKey('product-files', file.originalname);
+    await storage.uploadBuffer(fileKey, file.buffer, file.mimetype);
+    return fileKey;
+  })() : Promise.resolve(null);
+
+  const [coverPath, previewVideoPath, fileKey] = await Promise.all([uploadCover, uploadPreview, uploadFile]);
 
   db.prepare(`
     UPDATE products SET
@@ -763,8 +793,8 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
   if (file || external_url) {
     db.prepare('DELETE FROM product_files WHERE product_id = ?').run(product.id);
     if (file) {
-      const fileKey = objectKey('product-files', file.originalname);
-      await storage.uploadBuffer(fileKey, file.buffer, file.mimetype);
+      // Upload itself already happened above, in parallel with cover/
+      // preview — fileKey is that result.
       db.prepare(`
         INSERT INTO product_files (product_id, kind, storage_path, original_filename, size_bytes)
         VALUES (?, 'upload', ?, ?, ?)
@@ -773,11 +803,10 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
       // review_status resets to 'clear' first so an old flag from a
       // previous file doesn't linger on a file that's since been swapped out.
       db.prepare("UPDATE products SET review_status = 'clear', flag_reason = NULL WHERE id = ?").run(product.id);
-      try {
-        await verifyAndRecordFile(product.id, req.creator.id, file, title ?? product.title, description ?? product.description);
-      } catch (err) {
-        console.error('[content verification]', err);
-      }
+      // Fire-and-forget — see the identical comment in the POST handler
+      // above. Nothing in this response depends on verification finishing.
+      verifyAndRecordFile(product.id, req.creator.id, file, title ?? product.title, description ?? product.description)
+        .catch(err => console.error('[content verification]', err));
     } else {
       db.prepare(`
         INSERT INTO product_files (product_id, kind, external_url)

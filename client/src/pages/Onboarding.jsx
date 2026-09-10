@@ -8,6 +8,17 @@ import { SITE_HOST } from '../lib/site.js';
 
 const STEPS = ['Basics', 'About', 'Payout', 'Review'];
 
+// Mirrors the backend's exact rule (see routes/creators.js's HANDLE_RE) —
+// duplicated here isn't ideal, but a handle is validated in exactly one
+// place server-side and there's no shared module between client/server
+// to import it from. Kept in sync deliberately, not incidentally.
+const HANDLE_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])?$/;
+function handleError(handle) {
+  if (!handle) return 'Pick a handle.';
+  if (!HANDLE_RE.test(handle)) return 'Lowercase letters, numbers, and hyphens only — no spaces, no starting/ending with a hyphen.';
+  return null;
+}
+
 export default function Onboarding() {
   const { creator, refresh } = useAuth();
   const navigate = useNavigate();
@@ -23,12 +34,18 @@ export default function Onboarding() {
   if (creator) return <Navigate to="/dashboard" replace />;
 
   const update = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
+  // Lowercase as they type rather than only complaining after the fact —
+  // "TendaiWrites" becoming "tendaiwrites" on its own prevents the single
+  // most common way to trip the handle rule, instead of catching it once
+  // it's already wrong.
+  const updateHandle = (e) => setForm(f => ({ ...f, handle: e.target.value.toLowerCase() }));
+  const handleInvalid = handleError(form.handle);
 
   function next() {
     setError(null);
-    if (step === 0 && (!form.handle || !form.name)) {
-      setError('Handle and name are required.');
-      return;
+    if (step === 0) {
+      if (handleInvalid) { setError(handleInvalid); return; }
+      if (!form.name) { setError('Your name is required.'); return; }
     }
     if (step === 1 && (!form.what_selling || !form.who_for)) {
       setError('Both questions are required.');
@@ -82,8 +99,12 @@ export default function Onboarding() {
         <div>
           <div className="field">
             <label htmlFor="handle">Handle</label>
-            <input id="handle" required value={form.handle} onChange={update('handle')} placeholder="e.g. tendaiwrites" />
-            <small>Your storefront: {SITE_HOST}/@{form.handle || 'yourhandle'}. Can't be changed later.</small>
+            <input id="handle" required value={form.handle} onChange={updateHandle} placeholder="e.g. tendaiwrites" />
+            {form.handle && handleInvalid ? (
+              <small style={{ color: 'var(--red)' }}>{handleInvalid}</small>
+            ) : (
+              <small>Your storefront: {SITE_HOST}/@{form.handle || 'yourhandle'}. Can't be changed later.</small>
+            )}
           </div>
           <div className="field">
             <label htmlFor="name">Your name</label>
@@ -148,7 +169,12 @@ export default function Onboarding() {
       <div className="btn-row" style={{ marginTop: 24 }}>
         {step > 0 && <button className="btn btn--ghost" type="button" onClick={back}>Back</button>}
         {step < STEPS.length - 1 && (
-          <button className="btn btn--primary" style={{ flex: 1 }} type="button" onClick={next}>Continue</button>
+          <button
+            className="btn btn--primary" style={{ flex: 1 }} type="button" onClick={next}
+            disabled={step === 0 && (!!handleInvalid || !form.name) || (step === 1 && (!form.what_selling || !form.who_for))}
+          >
+            Continue
+          </button>
         )}
         {step === STEPS.length - 1 && (
           <button className="btn btn--gold" style={{ flex: 1 }} type="button" onClick={submit} disabled={submitting}>

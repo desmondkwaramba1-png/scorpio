@@ -8,12 +8,16 @@
   <rect width="64" height="64" rx="16" fill="url(#bg)"/>
   <!-- scorpion: curled tail + stinger is the single most recognizable shape at
        this size, so the mark leans on that rather than a full body/leg
-       illustration, which just turns to mud below ~30px. -->
-  <g fill="none" stroke="#2DE1E6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+       illustration, which just turns to mud below ~30px. Gold (#FF8C42),
+       not the cyan this used to be — cyan appears nowhere else in the
+       brand (buttons, the nav wordmark, and the splash screen's own
+       scorpion are all gold), so the icon read as off-brand next to
+       everything else in the app. -->
+  <g fill="none" stroke="#FF8C42" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
     <path d="M18 44 Q17 30 27 26 Q40 21 40 33 Q40 42 32 42 Q27 42 27 37"/>
-    <circle cx="27" cy="37" r="2.6" fill="#2DE1E6" stroke="none"/>
+    <circle cx="27" cy="37" r="2.6" fill="#FF8C42" stroke="none"/>
   </g>
-  <g fill="none" stroke="#2DE1E6" stroke-width="3.4" stroke-linecap="round">
+  <g fill="none" stroke="#FF8C42" stroke-width="3.4" stroke-linecap="round">
     <path d="M18 44 l-4 4"/>
     <path d="M18 44 l-5 1"/>
   </g>

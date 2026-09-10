@@ -3,6 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import { FiSearch, FiCompass } from 'react-icons/fi';
 import ProductCard from '../components/ProductCard.jsx';
 import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../lib/launchScope.js';
+import { useSEO } from '../lib/seo';
+import { SITE_ORIGIN } from '../lib/site.js';
+import { api } from '../lib/api';
 
 const TYPES = [
   { value: '', label: 'All' },
@@ -41,10 +44,9 @@ export default function Discover() {
     if (category) qs.set('category', category);
     setProducts(null);
     setError(null);
-    fetch(`/api/products?${qs.toString()}`)
-      .then(r => r.json())
+    api.get(`/api/products?${qs.toString()}`)
       .then(setProducts)
-      .catch(() => setError('Could not load the marketplace. Check your connection and try again.'));
+      .catch(err => setError(err.message));
   }, [type, q, sort, category]);
 
   function updateParam(key, value) {
@@ -52,6 +54,14 @@ export default function Discover() {
     if (value) next.set(key, value); else next.delete(key);
     setParams(next);
   }
+
+  useSEO({
+    title: q
+      ? `"${q}" — Search results | SCORPIO`
+      : 'Discover Ebooks, Courses & Templates — SCORPIO Marketplace',
+    description: 'Browse ebooks, guides, templates, and online courses from real Zimbabwean creators on SCORPIO — pay instantly with EcoCash.',
+    url: `${SITE_ORIGIN}/discover`
+  });
 
   return (
     <main className="wrap" style={{ padding: '40px 20px 80px' }}>

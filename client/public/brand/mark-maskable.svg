@@ -15,11 +15,11 @@
        a 64x64 canvas, so the artwork itself is unchanged from mark.svg —
        only the background shape differs. -->
   <rect width="64" height="64" fill="url(#bg)"/>
-  <g fill="none" stroke="#2DE1E6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+  <g fill="none" stroke="#FF8C42" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
     <path d="M18 44 Q17 30 27 26 Q40 21 40 33 Q40 42 32 42 Q27 42 27 37"/>
-    <circle cx="27" cy="37" r="2.6" fill="#2DE1E6" stroke="none"/>
+    <circle cx="27" cy="37" r="2.6" fill="#FF8C42" stroke="none"/>
   </g>
-  <g fill="none" stroke="#2DE1E6" stroke-width="3.4" stroke-linecap="round">
+  <g fill="none" stroke="#FF8C42" stroke-width="3.4" stroke-linecap="round">
     <path d="M18 44 l-4 4"/>
     <path d="M18 44 l-5 1"/>
   </g>

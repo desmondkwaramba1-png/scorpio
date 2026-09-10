@@ -45,6 +45,14 @@ try {
 } catch {}
 
 const app = express();
+// Fly's edge proxy is the one hop in front of this app, so trusting
+// exactly 1 proxy (not `true`, which would trust an arbitrary chain of
+// client-supplied X-Forwarded-For values) is the correct, safe setting —
+// without this, express-rate-limit can't safely read the real client IP
+// from X-Forwarded-For and throws ERR_ERL_UNEXPECTED_X_FORWARDED_FOR on
+// every rate-limited request (auth, checkout, reports), confirmed live in
+// production logs.
+app.set('trust proxy', 1);
 app.use(cors({
   origin(origin, callback) {
     if (!origin || ALLOWED_ORIGINS.has(origin)) return callback(null, true);

@@ -773,7 +773,9 @@ img{max-width:100%;display:block;}
 }
 
 .footer{background:var(--green-dark);padding:var(--sp-6) 0;color:rgba(255,255,255,.55);font-size:.85rem;}
-.footer__inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+.footer__inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;}
+.footer__link{color:rgba(255,255,255,.55);text-decoration:underline;text-underline-offset:2px;transition:color .15s ease;}
+.footer__link:hover{color:#fff;}
 
 /* ---- dashboard ---- */
 .tabs{display:flex;gap:6px;margin-bottom:var(--sp-6);border-bottom:1px solid var(--line);padding-bottom:var(--sp-3);flex-wrap:wrap;}

@@ -268,13 +268,6 @@ export default function Marketplace() {
         </section>
       )}
 
-      <footer className="footer">
-        <div className="wrap footer__inner">
-          <span>Copyright {new Date().getFullYear()} SCORPIO</span>
-          <span>Built for Zimbabwe. Pay with EcoCash.</span>
-        </div>
-      </footer>
-
       {viewingReels && <ReelViewer reels={viewingReels} onClose={() => setViewingReels(null)} />}
     </div>
   );

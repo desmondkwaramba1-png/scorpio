@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Nav from './components/Nav.jsx';
+import Footer from './components/Footer.jsx';
 import SplashScreen from './components/SplashScreen.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
@@ -21,6 +22,7 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword.jsx'));
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail.jsx'));
 const CheckEmail = lazy(() => import('./pages/CheckEmail.jsx'));
 const Terms = lazy(() => import('./pages/Terms.jsx'));
+const ReportIssue = lazy(() => import('./pages/ReportIssue.jsx'));
 const AcceptTerms = lazy(() => import('./pages/AcceptTerms.jsx'));
 const Onboarding = lazy(() => import('./pages/Onboarding.jsx'));
 const Account = lazy(() => import('./pages/Account.jsx'));
@@ -63,6 +65,7 @@ export default function App() {
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/check-email" element={<CheckEmail />} />
             <Route path="/terms" element={<Terms />} />
+            <Route path="/report" element={<ReportIssue />} />
             <Route path="/accept-terms" element={<AcceptTerms />} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
@@ -89,6 +92,7 @@ export default function App() {
           </Routes>
         </Suspense>
       </ErrorBoundary>
+      <Footer />
     </>
   );
 }

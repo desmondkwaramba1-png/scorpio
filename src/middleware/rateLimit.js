@@ -19,4 +19,16 @@ const checkoutLimiter = rateLimit({
   message: { error: 'Too many checkout attempts. Try again in a few minutes.' }
 });
 
-module.exports = { authLimiter, checkoutLimiter };
+// The general issue-report endpoint is deliberately open to logged-out
+// visitors (see routes/reports.js — the whole point is catching "I can't
+// log in"), which means it has no account behind it to rely on for abuse
+// control the way the other report endpoints do.
+const reportLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many reports sent. Try again in a few minutes.' }
+});
+
+module.exports = { authLimiter, checkoutLimiter, reportLimiter };

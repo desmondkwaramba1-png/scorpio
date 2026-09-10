@@ -78,26 +78,27 @@ router.post('/disputes/:id/resolve', requireAdmin, (req, res) => {
   });
 });
 
-// GET /api/admin/reports — general problem reports, two kinds in one
-// queue (see migrations/027/028_reports*.sql): an order-scoped report
-// (purchase_id set — buyer or seller flagging something about a specific
-// order) and a product-only report (product_id set, no order at all — one
-// seller flagging another's listing, e.g. as a copy). purchase_id is
-// LEFT JOINed rather than required, and the effective product is
-// COALESCE(rp.product_id, pu.product_id) since either can supply it.
+// GET /api/admin/reports — general problem reports, three kinds in one
+// queue (see migrations/027/028/029_reports*.sql): an order-scoped report
+// (purchase_id set), a product-only report (product_id set, no order —
+// one seller flagging another's listing), and a general report tied to
+// neither (a bug, "I can't log in," feedback — possibly from a logged-out
+// visitor, see routes/reports.js). Every join from purchase_id onward is
+// LEFT rather than required, since a general report has none of that
+// context to show — only reason/subject/reporter_email are guaranteed.
 router.get('/reports', requireAdmin, (req, res) => {
   const reports = db.prepare(`
-    SELECT rp.id AS report_id, rp.reason, rp.status AS report_status, rp.reporter_role, rp.created_at AS reported_at,
+    SELECT rp.id AS report_id, rp.subject, rp.reason, rp.status AS report_status, rp.reporter_role, rp.created_at AS reported_at,
            pu.id AS purchase_id, pu.amount_minor, pu.currency, pu.created_at AS purchased_at,
            p.title AS product_title, p.slug AS product_slug,
            buyer.name AS buyer_name, buyer.email AS buyer_email,
            c.name AS seller_name, c.handle AS seller_handle, cu.email AS seller_email,
-           reporter.email AS reporter_email
+           COALESCE(rp.reporter_email, reporter.email) AS reporter_email
     FROM reports rp
     LEFT JOIN purchases pu ON pu.id = rp.purchase_id
-    JOIN products p ON p.id = COALESCE(rp.product_id, pu.product_id)
+    LEFT JOIN products p ON p.id = COALESCE(rp.product_id, pu.product_id)
     LEFT JOIN buyers buyer ON buyer.id = pu.buyer_id
-    JOIN creators c ON c.id = p.creator_id
+    LEFT JOIN creators c ON c.id = p.creator_id
     LEFT JOIN users cu ON cu.id = c.user_id
     LEFT JOIN users reporter ON reporter.id = rp.reporter_user_id
     WHERE rp.status = 'open'

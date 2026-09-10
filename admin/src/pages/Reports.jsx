@@ -31,14 +31,18 @@ function ReportCard({ report, onResolve }) {
     <div className="card card--pad">
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
         <div>
-          <p style={{ fontWeight: 700 }}>{report.product_title}</p>
+          <p style={{ fontWeight: 700 }}>{report.product_title || report.subject || 'General report'}</p>
           {report.purchase_id ? (
             <p className="muted" style={{ fontSize: '.85rem' }}>
               {report.buyer_name || report.buyer_email} bought from {report.seller_name} ({report.seller_handle}) &middot; {formatMoney(report.amount_minor, report.currency)}
             </p>
-          ) : (
+          ) : report.product_title ? (
             <p className="muted" style={{ fontSize: '.85rem' }}>
               No order attached &mdash; a report on the listing itself, sold by {report.seller_name} ({report.seller_handle})
+            </p>
+          ) : (
+            <p className="muted" style={{ fontSize: '.85rem' }}>
+              Not tied to an order or a listing &mdash; a general issue report
             </p>
           )}
         </div>
@@ -47,7 +51,8 @@ function ReportCard({ report, onResolve }) {
 
       <div className="card card--pad" style={{ background: 'var(--field-bg)', marginBottom: 14 }}>
         <p style={{ fontSize: '.82rem', fontWeight: 600, marginBottom: 4 }}>
-          Reported by the {report.reporter_role} ({report.reporter_email})
+          {report.reporter_role ? `Reported by the ${report.reporter_role}` : 'Reported by a logged-out visitor'}
+          {report.reporter_email ? ` (${report.reporter_email})` : ''}
         </p>
         <p style={{ fontSize: '.9rem', lineHeight: 1.5 }}>{report.reason}</p>
       </div>

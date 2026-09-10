@@ -34,7 +34,7 @@ const HANDLE_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])?$/;
 const RESERVED_HANDLES = new Set([
   'discover', 'login', 'oauth-complete', 'forgot-password', 'reset-password',
   'verify-email', 'check-email', 'terms', 'accept-terms', 'onboarding', 'account', 'cart',
-  'checkout', 'dashboard', 'creators', 'payment'
+  'checkout', 'dashboard', 'creators', 'payment', 'report'
 ]);
 
 function publicCreator(row) {

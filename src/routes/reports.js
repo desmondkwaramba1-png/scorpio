@@ -4,8 +4,11 @@
 const express = require('express');
 const db = require('../db/schema');
 const { requireAuth } = require('../middleware/auth');
+const { reportLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // POST /api/reports — { purchase_id, reason }. The reporter must actually
 // be a party to the order (the buyer who paid, or the creator who sold
@@ -79,6 +82,35 @@ router.post('/product', requireAuth, (req, res) => {
     INSERT INTO reports (product_id, reporter_user_id, reporter_role, reason)
     VALUES (?, ?, ?, ?)
   `).run(productId, req.user.id, reporterRole, reason);
+
+  res.status(201).json({ id: result.lastInsertRowid, status: 'open' });
+});
+
+// POST /api/reports/general — { subject, reason, email }. No purchase, no
+// product, no login required — this is the catch-all for a problem that
+// doesn't fit the two scoped report types above: a broken page, "I can't
+// log in," general feedback. Deliberately open to logged-out visitors,
+// since requiring login here would rule out reporting the exact class of
+// problem ("I can't log in") this exists to catch. A logged-in reporter's
+// account email is used automatically; a logged-out one has to give an
+// email so there's any way to follow up.
+router.post('/general', reportLimiter, (req, res) => {
+  const subject = (req.body.subject || '').trim();
+  const reason = (req.body.reason || '').trim();
+  const email = req.user ? req.user.email : (req.body.email || '').trim();
+
+  if (!reason) return res.status(400).json({ error: 'Describe what happened.' });
+  if (reason.length > 2000) return res.status(400).json({ error: 'Keep it under 2000 characters.' });
+  if (subject.length > 200) return res.status(400).json({ error: 'Keep the subject under 200 characters.' });
+  if (!req.user && !EMAIL_RE.test(email)) {
+    return res.status(400).json({ error: 'Enter a valid email so we can follow up.' });
+  }
+
+  const reporterRole = req.user ? (req.creator ? 'creator' : 'buyer') : null;
+  const result = db.prepare(`
+    INSERT INTO reports (reporter_user_id, reporter_role, reporter_email, subject, reason)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(req.user ? req.user.id : null, reporterRole, email || null, subject || null, reason);
 
   res.status(201).json({ id: result.lastInsertRowid, status: 'open' });
 });

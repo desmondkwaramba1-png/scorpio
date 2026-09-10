@@ -123,11 +123,11 @@ export default function Login() {
 
   return (
     <AuthShell>
-      <h1 style={{ fontSize: '1.7rem', marginBottom: 6 }}>
-        {tab === 'login' ? 'Log in to SCORPIO' : 'Create your SCORPIO account'}
+      <h1 style={{ fontSize: '1.6rem', marginBottom: 6 }}>
+        {tab === 'login' ? 'Welcome back' : 'Create your account'}
       </h1>
       <p className="muted" style={{ marginBottom: 24 }}>
-        {tab === 'login' ? 'Welcome back.' : "One account covers both sides. Sellers can browse and buy too, and you can open a storefront later even if you start as a buyer."}
+        {tab === 'login' ? 'Good to see you again.' : 'One account covers both sides — you can browse, buy, and open a storefront later even if you start as a buyer.'}
       </p>
 
       <div className="tabs" style={{ marginBottom: 24 }}>

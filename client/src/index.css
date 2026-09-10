@@ -996,9 +996,10 @@ img{max-width:100%;display:block;}
 }
 .auth-shell--wide{max-width:600px;}
 .auth-shell__brand{
-  align-self:center;font-family:'Alex Brush',cursive;font-weight:400;font-size:2.5rem;line-height:1;
-  color:var(--gold);text-shadow:0 0 18px rgba(var(--gold-rgb),.4);
+  align-self:center;line-height:0;border-radius:12px;
+  box-shadow:0 6px 18px -6px rgba(0,0,0,.25);
 }
+.auth-shell__brand img{display:block;width:40px;height:40px;border-radius:12px;}
 .auth-card{
   width:100%;background:var(--surface);border:1px solid var(--line);
   border-radius:var(--radius);box-shadow:var(--shadow-2);padding:40px 36px;
@@ -1007,8 +1008,7 @@ img{max-width:100%;display:block;}
 .auth-card--wide{max-width:600px;}
 @media (max-width:480px){
   .auth-card{padding:28px 22px;border-radius:var(--radius-sm);}
-  .auth-shell__brand{font-size:2.15rem;}
-  .auth-shell{gap:16px;}
+  .auth-shell{gap:14px;}
 }
 
 /* ---- role picker (login, onboarding's post-OAuth ask) ---- */

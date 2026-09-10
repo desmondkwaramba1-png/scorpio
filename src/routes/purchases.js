@@ -249,6 +249,15 @@ router.post('/', checkoutLimiter, requireAuth, async (req, res) => {
   const product = db.prepare("SELECT * FROM products WHERE slug = ? AND status = 'published'").get(product_slug);
   if (!product) return res.status(404).json({ error: 'Product not found.' });
 
+  // No self-purchase: paying yourself minus the platform fee is pure fee-
+  // gaming, and self-reviews would be worthless — every marketplace that
+  // takes a cut blocks this for the same reason. It also collapses a
+  // genuinely confusing UI state: the same order simultaneously showing an
+  // owner's "Edit listing" controls and a buyer's purchase record.
+  if (req.creator && req.creator.id === product.creator_id) {
+    return res.status(403).json({ error: "You can't buy your own product." });
+  }
+
   if (isSoldOut(product)) {
     return res.status(409).json({ error: 'This product is sold out.' });
   }

@@ -6,6 +6,7 @@ import EngagementBar from '../components/EngagementBar.jsx';
 import CommentsSection from '../components/CommentsSection.jsx';
 import ReviewsSection, { Stars } from '../components/ReviewsSection.jsx';
 import CompactProductCard from '../components/CompactProductCard.jsx';
+import ReportProblem from '../components/ReportProblem.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { formatMoney } from '../lib/money';
@@ -371,6 +372,14 @@ export default function Product() {
       <div style={{ gridColumn: '1 / -1' }}>
         <ReviewsSection productSlug={product.slug} />
         <CommentsSection ref={commentsRef} productId={product.id} />
+        {/* Not gated on having bought this — the case this exists for
+            (another seller flagging a copied/similar listing) is exactly
+            someone who never bought it and shouldn't have to. */}
+        {user && !isOwner && (
+          <div style={{ marginTop: 16, textAlign: 'center' }}>
+            <ReportProblem productId={product.id} label="Report this listing" />
+          </div>
+        )}
       </div>
     </div>
   );

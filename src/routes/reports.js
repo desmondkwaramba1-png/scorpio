@@ -46,4 +46,41 @@ router.post('/', requireAuth, (req, res) => {
   res.status(201).json({ id: result.lastInsertRowid, status: 'open' });
 });
 
+// POST /api/reports/product — { product_id, reason }. No purchase
+// required: this is for exactly the case the purchase-scoped report above
+// can't cover — a seller flagging another seller's listing as a copy or
+// otherwise a problem, or any logged-in user flagging a product as
+// misleading, before ever buying it. Any logged-in user except the
+// product's own owner (reporting your own listing makes no sense — use
+// the dashboard to edit or unpublish it instead).
+router.post('/product', requireAuth, (req, res) => {
+  const productId = Number(req.body.product_id);
+  const reason = (req.body.reason || '').trim();
+  if (!productId) return res.status(400).json({ error: 'product_id is required.' });
+  if (!reason) return res.status(400).json({ error: 'Describe the problem.' });
+  if (reason.length > 2000) return res.status(400).json({ error: 'Keep it under 2000 characters.' });
+
+  const product = db.prepare(`
+    SELECT p.id, p.title, c.user_id AS owner_user_id
+    FROM products p JOIN creators c ON c.id = p.creator_id
+    WHERE p.id = ?
+  `).get(productId);
+  if (!product) return res.status(404).json({ error: 'Product not found.' });
+  if (product.owner_user_id === req.user.id) {
+    return res.status(403).json({ error: "You can't report your own product." });
+  }
+
+  const existing = db.prepare(`SELECT id FROM reports WHERE product_id = ? AND reporter_user_id = ? AND status = 'open'`)
+    .get(productId, req.user.id);
+  if (existing) return res.status(409).json({ error: 'You already have an open report on this product.' });
+
+  const reporterRole = req.creator ? 'creator' : 'buyer';
+  const result = db.prepare(`
+    INSERT INTO reports (product_id, reporter_user_id, reporter_role, reason)
+    VALUES (?, ?, ?, ?)
+  `).run(productId, req.user.id, reporterRole, reason);
+
+  res.status(201).json({ id: result.lastInsertRowid, status: 'open' });
+});
+
 module.exports = router;

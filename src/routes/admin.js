@@ -78,10 +78,13 @@ router.post('/disputes/:id/resolve', requireAdmin, (req, res) => {
   });
 });
 
-// GET /api/admin/reports — general problem reports on any order (see
-// migrations/027_reports.sql). Separate queue from /disputes above: this
-// covers ordinary digital-goods orders, which the escrow dispute system
-// never did — those only ever applied to 'service' orders.
+// GET /api/admin/reports — general problem reports, two kinds in one
+// queue (see migrations/027/028_reports*.sql): an order-scoped report
+// (purchase_id set — buyer or seller flagging something about a specific
+// order) and a product-only report (product_id set, no order at all — one
+// seller flagging another's listing, e.g. as a copy). purchase_id is
+// LEFT JOINed rather than required, and the effective product is
+// COALESCE(rp.product_id, pu.product_id) since either can supply it.
 router.get('/reports', requireAdmin, (req, res) => {
   const reports = db.prepare(`
     SELECT rp.id AS report_id, rp.reason, rp.status AS report_status, rp.reporter_role, rp.created_at AS reported_at,
@@ -91,9 +94,9 @@ router.get('/reports', requireAdmin, (req, res) => {
            c.name AS seller_name, c.handle AS seller_handle, cu.email AS seller_email,
            reporter.email AS reporter_email
     FROM reports rp
-    JOIN purchases pu ON pu.id = rp.purchase_id
-    JOIN products p ON p.id = pu.product_id
-    JOIN buyers buyer ON buyer.id = pu.buyer_id
+    LEFT JOIN purchases pu ON pu.id = rp.purchase_id
+    JOIN products p ON p.id = COALESCE(rp.product_id, pu.product_id)
+    LEFT JOIN buyers buyer ON buyer.id = pu.buyer_id
     JOIN creators c ON c.id = p.creator_id
     LEFT JOIN users cu ON cu.id = c.user_id
     LEFT JOIN users reporter ON reporter.id = rp.reporter_user_id

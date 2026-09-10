@@ -32,9 +32,15 @@ function ReportCard({ report, onResolve }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
         <div>
           <p style={{ fontWeight: 700 }}>{report.product_title}</p>
-          <p className="muted" style={{ fontSize: '.85rem' }}>
-            {report.buyer_name || report.buyer_email} bought from {report.seller_name} ({report.seller_handle}) &middot; {formatMoney(report.amount_minor, report.currency)}
-          </p>
+          {report.purchase_id ? (
+            <p className="muted" style={{ fontSize: '.85rem' }}>
+              {report.buyer_name || report.buyer_email} bought from {report.seller_name} ({report.seller_handle}) &middot; {formatMoney(report.amount_minor, report.currency)}
+            </p>
+          ) : (
+            <p className="muted" style={{ fontSize: '.85rem' }}>
+              No order attached &mdash; a report on the listing itself, sold by {report.seller_name} ({report.seller_handle})
+            </p>
+          )}
         </div>
         <span className="muted" style={{ fontSize: '.8rem' }}>Reported {report.reported_at}</span>
       </div>

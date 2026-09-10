@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { FiFlag, FiCheck } from 'react-icons/fi';
 import { api } from '../lib/api';
 
-// Buyer or seller flagging a problem with an ordinary order — see
-// migrations/027_reports.sql and routes/reports.js. Deliberately plain: no
-// escrow, no resolution flow in the UI — this just gets a human (the
-// platform operator) looking at it, same honesty as the wallet payout
-// stub elsewhere in the app.
-export default function ReportProblem({ purchaseId, hasOpenReport, stopPropagation }) {
+// Buyer or seller flagging a problem — either about a specific order
+// (purchaseId, the original case: see migrations/027_reports.sql) or
+// about a product with no order behind it at all (productId — a seller
+// flagging another seller's listing as a copy, added in 028; see
+// routes/reports.js's POST /product). Exactly one of purchaseId/productId
+// is expected. Deliberately plain: no escrow, no resolution flow in the
+// UI — this just gets a human (the platform operator) looking at it, same
+// honesty as the wallet payout stub elsewhere in the app.
+export default function ReportProblem({ purchaseId, productId, hasOpenReport, stopPropagation, label }) {
   const [reported, setReported] = useState(!!hasOpenReport);
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');
@@ -25,7 +28,11 @@ export default function ReportProblem({ purchaseId, hasOpenReport, stopPropagati
     setSubmitting(true);
     setError(null);
     try {
-      await api.post('/api/reports', { purchase_id: purchaseId, reason: reason.trim() });
+      if (productId) {
+        await api.post('/api/reports/product', { product_id: productId, reason: reason.trim() });
+      } else {
+        await api.post('/api/reports', { purchase_id: purchaseId, reason: reason.trim() });
+      }
       setReported(true);
       setOpen(false);
     } catch (err) {
@@ -50,7 +57,7 @@ export default function ReportProblem({ purchaseId, hasOpenReport, stopPropagati
         className="btn btn--ghost btn--sm"
         onClick={e => { stop(e); setOpen(true); }}
       >
-        <FiFlag size={13} /> Report a problem
+        <FiFlag size={13} /> {label || 'Report a problem'}
       </button>
     );
   }

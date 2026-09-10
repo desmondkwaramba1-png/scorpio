@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { FiMail, FiRefreshCw } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api';
+import AuthShell from '../components/AuthShell.jsx';
 
 // The gate ProtectedRoute sends anyone with no email_verified_at to. Stays
 // on this same page rather than bouncing them out of the app — they're
@@ -48,8 +49,8 @@ export default function CheckEmail() {
   }
 
   return (
-    <div className="wrap" style={{ maxWidth: 420, padding: '80px 20px', textAlign: 'center' }}>
-      <FiMail size={32} color="var(--green-glow)" style={{ marginBottom: 14 }} />
+    <AuthShell cardStyle={{ textAlign: 'center' }}>
+      <FiMail size={32} color="var(--gold)" style={{ marginBottom: 14 }} />
       <h1 style={{ fontSize: '1.4rem', marginBottom: 10 }}>Verify your email</h1>
       <p className="muted" style={{ marginBottom: 28, lineHeight: 1.6 }}>
         We sent a link to <strong style={{ color: 'var(--ink)' }}>{user.email}</strong>. Open it, then come back
@@ -64,6 +65,6 @@ export default function CheckEmail() {
       </button>
 
       {error && <p className="error-text" style={{ marginTop: 16 }}>{error}</p>}
-    </div>
+    </AuthShell>
   );
 }

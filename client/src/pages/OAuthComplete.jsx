@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FiShoppingBag, FiShoppingCart } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
+import AuthShell from '../components/AuthShell.jsx';
 
 // Landed on after a Google/Facebook redirect — the backend already set the
 // session cookie, this page just refreshes auth state and routes onward.
@@ -36,7 +37,7 @@ export default function OAuthComplete() {
 
   if (asking) {
     return (
-      <div className="wrap" style={{ maxWidth: 420, padding: '64px 20px' }}>
+      <AuthShell>
         <h1 style={{ fontSize: '1.4rem', marginBottom: 6, textAlign: 'center' }}>One quick thing</h1>
         <p className="muted" style={{ textAlign: 'center', marginBottom: 24 }}>Are you here to sell, or to buy?</p>
         <div className="role-grid">
@@ -51,12 +52,12 @@ export default function OAuthComplete() {
             <p className="role-card__sub">Track your orders and re-download what you bought.</p>
           </button>
         </div>
-      </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="wrap" style={{ padding: '80px 20px', textAlign: 'center' }}>
+    <div className="auth-page">
       <p className="muted">Signing you in...</p>
     </div>
   );

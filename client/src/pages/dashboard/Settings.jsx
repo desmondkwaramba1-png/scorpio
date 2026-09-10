@@ -4,18 +4,8 @@ import { FiUser, FiCreditCard, FiCheck, FiCamera } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import Seal from '../../components/Seal.jsx';
+import FormSection from '../../components/FormSection.jsx';
 import ThemeToggle from '../../components/ThemeToggle.jsx';
-
-function SectionIcon({ children }) {
-  return (
-    <div style={{
-      width: 34, height: 34, borderRadius: 10, background: 'var(--green-tint)', color: 'var(--green-glow)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-    }}>
-      {children}
-    </div>
-  );
-}
 
 export default function Settings() {
   const { creator, refresh } = useAuth();
@@ -73,13 +63,8 @@ export default function Settings() {
       <p className="muted" style={{ marginBottom: 28 }}>How your storefront looks, and where your money goes.</p>
 
       <div className="form-layout">
-        <form onSubmit={handleSubmit} style={{ maxWidth: 480, display: 'grid', gap: 20 }}>
-          <div className="card card--pad">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-              <SectionIcon><FiUser size={16} /></SectionIcon>
-              <p style={{ fontWeight: 700 }}>Your profile</p>
-            </div>
-
+        <form onSubmit={handleSubmit} style={{ maxWidth: 480 }}>
+          <FormSection icon={FiUser} title="Your profile">
             <div className="field" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <label htmlFor="avatar" style={{ position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
                 <input id="avatar" type="file" accept="image/*" onChange={handleAvatar}
@@ -116,17 +101,10 @@ export default function Settings() {
               <label htmlFor="bio">A short bio</label>
               <textarea id="bio" value={form.bio} onChange={update('bio')} placeholder="A line or two about who you are." />
             </div>
-          </div>
+          </FormSection>
 
-          <div className="card card--pad">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-              <SectionIcon><FiCheck size={16} /></SectionIcon>
-              <p style={{ fontWeight: 700 }}>Why buyers should trust you</p>
-            </div>
-            <p className="muted" style={{ fontSize: '.85rem', marginBottom: 16 }}>
-              This shows up on your storefront, and it's part of how buyers decide to buy.
-            </p>
-
+          <FormSection icon={FiCheck} title="Why buyers should trust you"
+            note="This shows up on your storefront, and it's part of how buyers decide to buy.">
             <div className="field">
               <label htmlFor="what_selling">What are you selling?</label>
               <textarea id="what_selling" required value={form.what_selling} onChange={update('what_selling')} />
@@ -136,32 +114,27 @@ export default function Settings() {
               <label htmlFor="who_for">Who is it for?</label>
               <textarea id="who_for" required value={form.who_for} onChange={update('who_for')} />
             </div>
-          </div>
+          </FormSection>
 
-          <div className="card card--pad">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-              <SectionIcon><FiCreditCard size={16} /></SectionIcon>
-              <p style={{ fontWeight: 700 }}>Payouts</p>
-            </div>
-
+          <FormSection icon={FiCreditCard} title="Payouts">
             <div className="field" style={{ marginBottom: 0 }}>
               <label htmlFor="payout_ecocash_number">EcoCash number</label>
               <input id="payout_ecocash_number" value={form.payout_ecocash_number} onChange={update('payout_ecocash_number')}
                 placeholder="077 123 4567" />
               <small>Where your earnings get paid out. Also required to unlock verification.</small>
             </div>
-          </div>
+          </FormSection>
 
-          <ThemeToggle />
+          <div style={{ marginTop: 20 }}><ThemeToggle /></div>
 
-          {error && <p className="error-text">{error}</p>}
+          {error && <p className="error-text" style={{ marginTop: 16 }}>{error}</p>}
           {saved && (
-            <p style={{ color: 'var(--green-glow)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <p style={{ color: 'var(--green-glow)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, marginTop: 16 }}>
               <FiCheck size={15} /> Saved.
             </p>
           )}
 
-          <button className="btn btn--primary btn--block" disabled={submitting} type="submit">
+          <button className="btn btn--primary btn--block" disabled={submitting} type="submit" style={{ marginTop: 20 }}>
             {submitting ? 'Saving...' : 'Save changes'}
           </button>
         </form>

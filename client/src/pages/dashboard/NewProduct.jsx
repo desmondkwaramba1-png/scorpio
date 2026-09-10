@@ -5,19 +5,9 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
 import FileUpload from '../../components/FileUpload.jsx';
+import FormSection from '../../components/FormSection.jsx';
 import Seal from '../../components/Seal.jsx';
 import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../../lib/launchScope.js';
-
-function SectionIcon({ children }) {
-  return (
-    <div style={{
-      width: 34, height: 34, borderRadius: 10, background: 'var(--green-tint)', color: 'var(--green-glow)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-    }}>
-      {children}
-    </div>
-  );
-}
 
 export default function NewProduct() {
   const { creator } = useAuth();
@@ -108,13 +98,8 @@ export default function NewProduct() {
       </p>
 
       <div className="form-layout">
-        <form onSubmit={e => { e.preventDefault(); submit('published'); }} style={{ maxWidth: 480, display: 'grid', gap: 20 }}>
-          <div className="card card--pad">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-              <SectionIcon><FiImage size={16} /></SectionIcon>
-              <p style={{ fontWeight: 700 }}>The basics</p>
-            </div>
-
+        <form onSubmit={e => { e.preventDefault(); submit('published'); }} style={{ maxWidth: 480 }}>
+          <FormSection icon={FiImage} title="The basics">
             <div className="field">
               <label htmlFor="cover">Cover image</label>
               <FileUpload id="cover" accept="image/*" onChange={handleCover}
@@ -149,14 +134,9 @@ export default function NewProduct() {
               )}
               {ACTIVE_CATEGORIES.length > 1 && <small>This is how buyers find it when browsing. Pick the closest fit.</small>}
             </div>
-          </div>
+          </FormSection>
 
-          <div className="card card--pad">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-              <SectionIcon><FiDollarSign size={16} /></SectionIcon>
-              <p style={{ fontWeight: 700 }}>Pricing</p>
-            </div>
-
+          <FormSection icon={FiDollarSign} title="Pricing">
             <div className="field">
               <label htmlFor="type">Type</label>
               <select id="type" value={form.type} onChange={update('type')}>
@@ -193,14 +173,9 @@ export default function NewProduct() {
                 placeholder="Leave blank for unlimited" />
               {isService && <small>Cap how many of these you'll take on at once. Good for bespoke work with real turnaround time.</small>}
             </div>
-          </div>
+          </FormSection>
 
-          <div className="card card--pad">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-              <SectionIcon>{isService ? <FiBriefcase size={16} /> : <FiPackage size={16} />}</SectionIcon>
-              <p style={{ fontWeight: 700 }}>{isService ? 'Service details' : 'What buyers get'}</p>
-            </div>
-
+          <FormSection icon={isService ? FiBriefcase : FiPackage} title={isService ? 'Service details' : 'What buyers get'}>
             {isService ? (
               <>
                 <div className="field">
@@ -254,11 +229,11 @@ export default function NewProduct() {
                 )}
               </>
             )}
-          </div>
+          </FormSection>
 
-          {error && <p className="error-text">{error}</p>}
+          {error && <p className="error-text" style={{ marginTop: 20 }}>{error}</p>}
 
-          <div className="btn-row">
+          <div className="btn-row" style={{ marginTop: 20 }}>
             <button className="btn btn--ghost" disabled={submitting} type="button" onClick={() => submit('draft')}>
               Save as draft
             </button>

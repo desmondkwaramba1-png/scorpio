@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { FiTrash2, FiAlertTriangle, FiExternalLink, FiTag, FiKey } from 'react-icons/fi';
+import { FiTrash2, FiAlertTriangle, FiExternalLink, FiTag, FiKey, FiImage, FiBriefcase, FiPackage } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
 import FileUpload from '../../components/FileUpload.jsx';
+import FormSection from '../../components/FormSection.jsx';
 import Seal from '../../components/Seal.jsx';
 import { CATEGORIES } from '../../lib/categories.js';
 import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../../lib/launchScope.js';
@@ -188,71 +189,63 @@ export default function EditProduct() {
 
       <div className="form-layout">
         <form onSubmit={e => { e.preventDefault(); submit(product.status); }} style={{ maxWidth: 480 }}>
-          <div className="field">
-            <label htmlFor="cover">Cover image</label>
-            <FileUpload id="cover" accept="image/*" onChange={handleCover}
-              label={cover ? cover.name : 'Replace cover image'}
-              hint="Leave as-is to keep your current cover."
-              preview={coverPreview} previewKind="image" />
-          </div>
-
-          <div className="field">
-            <label htmlFor="title">Title</label>
-            <input id="title" required value={form.title} onChange={update('title')} />
-          </div>
-
-          <div className="field">
-            <label htmlFor="description">Description</label>
-            <textarea id="description" value={form.description} onChange={update('description')} />
-          </div>
-
-          <div className="field">
-            <label htmlFor="category">Category</label>
-            <select id="category" required value={form.category} onChange={update('category')}>
-              <option value="" disabled>Choose a category</option>
-              {categoryOptions.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-            </select>
-          </div>
-
-          <div className="field">
-            <label>Type</label>
-            <p className="muted" style={{ fontSize: '.9rem' }}>
-              {product.type === 'serial' ? 'Serial (recurring)' : product.type === 'service' ? 'Service (escrow)' : 'Single item'}. Can't be changed after creation.
-            </p>
-          </div>
-
-          <div className="field" style={{ display: 'flex', gap: 12 }}>
-            <div style={{ flex: 1 }}>
-              <label htmlFor="price">Price</label>
-              <input id="price" type="number" min="0" step="0.01" required
-                value={form.price} onChange={update('price')} />
+          <FormSection icon={FiImage} title="The basics">
+            <div className="field">
+              <label htmlFor="cover">Cover image</label>
+              <FileUpload id="cover" accept="image/*" onChange={handleCover}
+                label={cover ? cover.name : 'Replace cover image'}
+                hint="Leave as-is to keep your current cover."
+                preview={coverPreview} previewKind="image" />
             </div>
-            <div style={{ width: 90 }}>
-              <label htmlFor="currency">Currency</label>
-              <select id="currency" value={form.currency} onChange={update('currency')}>
-                <option value="USD">USD</option>
-                <option value="ZWG">ZiG</option>
+
+            <div className="field">
+              <label htmlFor="title">Title</label>
+              <input id="title" required value={form.title} onChange={update('title')} />
+            </div>
+
+            <div className="field">
+              <label htmlFor="description">Description</label>
+              <textarea id="description" value={form.description} onChange={update('description')} />
+            </div>
+
+            <div className="field">
+              <label htmlFor="category">Category</label>
+              <select id="category" required value={form.category} onChange={update('category')}>
+                <option value="" disabled>Choose a category</option>
+                {categoryOptions.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
-          </div>
 
-          <div className="field">
-            <label htmlFor="quantity_limit">Limited quantity (optional)</label>
-            <input id="quantity_limit" type="number" min="1" value={form.quantity_limit} onChange={update('quantity_limit')}
-              placeholder="Leave blank for unlimited" />
-          </div>
-
-          <div className="card card--pad" style={{ marginBottom: 18 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-              <div style={{
-                width: 34, height: 34, borderRadius: 10, background: 'var(--gold-tint)', color: 'var(--gold)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-              }}>
-                <FiTag size={16} />
-              </div>
-              <p style={{ fontWeight: 700 }}>Promotion</p>
+            <div className="field">
+              <label>Type</label>
+              <p className="muted" style={{ fontSize: '.9rem' }}>
+                {product.type === 'serial' ? 'Serial (recurring)' : product.type === 'service' ? 'Service (escrow)' : 'Single item'}. Can't be changed after creation.
+              </p>
             </div>
 
+            <div className="field" style={{ display: 'flex', gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label htmlFor="price">Price</label>
+                <input id="price" type="number" min="0" step="0.01" required
+                  value={form.price} onChange={update('price')} />
+              </div>
+              <div style={{ width: 90 }}>
+                <label htmlFor="currency">Currency</label>
+                <select id="currency" value={form.currency} onChange={update('currency')}>
+                  <option value="USD">USD</option>
+                  <option value="ZWG">ZiG</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label htmlFor="quantity_limit">Limited quantity (optional)</label>
+              <input id="quantity_limit" type="number" min="1" value={form.quantity_limit} onChange={update('quantity_limit')}
+                placeholder="Leave blank for unlimited" />
+            </div>
+          </FormSection>
+
+          <FormSection icon={FiTag} title="Promotion">
             <div className="field" style={{ marginBottom: form.discount_enabled ? 16 : 0 }}>
               <label style={{ display: 'flex', alignItems: 'center', fontWeight: 400 }}>
                 <input type="checkbox" checked={form.discount_enabled} onChange={update('discount_enabled')}
@@ -289,10 +282,10 @@ export default function EditProduct() {
                 )}
               </>
             )}
-          </div>
+          </FormSection>
 
           {product.type === 'service' ? (
-            <>
+            <FormSection icon={FiBriefcase} title="Service details">
               <div className="field">
                 <label htmlFor="portfolio_url">Portfolio links</label>
                 <textarea id="portfolio_url" value={form.portfolio_url} onChange={update('portfolio_url')}
@@ -304,34 +297,21 @@ export default function EditProduct() {
                 <input id="delivery_days" type="number" min="1" value={form.delivery_days} onChange={update('delivery_days')} placeholder="3" />
                 <small>Shown to buyers, and used to tell them when they're entitled to report a late order.</small>
               </div>
-              <div className="field">
+              <div className="field" style={{ marginBottom: 0 }}>
                 <label htmlFor="service_terms">What's included &amp; terms</label>
                 <textarea id="service_terms" value={form.service_terms} onChange={update('service_terms')}
                   placeholder={'e.g.\n- 2 rounds of revisions included\n- You\'ll need to send your brand colors and any reference images upfront\n- No refunds once work has started, only for non-delivery'}
                   style={{ minHeight: 110 }} />
                 <small>Revisions, what you need from the buyer, cancellation policy. Set expectations before they pay, not after.</small>
               </div>
-            </>
+            </FormSection>
           ) : (
             <>
               {(form.category === 'software' || product.total_keys > 0) && (
-                <div className="card card--pad" style={{ marginBottom: 18 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                    <div style={{
-                      width: 34, height: 34, borderRadius: 10, background: 'var(--gold-tint)', color: 'var(--gold)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                    }}>
-                      <FiKey size={16} />
-                    </div>
-                    <div>
-                      <p style={{ fontWeight: 700 }}>License keys</p>
-                      {product.total_keys > 0 && (
-                        <p className="muted" style={{ fontSize: '.82rem' }}>
-                          {product.unclaimed_keys} left of {product.total_keys} &middot; {product.total_keys - product.unclaimed_keys} claimed by buyers
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                <FormSection icon={FiKey} title="License keys"
+                  note={product.total_keys > 0
+                    ? `${product.unclaimed_keys} left of ${product.total_keys} · ${product.total_keys - product.unclaimed_keys} claimed by buyers`
+                    : undefined}>
                   <div className="field" style={{ marginBottom: 10 }}>
                     <label htmlFor="new_keys">{product.total_keys > 0 ? 'Add more keys' : 'Paste keys to sell this as software with an activation key'}</label>
                     <textarea id="new_keys" value={newKeys} onChange={e => setNewKeys(e.target.value)}
@@ -342,35 +322,37 @@ export default function EditProduct() {
                   <button type="button" className="btn btn--ghost btn--sm" disabled={addingKeys || !newKeys.trim()} onClick={addKeys}>
                     {addingKeys ? 'Adding...' : 'Add keys'}
                   </button>
-                </div>
+                </FormSection>
               )}
 
-              <div className="field">
-                <label htmlFor="file">{isCourse ? 'Course video' : EBOOKS_ONLY ? 'PDF file' : 'Product file'}</label>
-                <FileUpload id="file" accept={isCourse ? 'video/mp4,video/webm,video/quicktime' : EBOOKS_ONLY ? 'application/pdf' : undefined} onChange={handleFile}
-                  label={filePreview || 'Replace file'}
-                  hint={
-                    product.file_kind === 'upload' ? `Current file: ${product.file_name}. Choose a new one to replace it.`
-                      : product.file_kind === 'external_link' ? `Currently delivered via an external link. Choose a file to replace it.`
-                        : product.total_keys > 0 ? 'No file attached. Delivery is by license key only, which is fine.'
-                          : 'No file attached yet.'
-                  } />
-              </div>
-
-              {isCourse && (
-                <div className="field">
-                  <label htmlFor="preview_video">Free preview clip (optional)</label>
-                  <FileUpload id="preview_video" accept="video/mp4,video/webm,video/quicktime" onChange={handlePreviewVideo}
-                    label={previewVideoName || (product.preview_video_path ? 'Replace preview clip' : 'Choose a short clip')}
-                    hint="A short, real sample anyone can watch free, no purchase needed." />
+              <FormSection icon={FiPackage} title="What buyers get">
+                <div className="field" style={{ marginBottom: isCourse ? undefined : 0 }}>
+                  <label htmlFor="file">{isCourse ? 'Course video' : EBOOKS_ONLY ? 'PDF file' : 'Product file'}</label>
+                  <FileUpload id="file" accept={isCourse ? 'video/mp4,video/webm,video/quicktime' : EBOOKS_ONLY ? 'application/pdf' : undefined} onChange={handleFile}
+                    label={filePreview || 'Replace file'}
+                    hint={
+                      product.file_kind === 'upload' ? `Current file: ${product.file_name}. Choose a new one to replace it.`
+                        : product.file_kind === 'external_link' ? `Currently delivered via an external link. Choose a file to replace it.`
+                          : product.total_keys > 0 ? 'No file attached. Delivery is by license key only, which is fine.'
+                            : 'No file attached yet.'
+                    } />
                 </div>
-              )}
+
+                {isCourse && (
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <label htmlFor="preview_video">Free preview clip (optional)</label>
+                    <FileUpload id="preview_video" accept="video/mp4,video/webm,video/quicktime" onChange={handlePreviewVideo}
+                      label={previewVideoName || (product.preview_video_path ? 'Replace preview clip' : 'Choose a short clip')}
+                      hint="A short, real sample anyone can watch free, no purchase needed." />
+                  </div>
+                )}
+              </FormSection>
             </>
           )}
 
-          {error && <p className="error-text">{error}</p>}
+          {error && <p className="error-text" style={{ marginTop: 20 }}>{error}</p>}
 
-          <div className="btn-row">
+          <div className="btn-row" style={{ marginTop: 20 }}>
             <button
               className="btn btn--ghost" disabled={submitting} type="button"
               onClick={() => submit(product.status === 'published' ? 'draft' : 'published')}

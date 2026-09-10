@@ -4,6 +4,13 @@ import { FiShoppingBag, FiShoppingCart, FiEye, FiEyeOff } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext.jsx';
+import AuthShell from '../components/AuthShell.jsx';
+
+// Flip to true once the Google OAuth app clears Google's verification
+// review and is published out of "Testing" (and Facebook clears Meta App
+// Review). Until then the social buttons are hidden — see the block in the
+// render for the full reasoning.
+const SOCIAL_LOGIN_ENABLED = false;
 
 // A plain <input type="password"> gives no way to check what you actually
 // typed before submitting — a real source of failed logins/signups on a
@@ -115,7 +122,7 @@ export default function Login() {
   }
 
   return (
-    <div className="wrap" style={{ maxWidth: 420, padding: '56px 20px 80px' }}>
+    <AuthShell>
       <h1 style={{ fontSize: '1.7rem', marginBottom: 6 }}>
         {tab === 'login' ? 'Log in to SCORPIO' : 'Create your SCORPIO account'}
       </h1>
@@ -152,46 +159,49 @@ export default function Login() {
           {tab === 'signup' && (
             <p className="muted" style={{ fontSize: '.85rem', marginBottom: 16 }}>
               Signing up as a {signupRole === 'creator' ? 'creator' : 'buyer'}.{' '}
-              <button type="button" onClick={() => setSignupRole(null)} style={{ background: 'none', border: 'none', padding: 0, color: 'var(--green-glow)', fontWeight: 600, cursor: 'pointer' }}>
+              <button type="button" onClick={() => setSignupRole(null)} style={{ background: 'none', border: 'none', padding: 0, color: 'var(--gold-ink)', fontWeight: 600, cursor: 'pointer' }}>
                 change
               </button>
             </p>
           )}
 
-          {searchParams.get('oauth_error') === 'not_configured' && (
-            <p className="error-text" style={{ marginBottom: 16 }}>
-              {searchParams.get('provider') === 'facebook' ? 'Facebook' : 'Google'} sign-in isn't set up yet. Use email/password below instead.
-            </p>
-          )}
-          {searchParams.get('oauth_error') && searchParams.get('oauth_error') !== 'not_configured' && (
-            <p className="error-text" style={{ marginBottom: 16 }}>That sign-in didn't go through. Try again.</p>
+          {searchParams.get('oauth_error') && (
+            <p className="error-text" style={{ marginBottom: 16 }}>That sign-in didn't go through. Use your email and password below.</p>
           )}
 
-          <div style={{ display: 'grid', gap: 10, marginBottom: 20 }}>
-            <a href={`/api/auth/google${googleQuery ? `?${googleQuery}` : ''}`} className="btn btn--ghost btn--block">
-              <FcGoogle size={18} /> Continue with Google
-            </a>
-            {/* Facebook Login is temporarily off the UI, not deleted — the
-                backend route in oauth.js already safely no-ops without
-                FACEBOOK_APP_ID/SECRET set, and Meta requires App Review
-                before it works for anyone but the app's own testers, which
-                is on Meta's timeline, not something to keep half-shipping
-                around. Re-add this <a> once that's sorted. */}
-          </div>
-          <p className="muted" style={{ fontSize: '.78rem', textAlign: 'center', marginTop: -10 }}>
-            Continuing means you'll be asked to agree to the <Link to="/terms" target="_blank" style={{ color: 'var(--green)' }}>terms</Link> on your first visit.
-          </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0', color: 'var(--muted)', fontSize: '.8rem' }}>
-            <span style={{ flex: 1, height: 1, background: 'var(--line)' }} />
-            or
-            <span style={{ flex: 1, height: 1, background: 'var(--line)' }} />
-          </div>
+          {/* Social sign-in (Google + Facebook) is intentionally hidden from
+              the UI for now, not removed. Google's OAuth app is still in
+              "Testing" publishing status pending a Trust & Safety review, so
+              it only works for explicitly-listed test accounts — showing a
+              button that fails for the public is worse than not showing it.
+              The backend routes (oauth.js) and OAuthComplete.jsx are all
+              still in place; restore the block below once the app is
+              verified and published (Facebook likewise needs Meta App
+              Review). Everything from `oauthRole`/`googleQuery` up top
+              through here comes back together. */}
+          {SOCIAL_LOGIN_ENABLED && (
+            <>
+              <div style={{ display: 'grid', gap: 10, marginBottom: 20 }}>
+                <a href={`/api/auth/google${googleQuery ? `?${googleQuery}` : ''}`} className="btn btn--ghost btn--block">
+                  <FcGoogle size={18} /> Continue with Google
+                </a>
+              </div>
+              <p className="muted" style={{ fontSize: '.78rem', textAlign: 'center', marginTop: -10 }}>
+                Continuing means you'll be asked to agree to the <Link to="/terms" target="_blank" style={{ color: 'var(--green)' }}>terms</Link> on your first visit.
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0', color: 'var(--muted)', fontSize: '.8rem' }}>
+                <span style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+                or
+                <span style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+              </div>
+            </>
+          )}
 
           {tab === 'login' && (
             <form onSubmit={handleLogin}>
               <div className="field">
                 <label htmlFor="identifier">Username or email</label>
-                <input id="identifier" required value={form.identifier} onChange={update('identifier')} placeholder="tendai_writes or you@example.com" />
+                <input id="identifier" required value={form.identifier} onChange={update('identifier')} autoFocus />
               </div>
               <PasswordField
                 id="password" label="Password" value={form.password} onChange={update('password')}
@@ -212,7 +222,8 @@ export default function Login() {
             <form onSubmit={handleSignup}>
               <div className="field">
                 <label htmlFor="username">Username</label>
-                <input id="username" required value={form.username} onChange={update('username')} placeholder="e.g. tendai_writes" />
+                <input id="username" required value={form.username} onChange={update('username')} autoFocus />
+                <small>Letters, numbers, and underscores. This is what shows on your profile.</small>
               </div>
               <div className="field">
                 <label htmlFor="email">Email</label>
@@ -249,6 +260,6 @@ export default function Login() {
           )}
         </>
       )}
-    </div>
+    </AuthShell>
   );
 }

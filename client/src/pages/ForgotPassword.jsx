@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiMail } from 'react-icons/fi';
 import { api } from '../lib/api';
+import AuthShell from '../components/AuthShell.jsx';
 
 export default function ForgotPassword() {
   const [identifier, setIdentifier] = useState('');
@@ -25,24 +26,24 @@ export default function ForgotPassword() {
 
   if (sent) {
     return (
-      <div className="wrap" style={{ maxWidth: 420, padding: '56px 20px 80px' }}>
+      <AuthShell>
         <h1 style={{ fontSize: '1.7rem', marginBottom: 14 }}>Check your email</h1>
-        <p className="muted" style={{ marginBottom: 28, lineHeight: 1.6 }}>
+        <p className="muted" style={{ marginBottom: 4, lineHeight: 1.6 }}>
           If that account exists, a reset link is on its way. Open it to set a new password.
         </p>
-      </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="wrap" style={{ maxWidth: 420, padding: '56px 20px 80px' }}>
+    <AuthShell>
       <h1 style={{ fontSize: '1.7rem', marginBottom: 10 }}>Reset your password</h1>
       <p className="muted" style={{ marginBottom: 28 }}>Enter your username or email and we'll send a reset link.</p>
 
       <form onSubmit={handleSubmit}>
         <div className="field">
           <label htmlFor="identifier">Username or email</label>
-          <input id="identifier" required value={identifier} onChange={e => setIdentifier(e.target.value)} />
+          <input id="identifier" required value={identifier} onChange={e => setIdentifier(e.target.value)} autoFocus />
         </div>
 
         {error && <p className="error-text">{error}</p>}
@@ -53,6 +54,6 @@ export default function ForgotPassword() {
           <Link to="/login" className="muted" style={{ fontSize: '.88rem', fontWeight: 600 }}>Back to login</Link>
         </p>
       </form>
-    </div>
+    </AuthShell>
   );
 }

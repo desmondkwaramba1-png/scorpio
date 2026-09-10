@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { FiCheckCircle, FiXCircle } from 'react-icons/fi';
 import { api } from '../lib/api';
+import AuthShell from '../components/AuthShell.jsx';
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
@@ -16,7 +17,7 @@ export default function VerifyEmail() {
   }, [token]);
 
   return (
-    <div className="wrap" style={{ maxWidth: 420, padding: '80px 20px', textAlign: 'center' }}>
+    <AuthShell cardStyle={{ textAlign: 'center' }}>
       {status === 'checking' && <p className="muted">Verifying...</p>}
       {status === 'verified' && (
         <>
@@ -34,6 +35,6 @@ export default function VerifyEmail() {
           <Link to="/login" className="btn btn--primary">Back to login</Link>
         </>
       )}
-    </div>
+    </AuthShell>
   );
 }

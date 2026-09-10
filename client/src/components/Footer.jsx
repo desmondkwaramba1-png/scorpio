@@ -11,6 +11,7 @@ export default function Footer() {
         <span>Copyright {new Date().getFullYear()} SCORPIO</span>
         <Link to="/report" className="footer__link">Report an issue</Link>
         <Link to="/terms" className="footer__link">Terms</Link>
+        <Link to="/privacy" className="footer__link">Privacy</Link>
         <span>Built for Zimbabwe. Pay with EcoCash.</span>
       </div>
     </footer>

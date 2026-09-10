@@ -930,6 +930,17 @@ img{max-width:100%;display:block;}
 @media (min-width:640px){ .wizard-step span{display:inline;} }
 
 /* ---- form + live preview (desktop) ---- */
+/* Shared section block for the creator-dashboard forms (see FormSection.jsx). */
+.form-section + .form-section{margin-top:20px;}
+.form-section__head{display:flex;align-items:flex-start;gap:11px;margin-bottom:18px;}
+.form-section__icon{
+  width:36px;height:36px;border-radius:10px;flex-shrink:0;
+  background:var(--gold-tint);color:var(--gold-ink);
+  display:flex;align-items:center;justify-content:center;
+}
+.form-section__title{font-size:1rem;font-weight:700;line-height:1.3;}
+.form-section__note{font-size:.83rem;color:var(--muted);margin-top:3px;line-height:1.45;}
+
 .form-layout{display:grid;grid-template-columns:1fr 340px;gap:var(--sp-7);align-items:start;}
 .form-layout__preview{position:sticky;top:88px;}
 @media (max-width:920px){
@@ -937,20 +948,60 @@ img{max-width:100%;display:block;}
   .form-layout__preview{position:static;order:-1;max-width:340px;}
 }
 
-/* ---- role picker (login) ---- */
+/* ---- auth pages: a real dedicated screen, not form fields floating on
+   the plain page background ---- */
+/* Login, signup, onboarding, and the post-OAuth role question all used to
+   render as bare content directly on --paper with no framing at all — no
+   card, no border, nothing to separate "you are now in a focused flow"
+   from an ordinary content page. A soft radial wash behind a bordered,
+   shadowed card is the same "this is a dedicated moment" cue every
+   polished auth flow uses (Stripe, Linear, etc.), not decoration for its
+   own sake — it's what was actually missing. */
+.auth-page{
+  min-height:calc(100vh - 56px);display:flex;align-items:flex-start;justify-content:center;
+  padding:56px 20px 80px;
+  background:
+    radial-gradient(700px 420px at 50% -10%, var(--gold-tint) 0%, transparent 65%),
+    var(--paper);
+}
+/* The shell stacks the wordmark above the card and owns the column width;
+   the card itself just fills it. A visible brand mark on the auth screen
+   is the single thing that most separates "a real product's sign-in" from
+   "a form on a page" — every global-tier auth flow leads with it. */
+.auth-shell{
+  width:100%;max-width:452px;display:flex;flex-direction:column;align-items:stretch;gap:22px;
+}
+.auth-shell--wide{max-width:600px;}
+.auth-shell__brand{
+  align-self:center;font-family:'Alex Brush',cursive;font-weight:400;font-size:2.5rem;line-height:1;
+  color:var(--gold);text-shadow:0 0 18px rgba(var(--gold-rgb),.4);
+}
+.auth-card{
+  width:100%;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--radius);box-shadow:var(--shadow-2);padding:40px 36px;
+}
+/* legacy: a couple of screens still wrap in .auth-card directly */
+.auth-card--wide{max-width:600px;}
+@media (max-width:480px){
+  .auth-card{padding:28px 22px;border-radius:var(--radius-sm);}
+  .auth-shell__brand{font-size:2.15rem;}
+  .auth-shell{gap:16px;}
+}
+
+/* ---- role picker (login, onboarding's post-OAuth ask) ---- */
 .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4);}
 .role-card{
   display:block;padding:var(--sp-5);border:1.5px solid var(--line-strong);border-radius:var(--radius);
   background:var(--surface);cursor:pointer;transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease;
   text-align:left;width:100%;
 }
-.role-card:hover{border-color:var(--green-glow);box-shadow:var(--shadow-1);transform:translateY(-2px);}
+.role-card:hover{border-color:var(--gold);box-shadow:0 8px 20px -8px rgba(var(--gold-rgb),.35);transform:translateY(-2px);}
 .role-card__icon{
-  width:38px;height:38px;border-radius:10px;background:var(--green-tint);color:var(--green-glow);
-  display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin-bottom:12px;
+  width:42px;height:42px;border-radius:11px;background:var(--gold-tint);color:var(--gold-ink);
+  display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:14px;
 }
 .role-card__title{font-weight:700;margin-bottom:4px;color:var(--ink);}
-.role-card__sub{font-size:.85rem;color:var(--muted);}
+.role-card__sub{font-size:.85rem;color:var(--muted);line-height:1.4;}
 
 .method-btn{
   flex:1;display:flex;align-items:center;justify-content:center;gap:8px;

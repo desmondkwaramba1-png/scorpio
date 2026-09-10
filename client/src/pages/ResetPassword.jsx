@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
+import AuthShell from '../components/AuthShell.jsx';
 
 // Only reachable via the emailed reset link's ?token= — the WhatsApp-coded
 // fallback path this used to support was removed along with the rest of
@@ -37,33 +38,33 @@ export default function ResetPassword() {
 
   if (!token) {
     return (
-      <div className="wrap" style={{ maxWidth: 420, padding: '56px 20px 80px', textAlign: 'center' }}>
+      <AuthShell cardStyle={{ textAlign: 'center' }}>
         <h1 style={{ fontSize: '1.5rem', marginBottom: 10 }}>This link is missing its token</h1>
         <p className="muted" style={{ marginBottom: 24 }}>Use the reset link from your email, or request a new one.</p>
         <Link to="/forgot-password" className="btn btn--primary">Request a new link</Link>
-      </div>
+      </AuthShell>
     );
   }
 
   if (done) {
     return (
-      <div className="wrap" style={{ maxWidth: 420, padding: '56px 20px 80px' }}>
+      <AuthShell>
         <h1 style={{ fontSize: '1.7rem', marginBottom: 14 }}>Password updated</h1>
         <p className="muted" style={{ marginBottom: 28 }}>You can log in with your new password now.</p>
         <button className="btn btn--primary" onClick={() => navigate('/login')}>Go to login</button>
-      </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="wrap" style={{ maxWidth: 420, padding: '56px 20px 80px' }}>
+    <AuthShell>
       <h1 style={{ fontSize: '1.7rem', marginBottom: 10 }}>Set a new password</h1>
       <p className="muted" style={{ marginBottom: 28 }}>You followed a reset link. Choose a new password.</p>
 
       <form onSubmit={handleSubmit}>
         <div className="field">
           <label htmlFor="password">New password</label>
-          <input id="password" type="password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)} />
+          <input id="password" type="password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)} autoFocus />
         </div>
         <div className="field">
           <label htmlFor="confirm">Confirm new password</label>
@@ -77,6 +78,6 @@ export default function ResetPassword() {
           <Link to="/login" className="muted" style={{ fontSize: '.88rem', fontWeight: 600 }}>Back to login</Link>
         </p>
       </form>
-    </div>
+    </AuthShell>
   );
 }

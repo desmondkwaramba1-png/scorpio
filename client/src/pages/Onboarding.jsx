@@ -4,6 +4,7 @@ import { FiCheck } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api';
 import FileUpload from '../components/FileUpload.jsx';
+import AuthShell from '../components/AuthShell.jsx';
 import { SITE_HOST } from '../lib/site.js';
 
 const STEPS = ['Basics', 'About', 'Payout', 'Review'];
@@ -79,7 +80,7 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="wrap" style={{ maxWidth: 560, padding: '48px 20px 80px' }}>
+    <AuthShell wide>
       <h1 style={{ fontSize: '1.6rem', marginBottom: 6 }}>Set up your storefront</h1>
       <p className="muted" style={{ marginBottom: 32 }}>Four short steps. Takes about two minutes.</p>
 
@@ -99,7 +100,7 @@ export default function Onboarding() {
         <div>
           <div className="field">
             <label htmlFor="handle">Handle</label>
-            <input id="handle" required value={form.handle} onChange={updateHandle} placeholder="e.g. tendaiwrites" />
+            <input id="handle" required value={form.handle} onChange={updateHandle} autoFocus />
             {form.handle && handleInvalid ? (
               <small style={{ color: 'var(--red)' }}>{handleInvalid}</small>
             ) : (
@@ -182,6 +183,6 @@ export default function Onboarding() {
           </button>
         )}
       </div>
-    </div>
+    </AuthShell>
   );
 }

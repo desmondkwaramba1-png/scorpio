@@ -22,6 +22,7 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword.jsx'));
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail.jsx'));
 const CheckEmail = lazy(() => import('./pages/CheckEmail.jsx'));
 const Terms = lazy(() => import('./pages/Terms.jsx'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy.jsx'));
 const ReportIssue = lazy(() => import('./pages/ReportIssue.jsx'));
 const AcceptTerms = lazy(() => import('./pages/AcceptTerms.jsx'));
 const Onboarding = lazy(() => import('./pages/Onboarding.jsx'));
@@ -65,6 +66,7 @@ export default function App() {
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/check-email" element={<CheckEmail />} />
             <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/report" element={<ReportIssue />} />
             <Route path="/accept-terms" element={<AcceptTerms />} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />

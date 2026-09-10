@@ -1,24 +1,25 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { FiZoomIn } from 'react-icons/fi';
 
-// A dependency-free crop step: the picked image fills a fixed frame, the
-// person drags to reposition and uses the slider to zoom, then Apply draws
-// the visible region to a canvas and hands back a JPEG blob. Used for
-// avatars (square) and product covers (wide) so what a seller uploads off
-// their phone actually fits the shape it's shown in, instead of being
-// centre-cropped blind by CSS.
+// A dependency-free crop step: the picked image fills a frame, the person
+// drags to reposition and uses the slider to zoom, then Apply draws the
+// visible region to a canvas and hands back a JPEG blob. Used for avatars
+// (square) and product covers (wide) so what a seller uploads off their
+// phone actually fits the shape it's shown in.
+//
+// The frame is sized by CSS (100% of the field, capped), never a fixed
+// pixel width — a hardcoded width was wider than the card on a phone and
+// pushed the whole page sideways. All the crop maths reads the frame's
+// real measured size so the output stays correct at any width.
 export default function ImageCropper({ file, aspect = 1, round = false, onCancel, onApply }) {
   const [src, setSrc] = useState(null);
   const [natural, setNatural] = useState(null);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [frame, setFrame] = useState({ w: 0, h: 0 });
   const [busy, setBusy] = useState(false);
+  const frameRef = useRef(null);
   const drag = useRef(null);
-
-  // Frame the crop happens in. Width is fixed; height follows the aspect.
-  const FRAME_W = 340;
-  const vw = FRAME_W;
-  const vh = Math.round(FRAME_W / aspect);
 
   useEffect(() => {
     const url = URL.createObjectURL(file);
@@ -26,7 +27,21 @@ export default function ImageCropper({ file, aspect = 1, round = false, onCancel
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  const baseScale = natural ? Math.max(vw / natural.w, vh / natural.h) : 1;
+  // Measure the frame the CSS actually laid out, and keep it current if the
+  // viewport changes while the cropper is open.
+  useLayoutEffect(() => {
+    const el = frameRef.current;
+    if (!el) return;
+    const measure = () => setFrame({ w: el.clientWidth, h: el.clientHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const vw = frame.w;
+  const vh = frame.h;
+  const baseScale = natural && vw ? Math.max(vw / natural.w, vh / natural.h) : 1;
   const scale = baseScale * zoom;
   const dispW = natural ? natural.w * scale : 0;
   const dispH = natural ? natural.h * scale : 0;
@@ -49,7 +64,6 @@ export default function ImageCropper({ file, aspect = 1, round = false, onCancel
   }
 
   function pointerDown(e) {
-    e.preventDefault();
     const p = 'touches' in e ? e.touches[0] : e;
     drag.current = { x: p.clientX, y: p.clientY, ox: offset.x, oy: offset.y };
   }
@@ -64,11 +78,9 @@ export default function ImageCropper({ file, aspect = 1, round = false, onCancel
   function pointerUp() { drag.current = null; }
 
   async function apply() {
-    if (!natural) return;
+    if (!natural || !vw) return;
     setBusy(true);
     try {
-      // Point in image-space that sits under the frame centre, then the
-      // source rectangle around it that the frame is showing.
       const cx = natural.w / 2 - offset.x / scale;
       const cy = natural.h / 2 - offset.y / scale;
       const sw = vw / scale;
@@ -87,7 +99,11 @@ export default function ImageCropper({ file, aspect = 1, round = false, onCancel
       await img.decode();
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
       const blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.92));
-      const cropped = new File([blob], (file.name || 'image').replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
+      const cropped = new File(
+        [blob],
+        (file.name || 'image').replace(/\.\w+$/, '') + '.jpg',
+        { type: 'image/jpeg' }
+      );
       onApply(cropped, URL.createObjectURL(blob));
     } finally {
       setBusy(false);
@@ -97,8 +113,9 @@ export default function ImageCropper({ file, aspect = 1, round = false, onCancel
   return (
     <div className="cropper">
       <div
-        className="cropper__frame"
-        style={{ width: vw, height: vh, borderRadius: round ? '50%' : 'var(--radius-sm)' }}
+        ref={frameRef}
+        className={`cropper__frame${round ? ' cropper__frame--round' : ''}`}
+        style={{ aspectRatio: String(aspect) }}
         onMouseDown={pointerDown}
         onMouseMove={pointerMove}
         onMouseUp={pointerUp}
@@ -115,8 +132,8 @@ export default function ImageCropper({ file, aspect = 1, round = false, onCancel
             draggable={false}
             className="cropper__img"
             style={{
-              width: dispW || 'auto',
-              height: dispH || 'auto',
+              width: dispW ? `${dispW}px` : 'auto',
+              height: dispH ? `${dispH}px` : 'auto',
               transform: `translate(-50%, -50%) translate(${offset.x}px, ${offset.y}px)`,
             }}
           />

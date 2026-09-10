@@ -292,15 +292,21 @@ img{max-width:100%;display:block;}
 .file-upload__preview{margin-top:10px;width:100%;max-height:220px;object-fit:contain;background:var(--field-bg);border-radius:var(--radius-sm);}
 
 /* ---- image cropper ---- */
+/* Width is 100% of the field up to a cap — never a fixed pixel size, so it
+   can't be wider than the card it sits in on a narrow phone. Height comes
+   from aspect-ratio set inline per use (1 for avatars, 5/4 for covers). */
 .cropper{margin-top:10px;}
 .cropper__frame{
-  position:relative;overflow:hidden;margin:0 auto;background:var(--green-dark);
+  position:relative;overflow:hidden;margin:0 auto;width:100%;max-width:340px;
+  background:var(--green-dark);
   cursor:grab;touch-action:none;user-select:none;border:1px solid var(--line);
+  border-radius:var(--radius-sm);
 }
+.cropper__frame--round{border-radius:50%;}
 .cropper__frame:active{cursor:grabbing;}
 .cropper__img{position:absolute;left:50%;top:50%;max-width:none;pointer-events:none;}
 .cropper__zoom{display:flex;align-items:center;gap:10px;margin:14px auto 0;max-width:340px;color:var(--muted);}
-.cropper__zoom input{flex:1;}
+.cropper__zoom input{flex:1;min-width:0;}
 .cropper__actions{display:flex;gap:8px;justify-content:center;margin-top:12px;}
 
 /* ---- seal badge: the signature element ---- */

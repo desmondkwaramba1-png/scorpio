@@ -2,8 +2,9 @@
  * Seed the live marketplace with demo creators + products so it doesn't
  * look empty at launch.
  *
- *   node scripts/seed-marketplace.js          # add demo data (skips if already seeded)
- *   node scripts/seed-marketplace.js --fresh  # remove previous demo data first, then reseed
+ *   node scripts/seed-marketplace.js           # add demo data (skips if already seeded)
+ *   node scripts/seed-marketplace.js --fresh   # remove previous demo data first, then reseed
+ *   node scripts/seed-marketplace.js --remove  # remove all demo data and stop
  *
  * Demo rows are namespaced: every creator gets a handle starting "demo-"
  * and its user an email ending "@demo.scorpio.co.zw", so --fresh can find
@@ -84,18 +85,30 @@ function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
 function rint(lo, hi) { return lo + Math.floor(Math.random() * (hi - lo + 1)); }
 
 const existingDemo = db.prepare(`SELECT COUNT(*) n FROM creators WHERE handle LIKE 'demo-%'`).get().n;
+const REMOVE = process.argv.includes('--remove');
+const FRESH = process.argv.includes('--fresh');
 
-if (process.argv.includes('--fresh') && existingDemo) {
+function removeDemoData() {
   const ids = db.prepare(`SELECT id, user_id FROM creators WHERE handle LIKE 'demo-%'`).all();
-  const tx = db.transaction(() => {
+  db.transaction(() => {
     for (const { id, user_id } of ids) {
       db.prepare('DELETE FROM products WHERE creator_id = ?').run(id); // cascades product_files
       db.prepare('DELETE FROM creators WHERE id = ?').run(id);
       if (user_id) db.prepare('DELETE FROM users WHERE id = ?').run(user_id);
     }
-  });
-  tx();
-  console.log(`Removed ${ids.length} previous demo creators and their products.`);
+  })();
+  return ids.length;
+}
+
+if (REMOVE) {
+  const n = removeDemoData();
+  const left = db.prepare(`SELECT COUNT(*) n FROM products WHERE status = 'published'`).get().n;
+  console.log(`Removed ${n} demo creators and their products. ${left} published products remain.`);
+  process.exit(0);
+}
+
+if (FRESH && existingDemo) {
+  console.log(`Removed ${removeDemoData()} previous demo creators and their products.`);
 } else if (existingDemo) {
   console.log(`Demo data already present (${existingDemo} demo creators). Use --fresh to rebuild. Nothing to do.`);
   process.exit(0);

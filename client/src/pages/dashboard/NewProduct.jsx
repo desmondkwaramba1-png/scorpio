@@ -103,9 +103,9 @@ export default function NewProduct() {
             <div className="field">
               <label htmlFor="cover">Cover image</label>
               <FileUpload id="cover" accept="image/*" onChange={handleCover}
-                label={cover ? cover.name : 'Choose a cover image'}
-                hint="This is what people see first on the marketplace and when you share your link."
-                preview={coverPreview} previewKind="image" />
+                label={cover ? 'Cover ready' : 'Choose a cover image'}
+                hint="This is what people see first on the marketplace and when you share your link. We'll auto-tune the colours."
+                preview={coverPreview} previewKind="image" crop={{ aspect: 5 / 4 }} />
             </div>
 
             <div className="field">

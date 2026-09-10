@@ -20,7 +20,7 @@ export default function CheckEmail() {
 
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (user.email_verified_at) return <Navigate to="/" replace />;
+  if (user.email_verified_at) return <Navigate to="/dashboard" replace />;
 
   async function resend() {
     setResending(true);

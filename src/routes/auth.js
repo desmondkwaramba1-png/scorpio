@@ -34,7 +34,7 @@ const avatarUpload = multer({
 async function uploadAvatar(file) {
   const key = `avatars/${randomUUID()}${path.extname(file.originalname)}`;
   let buffer = file.buffer;
-  try { buffer = await optimizeImage(file.buffer, { maxWidth: 480 }); } catch (err) { console.error('[image optimize]', err); }
+  try { buffer = await optimizeImage(file.buffer, { maxWidth: 480, enhance: true }); } catch (err) { console.error('[image optimize]', err); }
   await storage.uploadBuffer(key, buffer, file.mimetype);
   return storage.publicUrl(key);
 }

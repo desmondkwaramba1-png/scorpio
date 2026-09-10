@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import Seal from '../../components/Seal.jsx';
 import FormSection from '../../components/FormSection.jsx';
+import ImageCropper from '../../components/ImageCropper.jsx';
 import ThemeToggle from '../../components/ThemeToggle.jsx';
 
 export default function Settings() {
@@ -19,6 +20,7 @@ export default function Settings() {
   });
   const [avatar, setAvatar] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
+  const [cropping, setCropping] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -29,8 +31,14 @@ export default function Settings() {
 
   function handleAvatar(e) {
     const file = e.target.files[0];
-    setAvatar(file);
-    setAvatarPreview(file ? URL.createObjectURL(file) : null);
+    e.target.value = '';
+    if (file && file.type.startsWith('image/')) setCropping(file);
+  }
+
+  function applyAvatarCrop(croppedFile, previewUrl) {
+    setCropping(null);
+    setAvatar(croppedFile);
+    setAvatarPreview(previewUrl);
   }
 
   async function handleSubmit(e) {
@@ -87,10 +95,20 @@ export default function Settings() {
               <div>
                 <p style={{ fontWeight: 600, fontSize: '.9rem' }}>Profile photo</p>
                 <label htmlFor="avatar" className="muted" style={{ fontSize: '.82rem', fontWeight: 600, cursor: 'pointer', color: 'var(--green-glow)' }}>
-                  {avatar ? avatar.name : (creator.avatar_path ? 'Change photo' : 'Choose a photo')}
+                  {avatar ? 'Photo updated — save to apply' : (creator.avatar_path ? 'Change photo' : 'Choose a photo')}
                 </label>
               </div>
             </div>
+
+            {cropping && (
+              <div className="field">
+                <ImageCropper
+                  file={cropping} aspect={1} round
+                  onCancel={() => setCropping(null)}
+                  onApply={applyAvatarCrop}
+                />
+              </div>
+            )}
 
             <div className="field">
               <label htmlFor="name">Your name</label>

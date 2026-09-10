@@ -284,7 +284,24 @@ img{max-width:100%;display:block;}
 }
 .file-upload__dropzone:hover{border-color:var(--green-glow);color:var(--green-glow);background:var(--green-tint);}
 .file-upload__input:focus-visible + .file-upload__dropzone{outline:2px solid var(--green-glow);outline-offset:2px;}
+/* Once a file is chosen the dropzone stops being a "do this" prompt and
+   becomes a "done" confirmation — solid green edge + check icon. */
+.file-upload__dropzone--done{
+  border-style:solid;border-color:var(--green);color:var(--green-glow);background:var(--green-tint);
+}
 .file-upload__preview{margin-top:10px;width:100%;max-height:220px;object-fit:contain;background:var(--field-bg);border-radius:var(--radius-sm);}
+
+/* ---- image cropper ---- */
+.cropper{margin-top:10px;}
+.cropper__frame{
+  position:relative;overflow:hidden;margin:0 auto;background:var(--green-dark);
+  cursor:grab;touch-action:none;user-select:none;border:1px solid var(--line);
+}
+.cropper__frame:active{cursor:grabbing;}
+.cropper__img{position:absolute;left:50%;top:50%;max-width:none;pointer-events:none;}
+.cropper__zoom{display:flex;align-items:center;gap:10px;margin:14px auto 0;max-width:340px;color:var(--muted);}
+.cropper__zoom input{flex:1;}
+.cropper__actions{display:flex;gap:8px;justify-content:center;margin-top:12px;}
 
 /* ---- seal badge: the signature element ---- */
 .seal{

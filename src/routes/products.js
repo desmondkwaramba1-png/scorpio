@@ -548,7 +548,7 @@ router.post('/', requireAuth, requireCreator, upload.fields([
   // together in serial; now it pays for whichever one is slowest.
   const uploadCover = (async () => {
     let coverBuffer = cover.buffer;
-    try { coverBuffer = await optimizeImage(cover.buffer, { maxWidth: 1600 }); } catch (err) { console.error('[image optimize]', err); }
+    try { coverBuffer = await optimizeImage(cover.buffer, { maxWidth: 1600, enhance: true }); } catch (err) { console.error('[image optimize]', err); }
     const coverKey = objectKey('covers', cover.originalname);
     await storage.uploadBuffer(coverKey, coverBuffer, cover.mimetype);
     return storage.publicUrl(coverKey);
@@ -739,7 +739,7 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
   // concurrently rather than one-after-another.
   const uploadCover = cover ? (async () => {
     let coverBuffer = cover.buffer;
-    try { coverBuffer = await optimizeImage(cover.buffer, { maxWidth: 1600 }); } catch (err) { console.error('[image optimize]', err); }
+    try { coverBuffer = await optimizeImage(cover.buffer, { maxWidth: 1600, enhance: true }); } catch (err) { console.error('[image optimize]', err); }
     const coverKey = objectKey('covers', cover.originalname);
     await storage.uploadBuffer(coverKey, coverBuffer, cover.mimetype);
     return storage.publicUrl(coverKey);

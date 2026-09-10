@@ -118,10 +118,8 @@ export default function Onboarding() {
           <div className="field">
             <label htmlFor="avatar">Profile photo</label>
             <FileUpload id="avatar" accept="image/*" onChange={handleAvatar}
-              label={avatar ? avatar.name : 'Choose a profile photo'} />
-            {avatarPreview && (
-              <img src={avatarPreview} alt="" style={{ marginTop: 10, width: 72, height: 72, borderRadius: '50%', objectFit: 'cover' }} />
-            )}
+              label={avatar ? 'Photo ready' : 'Choose a profile photo'}
+              crop={{ aspect: 1, round: true }} />
           </div>
         </div>
       )}

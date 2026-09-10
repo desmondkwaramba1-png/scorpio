@@ -193,9 +193,9 @@ export default function EditProduct() {
             <div className="field">
               <label htmlFor="cover">Cover image</label>
               <FileUpload id="cover" accept="image/*" onChange={handleCover}
-                label={cover ? cover.name : 'Replace cover image'}
-                hint="Leave as-is to keep your current cover."
-                preview={coverPreview} previewKind="image" />
+                label={cover ? 'New cover ready' : 'Replace cover image'}
+                hint="Leave as-is to keep your current cover. New uploads get their colours auto-tuned."
+                preview={coverPreview} previewKind="image" crop={{ aspect: 5 / 4 }} />
             </div>
 
             <div className="field">

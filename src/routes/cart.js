@@ -56,6 +56,13 @@ router.post('/', requireAuth, (req, res) => {
   const product = db.prepare("SELECT * FROM products WHERE slug = ? AND status = 'published'").get(product_slug);
   if (!product) return res.status(404).json({ error: 'Product not found.' });
 
+  // Same rule as the direct-buy flow (purchases.js): you can't buy your
+  // own product. Blocked here too so it can't be reached by adding to the
+  // cart from a stale tab or hitting the API directly.
+  if (req.creator && req.creator.id === product.creator_id) {
+    return res.status(403).json({ error: "That's your own product — you can't buy it." });
+  }
+
   // Pay-what-you-want needs a buyer-chosen amount per item, which a shared
   // cart total can't represent — that flow stays on the product's own
   // direct checkout instead of going through the cart.
@@ -102,6 +109,14 @@ router.post('/checkout', checkoutLimiter, requireAuth, async (req, res) => {
 
   const items = db.prepare(CART_SELECT).all(req.user.id).map(withPromo);
   if (items.length === 0) return res.status(400).json({ error: 'Your cart is empty.' });
+
+  // A creator can't buy through their own storefront — catch it here in
+  // case one slipped into the cart before this rule existed, or from a
+  // second tab open as a different context.
+  if (req.creator && items.some(p => p.creator_id === req.creator.id)) {
+    const own = items.filter(p => p.creator_id === req.creator.id).map(p => p.title).join(', ');
+    return res.status(403).json({ error: `${own} ${own.includes(',') ? 'are' : 'is'} your own — remove ${own.includes(',') ? 'them' : 'it'} from your cart to check out.` });
+  }
 
   // Re-checked against reality at the moment of paying, not what the
   // buyer's browser cached when they added it — a product can go sold out

@@ -3,6 +3,17 @@
     { "source": "/api/:path*", "destination": "https://scorpio-api.fly.dev/api/:path*" },
     { "source": "/uploads/:path*", "destination": "https://scorpio-api.fly.dev/uploads/:path*" },
     { "source": "/sitemap.xml", "destination": "https://scorpio-api.fly.dev/sitemap.xml" },
+    {
+      "source": "/:path((?!api/|uploads/|assets/|brand/|favicon|robots|manifest|sw\\.js|registerSW|workbox).*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|Twitterbot|WhatsApp|LinkedInBot|Slackbot|Slack-ImgProxy|TelegramBot|Discordbot|Pinterest|redditbot|Applebot|SkypeUriPreview|vkShare|W3C_Validator|Embedly|Iframely|nuzzel|Mastodon|Pleroma|Google-InspectionTool|Yahoo Link Preview|facebookcatalog).*"
+        }
+      ],
+      "destination": "https://scorpio-api.fly.dev/share/:path"
+    },
     { "source": "/((?!api/|uploads/|sitemap\\.xml).*)", "destination": "/index.html" }
   ]
 }

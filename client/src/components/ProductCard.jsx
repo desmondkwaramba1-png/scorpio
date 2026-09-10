@@ -10,15 +10,18 @@ import { formatMoney } from '../lib/money';
 import { CATEGORY_LABELS } from '../lib/categories.js';
 import { shareOrCopy } from '../lib/share';
 
-// isOwner: true when the logged-in creator viewing this card IS the seller
-// (their own storefront, seen through CreatorProfile.jsx) — a "Buy now"
-// button pointed at yourself is nonsensical, so this swaps the buy row for
-// an edit shortcut instead of pretending the seller is a customer here.
+// A "Buy now" / "Add to cart" button pointed at your own product is
+// nonsensical (the backend blocks it too), so those get swapped for an
+// "Edit listing" shortcut. Ownership is worked out from the logged-in
+// creator vs this product's creator_id, wherever the card shows up —
+// Discover, search, a rail — not just passed down from the seller's own
+// storefront view via the `isOwner` prop.
 export default function ProductCard({ product, isOwner = false }) {
   const p = product;
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, creator } = useAuth();
   const { addToCart } = useCart();
+  const owned = isOwner || (!!creator && creator.id === p.creator_id);
   const productUrl = `/@${p.creator_handle}/${p.slug}`;
   const soldOut = (p.quantity_limit !== null && p.quantity_sold >= p.quantity_limit)
     || (p.total_keys > 0 && p.unclaimed_keys <= 0);
@@ -126,7 +129,7 @@ export default function ProductCard({ product, isOwner = false }) {
         )}
 
         <div className="product-card__buyrow">
-          {isOwner ? (
+          {owned ? (
             <Link
               to={`/dashboard/products/${p.id}/edit`}
               onClick={e => e.stopPropagation()}
@@ -145,7 +148,7 @@ export default function ProductCard({ product, isOwner = false }) {
               {p.type === 'service' ? 'Order now' : 'Buy now'}
             </Link>
           )}
-          {!isOwner && !soldOut && !p.pay_what_you_want && p.type !== 'service' && (
+          {!owned && !soldOut && !p.pay_what_you_want && p.type !== 'service' && (
             <button
               onClick={handleAddToCart}
               className="btn btn--ghost btn--sm"

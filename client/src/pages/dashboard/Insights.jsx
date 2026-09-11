@@ -76,7 +76,7 @@ export default function Insights() {
       <div className="card card--pad">
         <p style={{ fontWeight: 600, marginBottom: 16 }}>Top products</p>
         {data.top_products.length === 0 && <p className="muted" style={{ fontSize: '.9rem' }}>No paid orders yet.</p>}
-        <div style={{ display: 'grid', gap: 10 }}>
+        <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr)' }}>
           {data.top_products.map(p => (
             <Link key={p.id} to={`/@${creator.handle}/${p.slug}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.92rem' }}>
               <span>{p.title}</span>

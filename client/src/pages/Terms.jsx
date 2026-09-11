@@ -35,7 +35,7 @@ export default function Terms() {
         Plain language, updated as the platform changes. Not a substitute for legal advice.
       </p>
 
-      <div style={{ display: 'grid', gap: 14 }}>
+      <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'minmax(0, 1fr)' }}>
         <Section icon={FiInfo} title="What SCORPIO is">
           A storefront platform for Zimbabwean creators to sell digital products. Creators list products
           and set prices; buyers pay and receive delivery. SCORPIO is the platform connecting the two,
@@ -92,7 +92,7 @@ export default function Terms() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gap: 14 }}>
+      <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'minmax(0, 1fr)' }}>
         <Section icon={FiPercent} title="Platform fee">
           SCORPIO takes 8% of the order amount, deducted from what a creator sees as their available
           balance. This is a stated policy computed on real order amounts, shown on every order in your

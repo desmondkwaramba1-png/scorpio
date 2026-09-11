@@ -34,7 +34,7 @@ export default function PrivacyPolicy() {
         Plain language, describing what this app actually does, not a template. Not a substitute for legal advice.
       </p>
 
-      <div style={{ display: 'grid', gap: 14 }}>
+      <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'minmax(0, 1fr)' }}>
         <Section icon={FiDatabase} title="What we collect">
           Account basics (username, email, phone number, and a hashed password, never stored in plain
           text). If you sign up with Google, we receive your name, email, and profile photo from Google

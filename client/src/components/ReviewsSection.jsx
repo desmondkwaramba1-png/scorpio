@@ -153,7 +153,7 @@ const ReviewsSection = forwardRef(function ReviewsSection({ productSlug }, ref) 
       )}
 
       {showForm && (
-        <form onSubmit={submit} style={{ marginTop: data.my_review ? 14 : 0, display: 'grid', gap: 10 }}>
+        <form onSubmit={submit} style={{ marginTop: data.my_review ? 14 : 0, display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr)' }}>
           <StarInput value={rating} onChange={setRating} />
           <textarea
             value={body} onChange={e => setBody(e.target.value)}

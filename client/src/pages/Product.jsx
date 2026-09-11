@@ -284,7 +284,7 @@ export default function Product() {
             {!product.issues || product.issues.length === 0 ? (
               <p className="muted" style={{ fontSize: '.88rem' }}>Nothing published yet, check back soon.</p>
             ) : (
-              <div style={{ display: 'grid', gap: 8 }}>
+              <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
                 {product.issues.map(iss => (
                   <div key={iss.id} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,

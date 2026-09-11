@@ -117,7 +117,7 @@ export default function Reels() {
       {error && <p className="error-text">{error}</p>}
 
       {!reels && (
-        <div style={{ display: 'grid', gap: 12 }}>
+        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
           <div className="skeleton" style={{ height: 72, borderRadius: 'var(--radius)' }} />
         </div>
       )}

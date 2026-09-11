@@ -151,7 +151,7 @@ export default function Orders() {
       <div>
         <h1 style={{ fontSize: '1.5rem', marginBottom: 24 }}>Orders</h1>
         <div className="skeleton" style={{ height: 80, borderRadius: 'var(--radius)', marginBottom: 24 }} />
-        <div style={{ display: 'grid', gap: 10 }}>
+        <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr)' }}>
           {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton" style={{ height: 60, borderRadius: 'var(--radius)' }} />)}
         </div>
       </div>
@@ -183,7 +183,7 @@ export default function Orders() {
         </p>
         {data.trending.length === 0 && <p className="muted" style={{ fontSize: '.9rem' }}>No orders in the last 7 days yet.</p>}
         {data.trending.length > 0 && (
-          <div style={{ display: 'grid', gap: 10 }}>
+          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr)' }}>
             {data.trending.map(p => (
               <Link key={p.id} to={`/@${creator.handle}/${p.slug}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.92rem' }}>
                 <span>{p.title}</span>
@@ -200,7 +200,7 @@ export default function Orders() {
           Your buyers will show up here once your first order comes in.
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: 10 }}>
+        <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr)' }}>
           {data.orders.map(o => <OrderRow key={o.id} o={o} creator={creator} />)}
         </div>
       )}

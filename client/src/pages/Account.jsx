@@ -388,7 +388,7 @@ export default function Account() {
 
       {error && <p className="error-text">{error}</p>}
       {!purchases && !error && (
-        <div style={{ display: 'grid', gap: 12 }}>
+        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
           <div className="skeleton" style={{ height: 72, borderRadius: 'var(--radius)' }} />
           <div className="skeleton" style={{ height: 72, borderRadius: 'var(--radius)' }} />
         </div>
@@ -409,7 +409,7 @@ export default function Account() {
           <p className="muted" style={{ fontSize: '.85rem', marginBottom: 14 }}>
             A seller delivered and is waiting on your OK, or an order is running past when it was promised.
           </p>
-          <div style={{ display: 'grid', gap: 12 }}>
+          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
             {needsAttention.map(p => <OrderRow key={p.id} purchase={p} onResend={resend} />)}
           </div>
         </div>
@@ -423,7 +423,7 @@ export default function Account() {
           <p className="muted" style={{ fontSize: '.85rem', marginBottom: 16 }}>
             Everything you've bought stays here: downloads, license keys, and services you're waiting on.
           </p>
-          <div style={{ display: 'grid', gap: 12 }}>
+          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
             {rest.map(p => <OrderRow key={p.id} purchase={p} onResend={resend} />)}
           </div>
         </>

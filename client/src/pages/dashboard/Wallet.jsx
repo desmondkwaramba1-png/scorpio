@@ -75,7 +75,7 @@ export default function Wallet() {
       {data.transactions.length === 0 && (
         <div className="empty-state"><strong>No transactions yet.</strong></div>
       )}
-      <div style={{ display: 'grid', gap: 10 }}>
+      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr)' }}>
         {data.transactions.map(t => (
           <div key={t.id} className="card card--pad" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div>

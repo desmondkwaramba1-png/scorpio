@@ -392,7 +392,7 @@ export default function EditProduct() {
               ) : issues.length === 0 ? (
                 <p className="muted" style={{ fontSize: '.85rem' }}>No issues yet, publish the first one above.</p>
               ) : (
-                <div style={{ display: 'grid', gap: 8 }}>
+                <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
                   {issues.map(iss => (
                     <div key={iss.id} style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,

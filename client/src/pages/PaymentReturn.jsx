@@ -146,7 +146,7 @@ export default function PaymentReturn() {
         <h1 style={{ fontSize: '1.4rem', marginBottom: 8 }}>Payment confirmed</h1>
         <p className="muted" style={{ marginBottom: 24 }}>{summary} &middot; {totalPrice}</p>
 
-        <div style={{ display: 'grid', gap: 12 }}>
+        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
           {data.items.map(item => <ItemRow key={item.product_slug} item={item} />)}
         </div>
 

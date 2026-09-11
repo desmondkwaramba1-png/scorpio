@@ -48,7 +48,7 @@ export default function Cart() {
     return (
       <div className="wrap" style={{ maxWidth: 640, padding: '40px 20px 80px' }}>
         <h1 style={{ fontSize: '1.6rem', marginBottom: 24 }}>Your cart</h1>
-        <div style={{ display: 'grid', gap: 12 }}>
+        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
           {Array.from({ length: 2 }).map((_, i) => <div key={i} className="skeleton" style={{ height: 72, borderRadius: 'var(--radius)' }} />)}
         </div>
       </div>
@@ -81,7 +81,7 @@ export default function Cart() {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 32 }}>
-          <div style={{ display: 'grid', gap: 12 }}>
+          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
             {items.map(p => {
               const price = formatMoney(p.price_minor, p.currency);
               const discounted = p.promo_active ? formatMoney(p.discounted_price_minor, p.currency) : null;

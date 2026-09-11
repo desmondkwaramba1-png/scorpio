@@ -164,11 +164,26 @@ export default function Marketplace() {
     localStorage.setItem(HERO_SEEN_KEY, '1');
   }, []);
 
+  // All of the homepage's initial data used to update state independently
+  // as each fetch resolved, up to 6 separate re-renders (and a real
+  // browser layout pass each time) instead of one. A real Lighthouse run
+  // traced a chunk of the "Style & Layout" main-thread cost dragging down
+  // Speed Index straight to this — same requests, same waterfall (a slow
+  // category still doesn't hold up the rest, they're still independent
+  // fetches), just applied to state together in one batch once everything
+  // that's coming back is actually back.
   useEffect(() => {
+    const categoryEntries = ACTIVE_CATEGORIES.length > 1 ? ACTIVE_CATEGORIES : [];
+
     Promise.all([
       fetch('/api/products?sort=popular&limit=8').then(r => r.json()).catch(() => []),
-      fetch('/api/products?limit=8').then(r => r.json()).catch(() => [])
-    ]).then(([popular, newest]) => {
+      fetch('/api/products?limit=8').then(r => r.json()).catch(() => []),
+      fetch('/api/creators?limit=14').then(r => r.json()).catch(() => []),
+      fetch('/api/reels?limit=60').then(r => r.json()).catch(() => []),
+      Promise.all(categoryEntries.map(c =>
+        fetch(`/api/products?category=${c.value}&limit=6`).then(r => r.json()).catch(() => [])
+      ))
+    ]).then(([popular, newest, creators, reels, categoryResults]) => {
       setTrending(popular);
       // With little to no like activity yet, "popular" and "newest" can
       // return the exact same products in the exact same order, the tie
@@ -176,34 +191,28 @@ export default function Marketplace() {
       // already shown in Trending so New Arrivals isn't just a rerun of it.
       const trendingIds = new Set(popular.map(p => p.id));
       setFresh(newest.filter(p => !trendingIds.has(p.id)));
-    });
 
-    fetch('/api/creators?limit=14').then(r => r.json()).then(setSpotlightCreators).catch(() => setSpotlightCreators([]));
-    // Recent reels across everyone, grouped by creator handle client-side ,
-    // one request instead of asking "does this creator have reels?" once
-    // per avatar in the tray. A creator absent from this batch just means
-    // no reels among the most recent ones, not "definitely none", an
-    // acceptable trade for one fetch instead of N.
-    fetch('/api/reels?limit=60').then(r => r.json()).then(reels => {
+      setSpotlightCreators(creators);
+
+      // Recent reels across everyone, grouped by creator handle client-
+      // side , one request instead of asking "does this creator have
+      // reels?" once per avatar in the tray. A creator absent from this
+      // batch just means no reels among the most recent ones, not
+      // "definitely none", an acceptable trade for one fetch instead of N.
       const grouped = {};
       for (const r of reels) (grouped[r.creator_handle] ||= []).push(r);
       setReelsByCreator(grouped);
-    }).catch(() => {});
 
-    // One curated row per category, Amazon-homepage style, fetched
-    // independently of trending/new so a slow category doesn't hold up the
-    // rest of the page, and rows for categories nobody's listed in yet
-    // just never appear (Rail already hides on an empty array). Skipped
-    // entirely with a single active category, it'd just duplicate New
-    // arrivals below.
-    if (ACTIVE_CATEGORIES.length > 1) {
-      ACTIVE_CATEGORIES.forEach(c => {
-        fetch(`/api/products?category=${c.value}&limit=6`)
-          .then(r => r.json())
-          .then(products => setByCategory(prev => ({ ...prev, [c.value]: products })))
-          .catch(() => setByCategory(prev => ({ ...prev, [c.value]: [] })));
-      });
-    }
+      // One curated row per category, Amazon-homepage style, rows for
+      // categories nobody's listed in yet just never appear (Rail already
+      // hides on an empty array). Skipped entirely with a single active
+      // category, it'd just duplicate New arrivals below.
+      if (categoryEntries.length > 0) {
+        const byCategory = {};
+        categoryEntries.forEach((c, i) => { byCategory[c.value] = categoryResults[i]; });
+        setByCategory(byCategory);
+      }
+    });
   }, []);
 
   function submitSearch(e) {

@@ -84,7 +84,35 @@ export default function Product() {
         : `${product.title} — ${formatMoney(product.price_minor, product.currency)} on SCORPIO. Real work from ${product.creator_name}, not scraped off the internet.`)
       : undefined,
     image: product?.cover_path,
-    url: productUrlForSeo ? `${SITE_ORIGIN}${productUrlForSeo}` : undefined
+    url: productUrlForSeo ? `${SITE_ORIGIN}${productUrlForSeo}` : undefined,
+    // Demo/seed listings are real pages (see scripts/seed-marketplace.js)
+    // but templated, near-duplicate content across ~200 of them — kept out
+    // of the sitemap for the same reason, and told not to index here too,
+    // in case Discover's internal links get one crawled anyway.
+    noindex: product?.creator_handle?.startsWith('demo-'),
+    jsonLd: product ? {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.title,
+      description: product.description || undefined,
+      image: product.cover_path ? [product.cover_path] : undefined,
+      brand: { '@type': 'Brand', name: product.creator_name },
+      offers: {
+        '@type': 'Offer',
+        url: `${SITE_ORIGIN}${productUrlForSeo}`,
+        priceCurrency: product.currency,
+        price: (product.price_minor / 100).toFixed(2),
+        availability: product.quantity_limit !== null && product.quantity_sold >= product.quantity_limit
+          ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock',
+      },
+      ...(product.review_count > 0 ? {
+        aggregateRating: {
+          '@type': 'AggregateRating',
+          ratingValue: product.avg_rating,
+          reviewCount: product.review_count,
+        },
+      } : {}),
+    } : undefined
   });
 
   if (error) {

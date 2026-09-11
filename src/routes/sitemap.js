@@ -17,15 +17,23 @@ function xmlEscape(s) {
 router.get('/sitemap.xml', (req, res) => {
   const staticUrls = ['/', '/discover', '/creators', '/terms'];
 
+  // Demo/seed listings (handle "demo-%", see scripts/seed-marketplace.js)
+  // are real, browsable pages on the site — they're excluded here, not
+  // deleted, purely so Google's limited early crawl budget on a brand-new
+  // domain goes to real creators and real products first. ~200 near-
+  // identical templated descriptions in the sitemap would also read as
+  // thin/duplicate content, which actively hurts how the rest of the site
+  // is judged — the opposite of what a sitemap is for.
   const creators = db.prepare(`
     SELECT DISTINCT c.handle FROM creators c
     JOIN products p ON p.creator_id = c.id AND p.status = 'published'
+    WHERE c.handle NOT LIKE 'demo-%'
   `).all();
 
   const products = db.prepare(`
     SELECT p.slug, p.created_at, c.handle
     FROM products p JOIN creators c ON c.id = p.creator_id
-    WHERE p.status = 'published'
+    WHERE p.status = 'published' AND c.handle NOT LIKE 'demo-%'
   `).all();
 
   const urls = [

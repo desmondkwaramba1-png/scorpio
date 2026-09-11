@@ -37,7 +37,8 @@ export default function CreatorProfile() {
     title: creator ? `${creator.name} (@${creator.handle}) — SCORPIO` : undefined,
     description: creator?.bio || (creator ? `${creator.name}'s storefront on SCORPIO — real guides, templates, and courses.` : undefined),
     image: creator?.avatar_path,
-    url: `${SITE_ORIGIN}/@${handle}`
+    url: `${SITE_ORIGIN}/@${handle}`,
+    noindex: handle?.startsWith('demo-')
   });
 
   if (error) return <div className="wrap" style={{ padding: '80px 20px', textAlign: 'center' }}><p className="error-text">{error}</p></div>;

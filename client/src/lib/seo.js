@@ -22,11 +22,36 @@ function setMeta(attr, key, content) {
 // response from the actual HTTP layer, not a client-side DOM update),
 // which is a real, separate, larger piece of work, not something to fake
 // here.
-export function useSEO({ title, description, image, url }) {
+// Structured data (JSON-LD) is separate from the meta tags above: it's
+// what lets Google actually understand "this is a Product, this is its
+// price, this is whether it's in stock" instead of guessing from prose —
+// the difference between a plain blue link and a rich result with a price
+// shown right in search. Google's crawler runs JS (confirmed live: it gets
+// the full rendered SPA, not a stub), so injecting this client-side does
+// reach it, unlike the link-preview problem useSEO's og:/twitter: tags
+// have with non-JS bots.
+function setJsonLd(data) {
+  const id = 'seo-jsonld';
+  let el = document.getElementById(id);
+  if (!data) {
+    if (el) el.remove();
+    return;
+  }
+  if (!el) {
+    el = document.createElement('script');
+    el.type = 'application/ld+json';
+    el.id = id;
+    document.head.appendChild(el);
+  }
+  el.textContent = JSON.stringify(data);
+}
+
+export function useSEO({ title, description, image, url, jsonLd, noindex }) {
   useEffect(() => {
     const previousTitle = document.title;
     if (title) document.title = title;
 
+    setMeta('name', 'robots', noindex ? 'noindex, follow' : 'index, follow');
     setMeta('name', 'description', description);
     setMeta('property', 'og:title', title);
     setMeta('property', 'og:description', description);
@@ -37,10 +62,12 @@ export function useSEO({ title, description, image, url }) {
     setMeta('name', 'twitter:title', title);
     setMeta('name', 'twitter:description', description);
     setMeta('name', 'twitter:image', image);
+    setJsonLd(jsonLd);
 
     // Restore the site default on unmount so navigating away (to a page
     // that doesn't call useSEO itself) doesn't leave a stale product title
-    // sitting in the browser tab.
-    return () => { document.title = previousTitle; };
-  }, [title, description, image, url]);
+    // sitting in the browser tab, or a stale JSON-LD block describing a
+    // product that's no longer the one on screen.
+    return () => { document.title = previousTitle; setJsonLd(null); setMeta('name', 'robots', 'index, follow'); };
+  }, [title, description, image, url, jsonLd, noindex]);
 }

@@ -65,7 +65,7 @@ const CommentsSection = forwardRef(function CommentsSection({ productId }, ref) 
         </form>
       ) : (
         <p className="muted" style={{ fontSize: '.88rem' }}>
-          <a href="/login?role=buyer" style={{ color: 'var(--green)', fontWeight: 600 }}>Log in</a> to comment.
+          <a href="/login?role=buyer" style={{ color: 'var(--link-ink)', fontWeight: 600 }}>Log in</a> to comment.
         </p>
       )}
       {error && <p className="error-text" style={{ marginTop: 10 }}>{error}</p>}

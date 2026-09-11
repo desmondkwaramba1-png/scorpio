@@ -79,14 +79,14 @@ export default function EngagementBar({ product, onCommentClick }) {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap', margin: '18px 0' }}>
-      <button onClick={toggleLike} style={{
+      <button onClick={toggleLike} aria-label={liked ? 'Unlike' : 'Like'} aria-pressed={liked} style={{
         display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer',
         color: liked ? 'var(--red)' : 'var(--muted)', fontSize: '.9rem', fontWeight: 600, padding: 0
       }}>
         <FiHeart fill={liked ? 'var(--red)' : 'none'} /> {likeCount > 0 && likeCount}
       </button>
 
-      <button onClick={onCommentClick} style={{
+      <button onClick={onCommentClick} aria-label="View comments" style={{
         display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer',
         color: 'var(--muted)', fontSize: '.9rem', fontWeight: 600, padding: 0
       }}>
@@ -94,7 +94,7 @@ export default function EngagementBar({ product, onCommentClick }) {
       </button>
 
       <div ref={menuRef} style={{ position: 'relative' }}>
-        <button onClick={handleShareClick} style={{
+        <button onClick={handleShareClick} aria-label={copied ? 'Link copied' : 'Share'} style={{
           display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer',
           color: copied ? 'var(--green-glow)' : 'var(--muted)', fontSize: '.9rem', fontWeight: 600, padding: 0
         }}>

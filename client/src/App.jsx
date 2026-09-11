@@ -53,6 +53,7 @@ export default function App() {
     <>
       <SplashScreen />
       <Nav />
+      <main>
       <ErrorBoundary>
         <Suspense fallback={<RouteFallback />}>
           <Routes>
@@ -94,6 +95,7 @@ export default function App() {
           </Routes>
         </Suspense>
       </ErrorBoundary>
+      </main>
       <Footer />
     </>
   );

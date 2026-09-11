@@ -101,7 +101,7 @@ export default function Discover() {
             placeholder="Search products..."
           />
         </div>
-        <select value={sort} onChange={e => updateParam('sort', e.target.value)} className="discover-sort">
+        <select value={sort} onChange={e => updateParam('sort', e.target.value)} className="discover-sort" aria-label="Sort by">
           <option value="">Newest first</option>
           <option value="popular">Most popular</option>
           <option value="bestselling">Bestselling</option>

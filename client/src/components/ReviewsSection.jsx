@@ -134,7 +134,7 @@ const ReviewsSection = forwardRef(function ReviewsSection({ productSlug }, ref) 
 
       {!user && (
         <p className="muted" style={{ fontSize: '.88rem' }}>
-          <a href="/login?role=buyer" style={{ color: 'var(--green)', fontWeight: 600 }}>Log in</a> to review this product.
+          <a href="/login?role=buyer" style={{ color: 'var(--link-ink)', fontWeight: 600 }}>Log in</a> to review this product.
         </p>
       )}
 

@@ -15,6 +15,12 @@
   <meta property="og:image:height" content="630" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="https://www.scorpio.co.zw/brand/og-default.png" />
+  <!-- /favicon.ico didn't exist as a real file — the SPA's catch-all
+       rewrite was serving index.html itself for that URL, and Google's
+       search-result favicon (and some older browsers/crawlers) check
+       that exact conventional path directly, not just the <link> tags
+       below. Real .ico now, generated from the current scorpion mark. -->
+  <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/svg+xml" href="/brand/mark.svg">
   <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
   <meta name="theme-color" content="#131921" />

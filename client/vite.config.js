@@ -11,6 +11,12 @@ export default defineConfig({
       // would leave someone stuck on a stale cached version until they
       // notice and click something.
       registerType: 'autoUpdate',
+      // Default injects <script src="/registerSW.js"> with no defer/async,
+      // a real render-blocking network request on every load for ~150
+      // bytes of JS that just calls navigator.serviceWorker.register() on
+      // window 'load'. render-blocking-insight flagged it by name.
+      // Inlining it into index.html removes that request outright.
+      injectRegister: 'inline',
       includeAssets: ['brand/mark.svg', 'brand/apple-touch-icon.png'],
       manifest: {
         name: 'SCORPIO — Create, Sell, Empower',

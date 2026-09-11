@@ -72,7 +72,14 @@ function CreatorSpotlightSkeleton() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="creator-spotlight__item">
               <span className="creator-spotlight__ring skeleton" style={{ border: 'none' }} />
-              <span className="skeleton" style={{ width: 40, height: 12, borderRadius: 4 }} />
+              {/* Real .creator-spotlight__name is .78rem text on the
+                  body's inherited line-height:1.5, a ~19px line box, not
+                  the 12px this placeholder used to reserve. Measured via
+                  a real Lighthouse desktop run: that 7px-per-item gap
+                  appearing across the whole row the instant real creator
+                  data replaced the skeleton was the single largest CLS
+                  culprit on the page (score 0.119 of 0.121 total). */}
+              <span className="skeleton" style={{ width: 40, height: 19, borderRadius: 4 }} />
             </div>
           ))}
         </div>

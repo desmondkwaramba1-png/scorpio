@@ -1,24 +1,28 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <radialGradient id="bg" cx="50%" cy="35%" r="75%">
-      <stop offset="0%" stop-color="#141B3D"/>
-      <stop offset="100%" stop-color="#070A1C"/>
+    <radialGradient id="bg" cx="50%" cy="30%" r="85%">
+      <stop offset="0%" stop-color="#1B2440"/>
+      <stop offset="100%" stop-color="#0A0D16"/>
     </radialGradient>
   </defs>
-  <rect width="64" height="64" rx="16" fill="url(#bg)"/>
-  <!-- scorpion: curled tail + stinger is the single most recognizable shape at
-       this size, so the mark leans on that rather than a full body/leg
-       illustration, which just turns to mud below ~30px. Gold (#FF8C42),
-       not the cyan this used to be — cyan appears nowhere else in the
-       brand (buttons, the nav wordmark, and the splash screen's own
-       scorpion are all gold), so the icon read as off-brand next to
-       everything else in the app. -->
-  <g fill="none" stroke="#FF8C42" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M18 44 Q17 30 27 26 Q40 21 40 33 Q40 42 32 42 Q27 42 27 37"/>
-    <circle cx="27" cy="37" r="2.6" fill="#FF8C42" stroke="none"/>
+  <rect width="100" height="100" rx="22" fill="url(#bg)"/>
+  <!-- A real scorpion silhouette — symmetric claws (one path, mirrored),
+       a segmented body, and a tail that arcs up into a clear stinger
+       without crossing the claws. Replaces the old single curled-tail
+       squiggle, which read as an abstract blob rather than a scorpion,
+       especially at small sizes. Gold (#FF8C42), same as every other
+       brand accent. -->
+  <path d="M58 52 C 70 50, 76 40, 72 30 C 68 21, 56 17, 47 22"
+        fill="none" stroke="#FF8C42" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M47 22 L 39 20 L 45 29 Z" fill="#FF8C42"/>
+  <g fill="none" stroke="#FF8C42" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M44 50 C 32 46, 21 49, 17 59"/>
+    <path d="M17 59 C 14 66, 18 70, 25 68"/>
   </g>
-  <g fill="none" stroke="#FF8C42" stroke-width="3.4" stroke-linecap="round">
-    <path d="M18 44 l-4 4"/>
-    <path d="M18 44 l-5 1"/>
+  <g fill="none" stroke="#FF8C42" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" transform="translate(100,0) scale(-1,1)">
+    <path d="M44 50 C 32 46, 21 49, 17 59"/>
+    <path d="M17 59 C 14 66, 18 70, 25 68"/>
   </g>
+  <ellipse cx="50" cy="66" rx="11.5" ry="13.5" fill="#FF8C42"/>
+  <circle cx="50" cy="50" r="7.5" fill="#FF8C42"/>
 </svg>

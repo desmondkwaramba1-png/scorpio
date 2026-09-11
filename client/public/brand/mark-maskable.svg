@@ -1,26 +1,27 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <radialGradient id="bg" cx="50%" cy="35%" r="75%">
-      <stop offset="0%" stop-color="#141B3D"/>
-      <stop offset="100%" stop-color="#070A1C"/>
+    <radialGradient id="bg" cx="50%" cy="30%" r="85%">
+      <stop offset="0%" stop-color="#1B2440"/>
+      <stop offset="100%" stop-color="#0A0D16"/>
     </radialGradient>
   </defs>
-  <!-- Maskable variant: full-bleed square, no rounded corners — Android
-       (and other platforms that support maskable icons) apply their own
-       mask shape (circle, squircle, rounded square...) over the whole
-       canvas, so this needs to stay filled edge-to-edge with no
-       transparent/white gaps for that mask to reveal cleanly. The
-       scorpion's existing bounding box (~x:13-40, y:21-48) already sits
-       comfortably inside the required 80%-diameter safe zone centered on
-       a 64x64 canvas, so the artwork itself is unchanged from mark.svg —
-       only the background shape differs. -->
-  <rect width="64" height="64" fill="url(#bg)"/>
-  <g fill="none" stroke="#FF8C42" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M18 44 Q17 30 27 26 Q40 21 40 33 Q40 42 32 42 Q27 42 27 37"/>
-    <circle cx="27" cy="37" r="2.6" fill="#FF8C42" stroke="none"/>
+  <!-- Full-bleed, no rounded corners — the OS applies its own mask shape
+       (circle, squircle, rounded-square, whatever the launcher uses), so
+       this must be a plain edge-to-edge square. All scorpion detail stays
+       within ~32 units of center, well inside the ~40-unit safe-zone
+       radius every maskable-icon spec asks for. -->
+  <rect width="100" height="100" fill="url(#bg)"/>
+  <path d="M58 52 C 70 50, 76 40, 72 30 C 68 21, 56 17, 47 22"
+        fill="none" stroke="#FF8C42" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M47 22 L 39 20 L 45 29 Z" fill="#FF8C42"/>
+  <g fill="none" stroke="#FF8C42" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M44 50 C 32 46, 21 49, 17 59"/>
+    <path d="M17 59 C 14 66, 18 70, 25 68"/>
   </g>
-  <g fill="none" stroke="#FF8C42" stroke-width="3.4" stroke-linecap="round">
-    <path d="M18 44 l-4 4"/>
-    <path d="M18 44 l-5 1"/>
+  <g fill="none" stroke="#FF8C42" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" transform="translate(100,0) scale(-1,1)">
+    <path d="M44 50 C 32 46, 21 49, 17 59"/>
+    <path d="M17 59 C 14 66, 18 70, 25 68"/>
   </g>
+  <ellipse cx="50" cy="66" rx="11.5" ry="13.5" fill="#FF8C42"/>
+  <circle cx="50" cy="50" r="7.5" fill="#FF8C42"/>
 </svg>

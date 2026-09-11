@@ -49,7 +49,40 @@ const CATEGORY_TAGLINES = {
 // opens the ReelViewer scoped to just their videos; a creator with none
 // yet is still a real, useful tap, it just goes straight to their
 // storefront instead of a dead-end "no videos" state.
+// Real Lighthouse run traced the page's single biggest layout-shift score
+// to this: while spotlightCreators is still null (the fetch hasn't
+// resolved yet), the old code returned null here, zero height, so the
+// moment real data arrived, this whole row popped into existence and
+// shoved "Shop by category" (and everything below it) down in one jump.
+// A skeleton sized to the real row reserves that space from first paint
+// instead, once creators is a genuinely empty array (fetched, really
+// nothing to show) it collapses to null same as before, that's not a
+// loading state, there's really nothing coming.
+function CreatorSpotlightSkeleton() {
+  return (
+    <section className="section section--row wrap" aria-hidden="true">
+      <div className="rail-head">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <FiUsers size={16} color="var(--green-glow)" />
+          <h2 className="rail-head__title">Meet the creators</h2>
+        </div>
+      </div>
+      <div className="rail-wrap">
+        <div className="creator-spotlight">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="creator-spotlight__item">
+              <span className="creator-spotlight__ring skeleton" style={{ border: 'none' }} />
+              <span className="skeleton" style={{ width: 40, height: 12, borderRadius: 4 }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function CreatorSpotlight({ creators, reelsByCreator, onPlay }) {
+  if (creators === null) return <CreatorSpotlightSkeleton />;
   if (!creators || creators.length === 0) return null;
   return (
     <section className="section section--row wrap">

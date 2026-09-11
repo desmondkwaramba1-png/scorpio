@@ -64,7 +64,7 @@ export default function Discover() {
   });
 
   return (
-    <main className="wrap" style={{ padding: '40px 20px 80px' }}>
+    <div className="wrap" style={{ padding: '40px 20px 80px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         <FiCompass size={22} color="var(--green)" />
         <h1 style={{ fontSize: '1.8rem' }}>Discover</h1>
@@ -145,6 +145,6 @@ export default function Discover() {
           {products.map(p => <ProductCard key={p.id} product={p} />)}
         </div>
       )}
-    </main>
+    </div>
   );
 }

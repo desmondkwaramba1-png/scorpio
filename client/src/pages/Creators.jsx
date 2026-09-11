@@ -40,7 +40,7 @@ export default function Creators() {
   }, []);
 
   return (
-    <main className="wrap" style={{ padding: '40px 20px 80px' }}>
+    <div className="wrap" style={{ padding: '40px 20px 80px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         <FiUsers size={22} color="var(--green)" />
         <h1 style={{ fontSize: '1.8rem' }}>Meet the creators</h1>
@@ -74,6 +74,6 @@ export default function Creators() {
           {creators.map(c => <CreatorCard key={c.id} creator={c} />)}
         </div>
       )}
-    </main>
+    </div>
   );
 }

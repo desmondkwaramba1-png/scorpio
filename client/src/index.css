@@ -509,7 +509,7 @@ img{max-width:100%;display:block;}
   font-size:1.05rem;font-weight:700;letter-spacing:-.01em;color:var(--ink);min-width:0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
-.rail-head__link{color:var(--green-glow);font-size:.85rem;font-weight:700;white-space:nowrap;flex-shrink:0;}
+.rail-head__link{color:var(--link-ink);font-size:.85rem;font-weight:700;white-space:nowrap;flex-shrink:0;}
 
 /* ---- shop: horizontal carousel of compact cards ---- */
 /* The fade lives on a wrapper, not .rail itself, so it can sit outside the

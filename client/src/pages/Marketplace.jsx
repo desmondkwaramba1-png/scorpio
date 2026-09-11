@@ -200,6 +200,12 @@ export default function Marketplace() {
             </>
           ) : (
             <form onSubmit={submitSearch} className="shop-hero__search">
+              {/* The full pitch above carries a real, visible <h1> — this
+                  compact header (a returning visitor who already dismissed
+                  it) showed none at all, a real page-has-heading-one fail
+                  a screen reader user would hit on every repeat visit, not
+                  just a first-time edge case. */}
+              <h1 className="sr-only">SCORPIO, Zimbabwe's marketplace for ebooks, guides, templates and courses</h1>
               <FiSearch size={16} color="var(--muted)" />
               <input
                 value={q} onChange={e => setQ(e.target.value)}

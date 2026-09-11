@@ -8,7 +8,7 @@ const express = require('express');
 const db = require('../db/schema');
 
 const router = express.Router();
-const SITE_ORIGIN = (process.env.FRONTEND_URL || 'https://scorpio.co.zw').replace(/\/$/, '');
+const SITE_ORIGIN = (process.env.FRONTEND_URL || 'https://www.scorpio.co.zw').replace(/\/$/, '');
 
 function xmlEscape(s) {
   return String(s).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&apos;', '"': '&quot;' }[c]));

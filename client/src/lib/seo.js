@@ -11,6 +11,28 @@ function setMeta(attr, key, content) {
   el.setAttribute('content', content);
 }
 
+// Every page already computes its own real URL for og:url (window.location
+// origin, so always the actual domain a visitor is on, www included since
+// that's what the app really serves from). A <link rel="canonical"> saying
+// exactly the same thing was missing, the index.html this app ships to
+// every crawler had none at all, no per-page signal and no default —
+// leaving Google to guess between the www version it actually serves and
+// the non-www one the sitemap and generated share links were separately
+// pointing at.
+function setCanonical(url) {
+  let el = document.querySelector('link[rel="canonical"]');
+  if (!url) {
+    if (el) el.remove();
+    return;
+  }
+  if (!el) {
+    el = document.createElement('link');
+    el.setAttribute('rel', 'canonical');
+    document.head.appendChild(el);
+  }
+  el.setAttribute('href', url);
+}
+
 // No react-helmet-async — this app has zero client-side dependency
 // overhead for meta tags today, and adding one isn't worth it for what's
 // really a handful of setAttribute calls. Real, honest limitation worth
@@ -58,6 +80,7 @@ export function useSEO({ title, description, image, url, jsonLd, noindex }) {
     setMeta('property', 'og:image', image);
     setMeta('property', 'og:url', url);
     setMeta('property', 'og:type', 'website');
+    setCanonical(url);
     setMeta('name', 'twitter:card', image ? 'summary_large_image' : 'summary');
     setMeta('name', 'twitter:title', title);
     setMeta('name', 'twitter:description', description);

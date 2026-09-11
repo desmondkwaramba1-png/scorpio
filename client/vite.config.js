@@ -10,13 +10,22 @@ export default defineConfig({
       // deploy — this app ships multiple times a day; a 'prompt' strategy
       // would leave someone stuck on a stale cached version until they
       // notice and click something.
+      // registerType: 'autoUpdate' only actually auto-updates when the app
+      // imports the virtual:pwa-register module and calls it (see
+      // main.jsx), that's what tells a newly-installed worker to
+      // skipWaiting and reloads the page once it takes over. Without that
+      // import, this setting was a no-op, the bare injected register
+      // script never sent the skip-waiting signal, so a new version sat
+      // in "waiting" until a tab was fully closed and reopened, real bug
+      // this session ran straight into shipping the Reels nav icon.
       registerType: 'autoUpdate',
-      // Default injects <script src="/registerSW.js"> with no defer/async,
-      // a real render-blocking network request on every load for ~150
-      // bytes of JS that just calls navigator.serviceWorker.register() on
-      // window 'load'. render-blocking-insight flagged it by name.
-      // Inlining it into index.html removes that request outright.
-      injectRegister: 'inline',
+      // injectRegister: null, not 'inline'/'script' — main.jsx's own
+      // virtual:pwa-register import handles registration now, injecting
+      // a second script that also calls .register() would be redundant.
+      // Bonus: the registration logic is bundled into the main JS chunk
+      // this way too, so the earlier fix for registerSW.js being a
+      // separate render-blocking request stays fixed either way.
+      injectRegister: null,
       includeAssets: ['brand/mark.svg', 'brand/apple-touch-icon.png'],
       manifest: {
         name: 'SCORPIO — Create, Sell, Empower',

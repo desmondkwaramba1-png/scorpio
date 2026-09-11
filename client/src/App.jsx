@@ -34,6 +34,7 @@ const Cart = lazy(() => import('./pages/Cart.jsx'));
 const CartCheckout = lazy(() => import('./pages/CartCheckout.jsx'));
 const PaymentReturn = lazy(() => import('./pages/PaymentReturn.jsx'));
 const CreatorProfile = lazy(() => import('./pages/CreatorProfile.jsx'));
+const CreatorReels = lazy(() => import('./pages/CreatorReels.jsx'));
 const DashboardLayout = lazy(() => import('./pages/dashboard/DashboardLayout.jsx'));
 const DashboardHome = lazy(() => import('./pages/dashboard/DashboardHome.jsx'));
 const DashboardProducts = lazy(() => import('./pages/dashboard/Products.jsx'));
@@ -93,6 +94,14 @@ export default function App() {
             </Route>
             <Route path="/:handle/:slug/checkout" element={<Checkout />} />
             <Route path="/:handle/:slug" element={<Product />} />
+            {/* Static "reels" segment always outranks :slug's dynamic
+                match in React Router's route scoring, regardless of
+                declaration order, and a product's slug can never
+                literally be "reels" (slugify() always appends a random
+                suffix, see products.js), so there's no real collision
+                to guard against here the way creators.js's reserved-
+                handle list guards the top-level /reels route. */}
+            <Route path="/:handle/reels" element={<CreatorReels />} />
             <Route path="/:handle" element={<CreatorProfile />} />
           </Routes>
         </Suspense>

@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { FiPlay } from 'react-icons/fi';
+import { useParams, Link } from 'react-router-dom';
+import { FiChevronRight } from 'react-icons/fi';
 import Seal from '../components/Seal.jsx';
 import { Stars } from '../components/ReviewsSection.jsx';
 import ProductCard from '../components/ProductCard.jsx';
-import ReelViewer from '../components/ReelViewer.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useSEO } from '../lib/seo';
 import { SITE_HOST, SITE_ORIGIN } from '../lib/site.js';
@@ -20,7 +19,6 @@ export default function CreatorProfile() {
   const [creator, setCreator] = useState(null);
   const [error, setError] = useState(null);
   const [reels, setReels] = useState(null);
-  const [viewingIndex, setViewingIndex] = useState(null);
 
   useEffect(() => {
     setCreator(null);
@@ -103,19 +101,22 @@ export default function CreatorProfile() {
       <div className="wrap" style={{ padding: '32px 20px 80px' }}>
         {creator.bio && <p className="muted" style={{ maxWidth: '60ch', lineHeight: 1.6, marginBottom: 40 }}>{creator.bio}</p>}
 
+        {/* Used to be the reels themselves, a horizontal strip right here,
+            scrolled straight into the product grid below with nothing but
+            a heading between them. Now it's just the door to their own
+            page (/@handle/reels), products and reels read as two
+            different things instead of one blended feed. */}
         {reels && reels.length > 0 && (
-          <>
-            <h2 style={{ fontSize: '1.15rem', marginBottom: 16 }}>Reels</h2>
-            <div className="storefront-reels">
-              {reels.map((r, i) => (
-                <button key={r.id} type="button" className="storefront-reel" onClick={() => setViewingIndex(i)}>
-                  <video src={r.video_path} muted playsInline preload="metadata" />
-                  <span className="storefront-reel__play"><FiPlay size={16} /></span>
-                  {r.product_title && <span className="storefront-reel__tag">{r.product_title}</span>}
-                </button>
-              ))}
-            </div>
-          </>
+          <Link to={`/@${creator.handle}/reels`} className="storefront-reels-link">
+            <span className="storefront-reels-link__preview">
+              <video src={reels[0].video_path} muted playsInline preload="metadata" />
+            </span>
+            <span className="storefront-reels-link__text">
+              <strong>Watch {reels.length} reel{reels.length === 1 ? '' : 's'}</strong>
+              <span>See {creator.name} in action</span>
+            </span>
+            <FiChevronRight size={18} />
+          </Link>
         )}
 
         <h2 style={{ fontSize: '1.15rem', marginBottom: 16 }}>Products</h2>
@@ -135,10 +136,6 @@ export default function CreatorProfile() {
           </div>
         )}
       </div>
-
-      {viewingIndex !== null && (
-        <ReelViewer reels={reels} startIndex={viewingIndex} onClose={() => setViewingIndex(null)} />
-      )}
     </div>
   );
 }

@@ -1211,25 +1211,26 @@ img{max-width:100%;display:block;}
   padding:8px 12px;border-radius:999px;font-size:.78rem;font-weight:700;
 }
 
-/* ---- storefront reels row (CreatorProfile.jsx) ---- */
-.storefront-reels{display:flex;gap:14px;overflow-x:auto;padding:2px 2px 10px;margin-bottom:36px;scrollbar-width:thin;}
-.storefront-reels::-webkit-scrollbar{height:5px;}
-.storefront-reels::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px;}
-.storefront-reel{
-  position:relative;flex:0 0 120px;aspect-ratio:9/16;border-radius:var(--radius-sm);overflow:hidden;
-  background:#000;border:none;cursor:pointer;padding:0;
+/* ---- storefront reels entry card (CreatorProfile.jsx) ---- */
+/* Used to be the reels themselves inline here, a horizontal strip of
+   thumbnails scrolling straight into the product grid below with only a
+   plain heading between them, reels and products read as one blended
+   feed rather than two different things. This is a single link card
+   into their own page (/@handle/reels, see CreatorReels.jsx) instead. */
+.storefront-reels-link{
+  display:flex;align-items:center;gap:14px;padding:14px 16px;margin-bottom:36px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  text-decoration:none;color:inherit;transition:border-color .15s ease;
 }
-.storefront-reel video{width:100%;height:100%;object-fit:cover;pointer-events:none;}
-.storefront-reel__play{
-  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;
-  background:rgba(0,0,0,.15);transition:background .15s ease;
+.storefront-reels-link:hover{border-color:var(--gold);}
+.storefront-reels-link__preview{
+  position:relative;flex-shrink:0;width:52px;height:52px;border-radius:50%;overflow:hidden;
+  background:#000;border:2px solid var(--gold);
 }
-.storefront-reel:hover .storefront-reel__play{background:rgba(0,0,0,.35);}
-.storefront-reel__tag{
-  position:absolute;left:6px;right:6px;bottom:6px;padding:4px 7px;border-radius:6px;
-  background:rgba(0,0,0,.6);color:#fff;font-size:.68rem;font-weight:600;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
+.storefront-reels-link__preview video{width:100%;height:100%;object-fit:cover;pointer-events:none;}
+.storefront-reels-link__text{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;}
+.storefront-reels-link__text strong{font-size:.95rem;}
+.storefront-reels-link__text span{font-size:.82rem;color:var(--muted);}
 
 /* ---- product page reel embed ---- */
 .product-reel{margin-top:28px;}

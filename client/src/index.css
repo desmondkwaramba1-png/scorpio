@@ -790,7 +790,11 @@ img{max-width:100%;display:block;}
     var(--green-dark);
   padding:76px 0 96px;
 }
-.hero__eyebrow{color:var(--link-ink);font-weight:700;font-size:.8rem;letter-spacing:.1em;margin-bottom:16px;}
+/* Sits on the dark cta-band (--green-dark), not a light background —
+   --link-ink is tuned for light backgrounds and still failed contrast
+   here. --gold measures 7.6:1 against --green-dark, and it's already
+   what the hero badge icon uses on this exact background. */
+.hero__eyebrow{color:var(--gold);font-weight:700;font-size:.8rem;letter-spacing:.1em;margin-bottom:16px;}
 .hero__title{font-size:clamp(2rem,5.2vw,3.4rem);max-width:17ch;line-height:1.05;color:#fff;}
 .hero__sub{margin-top:18px;max-width:46ch;color:rgba(255,255,255,.72);font-size:1.08rem;line-height:1.6;}
 .hero__fade{

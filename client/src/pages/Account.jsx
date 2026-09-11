@@ -29,7 +29,14 @@ function whatsappLink(phone) {
   return `https://wa.me/${withCountryCode}`;
 }
 
-function ServiceStatus({ purchaseId, service: initial, sellerName, sellerEmail, sellerPhone, productTitle }) {
+// onUpdate tells the actual purchases list (owned by Account, two
+// components up) about the change, not just this component's own local
+// service state. Without it, confirming (or disputing) updated what this
+// card showed just fine but left Account's own copy of the order
+// unchanged, so "Needs your attention" kept listing an order the buyer
+// had already confirmed, it wasn't lying about anything stale, it
+// genuinely never found out.
+function ServiceStatus({ purchaseId, service: initial, sellerName, sellerEmail, sellerPhone, productTitle, onUpdate }) {
   const [service, setService] = useState(initial);
   const [disputing, setDisputing] = useState(false);
   const [reason, setReason] = useState('');
@@ -43,6 +50,7 @@ function ServiceStatus({ purchaseId, service: initial, sellerName, sellerEmail, 
     try {
       await api.post(`/api/purchases/${purchaseId}/confirm`);
       setService(s => ({ ...s, fulfillment_status: 'released' }));
+      onUpdate?.({ fulfillment_status: 'released' });
     } catch (err) {
       setActionError(err.message);
     } finally {
@@ -58,6 +66,7 @@ function ServiceStatus({ purchaseId, service: initial, sellerName, sellerEmail, 
     try {
       await api.post(`/api/purchases/${purchaseId}/dispute`, { reason });
       setService(s => ({ ...s, fulfillment_status: 'disputed' }));
+      onUpdate?.({ fulfillment_status: 'disputed' });
       setDisputing(false);
     } catch (err) {
       setActionError(err.message);
@@ -134,7 +143,7 @@ function ServiceStatus({ purchaseId, service: initial, sellerName, sellerEmail, 
       )}
 
       {stillWaiting && (
-        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
           {service.fulfillment_status === 'delivered' && (
             <button onClick={confirm} disabled={submitting} className="btn btn--gold btn--sm">
               <FiCheck size={13} /> Confirm, all good
@@ -178,7 +187,7 @@ function ServiceStatus({ purchaseId, service: initial, sellerName, sellerEmail, 
   );
 }
 
-function OrderRow({ purchase, onResend }) {
+function OrderRow({ purchase, onResend, onServiceUpdate }) {
   const navigate = useNavigate();
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
@@ -229,7 +238,14 @@ function OrderRow({ purchase, onResend }) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+        {/* flexShrink:0 keeps these buttons from getting squeezed (the
+            title above shrinks instead, via its own minWidth:0). But with
+            up to three buttons plus the price/badge possibly all present
+            at once (a video product that's also downloadable), nothing
+            stopped them together from running past the card's right edge
+            on a narrow phone instead of wrapping, real horizontal overlap
+            a stress test at 320px with all three present actually showed. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '100%' }}>
           {(purchase.is_video || purchase.is_audio) && (
             <button onClick={e => { e.stopPropagation(); setWatching(w => !w); }} className="btn btn--gold btn--sm">
               {watching ? <FiX size={14} /> : <FiPlay size={14} />}
@@ -283,6 +299,7 @@ function OrderRow({ purchase, onResend }) {
           purchaseId={purchase.id} service={purchase.service}
           sellerName={purchase.creator_name} sellerEmail={purchase.creator_email} sellerPhone={purchase.creator_phone}
           productTitle={purchase.product_title}
+          onUpdate={patch => onServiceUpdate?.(purchase.id, patch)}
         />
       )}
       {/* Service orders already have their own dispute flow above (held
@@ -312,6 +329,17 @@ export default function Account() {
 
   async function resend(purchaseId) {
     await api.post(`/api/purchases/${purchaseId}/resend-download`);
+  }
+
+  // ServiceStatus (two components down, inside each OrderRow) already
+  // knows the moment a confirm/dispute succeeds, this is what lets that
+  // reach the actual purchases list instead of staying local to that one
+  // card, needsAttention below is computed from purchases, so without
+  // this an order stayed in "Needs your attention" even after being
+  // confirmed, the confirmation genuinely worked, this list just never
+  // heard about it.
+  function handleServiceUpdate(purchaseId, patch) {
+    setPurchases(ps => ps.map(p => p.id === purchaseId ? { ...p, service: { ...p.service, ...patch } } : p));
   }
 
   async function handleAvatarChange(e) {
@@ -410,7 +438,7 @@ export default function Account() {
             A seller delivered and is waiting on your OK, or an order is running past when it was promised.
           </p>
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-            {needsAttention.map(p => <OrderRow key={p.id} purchase={p} onResend={resend} />)}
+            {needsAttention.map(p => <OrderRow key={p.id} purchase={p} onResend={resend} onServiceUpdate={handleServiceUpdate} />)}
           </div>
         </div>
       )}
@@ -424,7 +452,7 @@ export default function Account() {
             Everything you've bought stays here: downloads, license keys, and services you're waiting on.
           </p>
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-            {rest.map(p => <OrderRow key={p.id} purchase={p} onResend={resend} />)}
+            {rest.map(p => <OrderRow key={p.id} purchase={p} onResend={resend} onServiceUpdate={handleServiceUpdate} />)}
           </div>
         </>
       )}

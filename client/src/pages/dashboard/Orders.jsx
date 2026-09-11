@@ -93,7 +93,7 @@ function OrderRow({ o, creator }) {
             Bought <Link to={`/@${creator.handle}/${o.product_slug}`}>{o.product_title}</Link> &middot; {formatDate(o.created_at)}
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '100%' }}>
           {label && <span className={`badge ${label.className}`}>{label.text}</span>}
           <span className="mono" style={{ fontWeight: 600, fontSize: '.9rem' }}>{formatMoney(o.amount_minor, o.currency)}</span>
           <a href={`mailto:${o.buyer_email}`} className="btn btn--ghost btn--sm" title="Email this buyer">

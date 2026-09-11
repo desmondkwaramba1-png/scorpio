@@ -26,7 +26,7 @@ function ItemRow({ item }) {
           <p className="mono muted" style={{ fontSize: '.85rem' }}>{price}</p>
         </div>
         {item.download_url ? (
-          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '100%' }}>
             {(item.is_video || item.is_audio) && (
               <button className="btn btn--ghost btn--sm" onClick={() => setOpen(o => !o)}>
                 {open ? <><FiX size={14} /> Close</> : <><FiPlay size={14} /> {item.is_video ? 'Watch' : 'Play'}</>}

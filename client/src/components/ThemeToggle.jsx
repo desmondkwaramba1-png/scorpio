@@ -1,7 +1,7 @@
 import { FiSun, FiMoon } from 'react-icons/fi';
 import { useTheme } from '../context/ThemeContext.jsx';
 
-// Lives in Account.jsx (buyers) and dashboard/Settings.jsx (creators) —
+// Lives in Account.jsx (buyers) and dashboard/Settings.jsx (creators) ,
 // pulled out of the top nav bar to free up that space, which meant it
 // needed a home reachable by both roles rather than just one settings page.
 export default function ThemeToggle() {

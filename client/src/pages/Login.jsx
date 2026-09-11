@@ -8,12 +8,12 @@ import AuthShell from '../components/AuthShell.jsx';
 
 // Flip to true once the Google OAuth app clears Google's verification
 // review and is published out of "Testing" (and Facebook clears Meta App
-// Review). Until then the social buttons are hidden — see the block in the
+// Review). Until then the social buttons are hidden, see the block in the
 // render for the full reasoning.
 const SOCIAL_LOGIN_ENABLED = false;
 
 // A plain <input type="password"> gives no way to check what you actually
-// typed before submitting — a real source of failed logins/signups on a
+// typed before submitting, a real source of failed logins/signups on a
 // fiddly mobile keyboard. tabIndex={-1} keeps the toggle out of the tab
 // order between the field and the next one; it's a convenience click/tap
 // target, not a stop on the form's real path.
@@ -47,11 +47,11 @@ export default function Login() {
   const next = searchParams.get('next');
 
   // Role only matters for a brand-new signup (does this new account want
-  // to land in onboarding right away?) — it's not something a RETURNING
+  // to land in onboarding right away?), it's not something a RETURNING
   // user should have to re-declare every time they log in. A "role=creator"
   // deep link (the various "Start selling" CTAs) jumps straight to signup;
   // "role=buyer" deep links (every "log in to continue" prompt, which all
-  // carry `next`) jump straight to login — in both cases the picker below
+  // carry `next`) jump straight to login, in both cases the picker below
   // is redundant with what the caller already knows.
   const [tab, setTab] = useState(presetRole === 'creator' ? 'signup' : 'login');
   const [signupRole, setSignupRole] = useState(presetRole === 'creator' ? 'creator' : presetRole === 'buyer' ? 'buyer' : null);
@@ -62,7 +62,7 @@ export default function Login() {
   const update = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
 
   // Actual account state (does this user already have a creator profile?)
-  // always wins over anything picked on the way in — that's what lets a
+  // always wins over anything picked on the way in, that's what lets a
   // returning seller land on their dashboard without re-declaring "I'm a
   // creator" every single login, and it's also what makes a buyer who
   // later opens a storefront (see Account.jsx) land correctly from then on.
@@ -75,7 +75,7 @@ export default function Login() {
 
   // OAuth login doesn't know in advance whether it'll create a brand-new
   // account or sign into an existing one, so a role picked in the login
-  // tab is meaningless either way — afterAuth/OAuthComplete decide purely
+  // tab is meaningless either way, afterAuth/OAuthComplete decide purely
   // from data.creator once control comes back. Only the signup tab's
   // explicit choice is real intent worth sending through; anything else is
   // left unset (not defaulted to 'buyer') so OAuthComplete.jsx knows to
@@ -127,7 +127,7 @@ export default function Login() {
         {tab === 'login' ? 'Welcome back' : 'Create your account'}
       </h1>
       <p className="muted" style={{ marginBottom: 24 }}>
-        {tab === 'login' ? 'Good to see you again.' : 'One account covers both sides — you can browse, buy, and open a storefront later even if you start as a buyer.'}
+        {tab === 'login' ? 'Good to see you again.' : 'One account covers both sides, you can browse, buy, and open a storefront later even if you start as a buyer.'}
       </p>
 
       <div className="tabs" style={{ marginBottom: 24 }}>
@@ -172,7 +172,7 @@ export default function Login() {
           {/* Social sign-in (Google + Facebook) is intentionally hidden from
               the UI for now, not removed. Google's OAuth app is still in
               "Testing" publishing status pending a Trust & Safety review, so
-              it only works for explicitly-listed test accounts — showing a
+              it only works for explicitly-listed test accounts, showing a
               button that fails for the public is worse than not showing it.
               The backend routes (oauth.js) and OAuthComplete.jsx are all
               still in place; restore the block below once the app is
@@ -237,7 +237,7 @@ export default function Login() {
               </div>
               <PasswordField
                 id="signup_password" label="Password" value={form.password} onChange={update('password')}
-                minLength={8} hint="At least 8 characters — pick something you don't use anywhere else."
+                minLength={8} hint="At least 8 characters, pick something you don't use anywhere else."
               />
               <PasswordField
                 id="confirm" label="Confirm password" value={form.confirm} onChange={update('confirm')}

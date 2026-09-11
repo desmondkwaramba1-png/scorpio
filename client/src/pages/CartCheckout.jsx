@@ -29,7 +29,7 @@ export default function CartCheckout() {
     e.preventDefault();
     setStatus('submitting');
     try {
-      // 30s, not the usual 15s default — this waits on Dischub actually
+      // 30s, not the usual 15s default, this waits on Dischub actually
       // triggering the EcoCash prompt, which can genuinely take longer
       // than a normal API call. Not retried on failure either way (POST),
       // so this only changes how long a still-working request gets before

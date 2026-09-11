@@ -20,7 +20,7 @@ export default function AcceptTerms() {
     try {
       await api.post('/api/auth/accept-terms');
       const data = await refresh();
-      // Role (creator vs buyer) isn't known here — it only travels through the
+      // Role (creator vs buyer) isn't known here, it only travels through the
       // OAuth redirect's query param, which this gate sits behind. Land
       // creators in their dashboard; everyone else goes to Account, which
       // itself offers a "start selling" path rather than assuming intent.

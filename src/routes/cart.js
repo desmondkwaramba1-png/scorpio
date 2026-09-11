@@ -10,7 +10,7 @@ const { productHasKeys, unclaimedCount } = require('../lib/licenseKeys');
 
 const router = express.Router();
 
-// Sold out if either stock signal says so — an explicit quantity_limit, or
+// Sold out if either stock signal says so, an explicit quantity_limit, or
 // (for software delivered by key) simply running out of unclaimed keys,
 // even when no quantity_limit was ever set.
 function isSoldOut(product) {
@@ -45,12 +45,12 @@ router.get('/', requireAuth, (req, res) => {
   res.json(db.prepare(CART_SELECT).all(req.user.id).map(withPromo));
 });
 
-// GET /api/cart/count — lightweight, just for the nav badge.
+// GET /api/cart/count, lightweight, just for the nav badge.
 router.get('/count', requireAuth, (req, res) => {
   res.json({ cart_count: cartCount(req.user.id) });
 });
 
-// POST /api/cart — { product_slug }
+// POST /api/cart, { product_slug }
 router.post('/', requireAuth, (req, res) => {
   const { product_slug } = req.body;
   const product = db.prepare("SELECT * FROM products WHERE slug = ? AND status = 'published'").get(product_slug);
@@ -60,24 +60,24 @@ router.post('/', requireAuth, (req, res) => {
   // own product. Blocked here too so it can't be reached by adding to the
   // cart from a stale tab or hitting the API directly.
   if (req.creator && req.creator.id === product.creator_id) {
-    return res.status(403).json({ error: "That's your own product — you can't buy it." });
+    return res.status(403).json({ error: "That's your own product, you can't buy it." });
   }
 
   // Pay-what-you-want needs a buyer-chosen amount per item, which a shared
-  // cart total can't represent — that flow stays on the product's own
+  // cart total can't represent, that flow stays on the product's own
   // direct checkout instead of going through the cart.
   if (product.pay_what_you_want) {
     return res.status(400).json({ error: 'This product lets you name your price. Buy it directly from its page instead of the cart.' });
   }
   // Free products settle instantly with no EcoCash step at all (see
-  // purchases.js) — mixing that into a shared, possibly multi-item cart
+  // purchases.js), mixing that into a shared, possibly multi-item cart
   // total that DOES need a real charge just complicates the checkout for
   // no benefit. Get it straight from the product page instead.
   if (product.price_minor === 0) {
-    return res.status(400).json({ error: 'This product is free — get it directly from its page instead of the cart.' });
+    return res.status(400).json({ error: 'This product is free, get it directly from its page instead of the cart.' });
   }
   // Services need their own checkout so the escrow/payment-protection
-  // messaging actually shows — the shared cart checkout doesn't know how
+  // messaging actually shows, the shared cart checkout doesn't know how
   // to explain that to a buyer mid-cart.
   if (product.type === 'service') {
     return res.status(400).json({ error: 'Services are ordered directly from their page, not through the cart.' });
@@ -89,7 +89,7 @@ router.post('/', requireAuth, (req, res) => {
   try {
     db.prepare('INSERT INTO cart_items (user_id, product_id) VALUES (?, ?)').run(req.user.id, product.id);
   } catch (err) {
-    if (!/UNIQUE/.test(err.message)) throw err; // already in cart — treat as success
+    if (!/UNIQUE/.test(err.message)) throw err; // already in cart, treat as success
   }
   res.status(201).json({ added: true, cart_count: cartCount(req.user.id) });
 });
@@ -100,10 +100,10 @@ router.delete('/:productId', requireAuth, (req, res) => {
   res.json({ removed: true, cart_count: cartCount(req.user.id) });
 });
 
-// POST /api/cart/checkout — { email, name, phone }. One Dischub order for
+// POST /api/cart/checkout, { email, name, phone }. One Dischub order for
 // the combined total; one `purchases` row per cart item, all sharing that
 // order's payment_reference. This works with zero payment-splitting logic
-// because every order — regardless of which creator's product it is —
+// because every order, regardless of which creator's product it is ,
 // already settles to the platform's single Dischub recipient account
 // (see services/payment.js RECIPIENT); a cart spanning multiple sellers
 // costs nothing extra here, it's the same one-recipient charge either way.
@@ -117,16 +117,16 @@ router.post('/checkout', checkoutLimiter, requireAuth, async (req, res) => {
   const items = db.prepare(CART_SELECT).all(req.user.id).map(withPromo);
   if (items.length === 0) return res.status(400).json({ error: 'Your cart is empty.' });
 
-  // A creator can't buy through their own storefront — catch it here in
+  // A creator can't buy through their own storefront, catch it here in
   // case one slipped into the cart before this rule existed, or from a
   // second tab open as a different context.
   if (req.creator && items.some(p => p.creator_id === req.creator.id)) {
     const own = items.filter(p => p.creator_id === req.creator.id).map(p => p.title).join(', ');
-    return res.status(403).json({ error: `${own} ${own.includes(',') ? 'are' : 'is'} your own — remove ${own.includes(',') ? 'them' : 'it'} from your cart to check out.` });
+    return res.status(403).json({ error: `${own} ${own.includes(',') ? 'are' : 'is'} your own, remove ${own.includes(',') ? 'them' : 'it'} from your cart to check out.` });
   }
 
   // Re-checked against reality at the moment of paying, not what the
-  // buyer's browser cached when they added it — a product can go sold out
+  // buyer's browser cached when they added it, a product can go sold out
   // or get unpublished between adding to cart and checking out.
   const unavailable = items.filter(p => p.status !== 'published' || isSoldOut(p));
   if (unavailable.length > 0) {
@@ -156,7 +156,7 @@ router.post('/checkout', checkoutLimiter, requireAuth, async (req, res) => {
   }
 
   // Not tied to any single purchase id the way the direct-buy flow's
-  // order_id is (zs${purchaseId}...) — a cart order covers several
+  // order_id is (zs${purchaseId}...), a cart order covers several
   // purchase rows at once, so there's no one id to derive it from.
   const orderId = `zsc${Date.now().toString(36)}${randomBytes(4).toString('hex')}`;
 
@@ -169,7 +169,7 @@ router.post('/checkout', checkoutLimiter, requireAuth, async (req, res) => {
   );
 
   // Non-redirecting flow: triggers a real EcoCash prompt on the buyer's
-  // phone directly. No pay_url — the frontend moves to /payment/return
+  // phone directly. No pay_url, the frontend moves to /payment/return
   // client-side and polls status from there.
   const order = await createOrder({ orderId, sender: phone, amountMinor: totalMinor, currency });
 

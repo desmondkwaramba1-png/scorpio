@@ -33,7 +33,7 @@ export default function DashboardLayout() {
   const { creator } = useAuth();
 
   // A buyer with no creator profile has no business seeing the seller
-  // dashboard shell (tabs, products, wallet) at all — not even a broken/
+  // dashboard shell (tabs, products, wallet) at all, not even a broken/
   // empty version of it. Only the index route used to guard on this.
   if (!creator) return <Navigate to="/onboarding" replace />;
 

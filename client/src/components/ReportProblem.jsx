@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { FiFlag, FiCheck } from 'react-icons/fi';
 import { api } from '../lib/api';
 
-// Buyer or seller flagging a problem — either about a specific order
+// Buyer or seller flagging a problem, either about a specific order
 // (purchaseId, the original case: see migrations/027_reports.sql) or
-// about a product with no order behind it at all (productId — a seller
+// about a product with no order behind it at all (productId, a seller
 // flagging another seller's listing as a copy, added in 028; see
 // routes/reports.js's POST /product). Exactly one of purchaseId/productId
 // is expected. Deliberately plain: no escrow, no resolution flow in the
-// UI — this just gets a human (the platform operator) looking at it, same
+// UI, this just gets a human (the platform operator) looking at it, same
 // honesty as the wallet payout stub elsewhere in the app.
 export default function ReportProblem({ purchaseId, productId, hasOpenReport, stopPropagation, label }) {
   const [reported, setReported] = useState(!!hasOpenReport);
@@ -67,7 +67,7 @@ export default function ReportProblem({ purchaseId, productId, hasOpenReport, st
       <div className="field" style={{ marginBottom: 8 }}>
         <textarea
           autoFocus rows={3} value={reason} onChange={e => setReason(e.target.value)}
-          placeholder="What went wrong? Be specific — this goes straight to the platform operator."
+          placeholder="What went wrong? Be specific, this goes straight to the platform operator."
           maxLength={2000}
         />
       </div>

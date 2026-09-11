@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { formatMoney } from '../lib/money';
 
-// The homepage-rail card: small, square, scannable — a teaser meant to be
+// The homepage-rail card: small, square, scannable, a teaser meant to be
 // swiped past quickly, not the full ProductCard (buy button, cart, likes,
 // sold count) used on Discover/CreatorProfile where someone's actually
 // comparing products. Click-through to the real product page is the only

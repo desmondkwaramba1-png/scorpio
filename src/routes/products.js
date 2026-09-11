@@ -21,14 +21,14 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 // Uploads are served back out as static files with whatever content-type
 // the extension implies, so an unrestricted cover upload is a stored-XSS
 // hole waiting to happen (an uploaded .svg or .html served at its own URL
-// renders — and executes — as a real page if anyone navigates straight to
+// renders, and executes, as a real page if anyone navigates straight to
 // it). The deliverable ('file') gets its own rule: while EBOOKS_ONLY, a
 // listing is either a single PDF (ebooks/templates) or a single video
-// (courses) — which one depends on `category`, which isn't reliably known
+// (courses), which one depends on `category`, which isn't reliably known
 // yet inside a multer fileFilter (multipart field order isn't guaranteed
 // to put the 'category' text field ahead of the 'file' stream), so this
 // stays permissive at the filter level and the real, category-specific
-// check runs after multer finishes parsing — see checkDeliverableType
+// check runs after multer finishes parsing, see checkDeliverableType
 // below, called from both POST and PATCH once req.body is complete.
 const COVER_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 const PDF_TYPE = 'application/pdf';
@@ -49,7 +49,7 @@ function productFileFilter(req, file, cb) {
 }
 
 // The strict, category-aware pass productFileFilter above can't safely do.
-// Nothing to clean up on rejection anymore — memoryStorage below never
+// Nothing to clean up on rejection anymore, memoryStorage below never
 // wrote the file to this server's disk (or to R2) in the first place, so
 // there's no orphan to delete, unlike the old disk-based version of this.
 function checkDeliverableType(file, category) {
@@ -62,21 +62,21 @@ function checkDeliverableType(file, category) {
     : 'The product file must be a PDF.';
 }
 
-// req.file.buffer, never a path on this server's own disk — validated here,
+// req.file.buffer, never a path on this server's own disk, validated here,
 // then either uploaded to R2 (storage.js) as a public object (cover,
 // preview clip) or a private one (the paid deliverable, only ever reached
-// again through a presigned URL — see routes/downloads.js).
+// again through a presigned URL, see routes/downloads.js).
 const upload = multer({
   storage: multer.memoryStorage(),
   fileFilter: productFileFilter,
   // A cover is always a small image; the deliverable can now be a real
   // course video. One shared limit since multer applies it per-upload-
-  // instance, not per-field — generous enough for a real 30-60 minute
+  // instance, not per-field, generous enough for a real 30-60 minute
   // course video at reasonable compression.
   limits: { fileSize: 500 * 1024 * 1024 }
 });
 
-// R2 object keys — prefix says which bucket "folder" and whether it's a
+// R2 object keys, prefix says which bucket "folder" and whether it's a
 // public or private object, extension kept for a sane Content-Type/browser
 // hint, uuid keeps two uploads from ever colliding.
 function objectKey(prefix, originalname) {
@@ -85,7 +85,7 @@ function objectKey(prefix, originalname) {
 
 // Attaches the buyer-facing promo fields every product response needs:
 // whether a promo is currently active, and what it actually charges. Also
-// attaches key stock — total_keys is 0 for the vast majority of products
+// attaches key stock, total_keys is 0 for the vast majority of products
 // that don't use license keys at all, so callers can treat "total_keys > 0"
 // as "this is a keyed product" without a separate flag.
 function withPromo(product) {
@@ -105,7 +105,7 @@ function slugify(title) {
     .replace(/(^-|-$)/g, '') + '-' + Math.random().toString(36).slice(2, 6);
 }
 
-// One key per line from the creator's textarea — blank lines and stray
+// One key per line from the creator's textarea, blank lines and stray
 // whitespace are the only "formatting" a paste from a spreadsheet or a
 // license-generator tool needs cleaning up.
 function parseKeyList(raw) {
@@ -116,7 +116,7 @@ function parseKeyList(raw) {
 // Runs the real file checks (contentVerification.js) on an uploaded
 // product file, records the result on the product_files row, and flags
 // the product if anything's actually wrong. The duplicate-hash check is
-// scoped to OTHER creators only — a seller re-uploading their own
+// scoped to OTHER creators only, a seller re-uploading their own
 // unchanged file (editing price, say, without touching the file) is not
 // "suspicious," it's just normal editing, so it's explicitly excluded
 // here rather than left to accidentally self-flag on every edit.
@@ -167,7 +167,7 @@ const FEED_SELECT = `
   JOIN creators c ON c.id = p.creator_id
 `;
 
-// GET /api/products — the public /discover feed. type, q (title search),
+// GET /api/products, the public /discover feed. type, q (title search),
 // sort=new|price_asc|price_desc|popular|bestselling, limit (homepage rails).
 router.get('/', (req, res) => {
   const { type, q, sort, limit, category } = req.query;
@@ -182,7 +182,7 @@ router.get('/', (req, res) => {
     clauses.push('p.category = ?');
     params.push(category);
   } else if (EBOOKS_ONLY) {
-    // No specific (active) category asked for — while EBOOKS_ONLY, the
+    // No specific (active) category asked for, while EBOOKS_ONLY, the
     // public feed only ever shows the active launch categories, regardless
     // of what legacy products exist in the DB from before launch scope
     // narrowed, or what category a caller tries to request directly.
@@ -214,7 +214,7 @@ router.get('/', (req, res) => {
   res.json(products.map(withPromo));
 });
 
-// GET /api/products/mine — the logged-in creator's own products, any status.
+// GET /api/products/mine, the logged-in creator's own products, any status.
 // Must be declared before /:slug so "mine" isn't parsed as a slug.
 router.get('/mine', requireAuth, requireCreator, (req, res) => {
   const products = db.prepare(`
@@ -229,7 +229,7 @@ router.get('/mine', requireAuth, requireCreator, (req, res) => {
   res.json(products.map(withPromo));
 });
 
-// GET /api/products/:slug — public product page. Drafts are only visible
+// GET /api/products/:slug, public product page. Drafts are only visible
 // to their owner (previewing before publish).
 router.get('/:slug', (req, res) => {
   const product = db.prepare(`
@@ -249,7 +249,7 @@ router.get('/:slug', (req, res) => {
 
   if (product.type === 'serial') {
     // A buyer who's paid gets every issue this purchase covers, past and
-    // future — but the file/link itself is only in the response once
+    // future, but the file/link itself is only in the response once
     // they've actually paid (or it's the owner previewing). Everyone else
     // sees the table of contents (title, issue number, date) with no
     // access, same as the buy-panel already shows for the main file.
@@ -283,7 +283,7 @@ router.get('/:slug', (req, res) => {
   res.json(withPromo(product));
 });
 
-// POST /api/products/:id/like — toggles the current user's like.
+// POST /api/products/:id/like, toggles the current user's like.
 router.post('/:id/like', requireAuth, (req, res) => {
   const product = db.prepare('SELECT id FROM products WHERE id = ?').get(req.params.id);
   if (!product) return res.status(404).json({ error: 'Product not found.' });
@@ -331,9 +331,9 @@ router.post('/:id/comments', requireAuth, (req, res) => {
   res.status(201).json(comment);
 });
 
-// POST /api/products/:id/share — counts a share-button click. No login
+// POST /api/products/:id/share, counts a share-button click. No login
 // required (same as every share button on the web, this counts intent to
-// share, not a confirmed post on the other platform — there's no way for
+// share, not a confirmed post on the other platform, there's no way for
 // any site to verify that from a share link).
 router.post('/:id/share', (req, res) => {
   const { channel } = req.body;
@@ -351,10 +351,10 @@ router.post('/:id/share', (req, res) => {
   res.json({ share_count: count });
 });
 
-// GET /api/products/:slug/reviews — public reviews + aggregate. When
+// GET /api/products/:slug/reviews, public reviews + aggregate. When
 // logged in, also reports whether this buyer has a paid, not-yet-reviewed
 // purchase of this product (eligible_to_review) and their own review if
-// they've already left one — the frontend uses these to show "write a
+// they've already left one, the frontend uses these to show "write a
 // review", "edit your review", or nothing, instead of showing a form to
 // someone who never bought the thing and letting them hit a 403.
 router.get('/:slug/reviews', (req, res) => {
@@ -401,7 +401,7 @@ router.get('/:slug/reviews', (req, res) => {
   });
 });
 
-// POST /api/products/:slug/reviews — leaves a review against the buyer's
+// POST /api/products/:slug/reviews, leaves a review against the buyer's
 // oldest paid, not-yet-reviewed purchase of this product. "Actually bought
 // it" is enforced by the join itself (never trusted from the client), and
 // the purchases.buyer_id -> user_id chain is the same ownership pattern
@@ -440,7 +440,7 @@ router.post('/:slug/reviews', requireAuth, (req, res) => {
   res.status(201).json(review);
 });
 
-// PATCH /api/products/:slug/reviews/mine — edit your own review.
+// PATCH /api/products/:slug/reviews/mine, edit your own review.
 router.patch('/:slug/reviews/mine', requireAuth, (req, res) => {
   const product = db.prepare('SELECT id FROM products WHERE slug = ?').get(req.params.slug);
   if (!product) return res.status(404).json({ error: 'Product not found.' });
@@ -488,7 +488,7 @@ router.delete('/:slug/reviews/mine', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// POST /api/products — creator_id always comes from the session, never the
+// POST /api/products, creator_id always comes from the session, never the
 // client, so nobody can publish a product under someone else's storefront.
 // Cover image is required, enforced here and not just in the form.
 router.post('/', requireAuth, requireCreator, upload.fields([
@@ -528,11 +528,11 @@ router.post('/', requireAuth, requireCreator, upload.fields([
   }
   const deliverableError = checkDeliverableType(file, category);
   if (deliverableError) return res.status(400).json({ error: deliverableError });
-  // A service has nothing to hand over at listing time by design — the
+  // A service has nothing to hand over at listing time by design, the
   // work doesn't exist yet, only the seller's portfolio and track record
   // do. What a buyer gets is delivered per-order later (see
   // POST /:id/deliver), not attached to the listing itself.
-  // A serial product's content is its issues (see POST /:id/issues) —
+  // A serial product's content is its issues (see POST /:id/issues) ,
   // chapter one doesn't have to exist the moment the listing goes up, only
   // before the first buyer would reasonably expect something. Same
   // "nothing to hand over yet" shape as a service, different reason.
@@ -546,7 +546,7 @@ router.post('/', requireAuth, requireCreator, upload.fields([
 
   const isPWYW = pay_what_you_want === 'true' || pay_what_you_want === true;
   const priceMinor = toMinor(price);
-  // 0 is allowed — a free listing. Checkout (purchases.js) already treats
+  // 0 is allowed, a free listing. Checkout (purchases.js) already treats
   // an amount of exactly 0 as "nothing to charge" and skips EcoCash
   // entirely, so a $0 price here is a real, supported product, not a bug.
   if (!isPWYW && (priceMinor === null || priceMinor < 0)) {
@@ -563,12 +563,12 @@ router.post('/', requireAuth, requireCreator, upload.fields([
     return res.status(503).json({ error: 'File storage is not configured yet. Try again shortly.' });
   }
 
-  // Every validation above has passed — only now do the actual R2 uploads,
+  // Every validation above has passed, only now do the actual R2 uploads,
   // so a request that was going to be rejected anyway never wastes one.
   //
   // These three are independent of each other (each is its own R2 object,
   // none reads what another writes), so they run concurrently instead of
-  // one-after-another — a course with a cover, a free preview clip, and
+  // one-after-another, a course with a cover, a free preview clip, and
   // the real video file used to pay for all three uploads' latency added
   // together in serial; now it pays for whichever one is slowest.
   const uploadCover = (async () => {
@@ -580,7 +580,7 @@ router.post('/', requireAuth, requireCreator, upload.fields([
   })();
 
   // Only meaningful for courses, but not restricted to them at the DB
-  // level — a free sample clip is a reasonable thing for any video
+  // level, a free sample clip is a reasonable thing for any video
   // deliverable, not something worth a CHECK constraint over.
   const uploadPreview = previewVideo ? (async () => {
     const previewKey = objectKey('previews', previewVideo.originalname);
@@ -588,8 +588,8 @@ router.post('/', requireAuth, requireCreator, upload.fields([
     return storage.publicUrl(previewKey);
   })() : Promise.resolve(null);
 
-  // The main deliverable's R2 upload doesn't actually need productId —
-  // only the product_files row it feeds does — so it can run alongside
+  // The main deliverable's R2 upload doesn't actually need productId ,
+  // only the product_files row it feeds does, so it can run alongside
   // the two above instead of waiting for the INSERT below.
   const uploadFile = file ? (async () => {
     const fileKey = objectKey('product-files', file.originalname);
@@ -622,7 +622,7 @@ router.post('/', requireAuth, requireCreator, upload.fields([
   const productId = result.lastInsertRowid;
 
   if (file) {
-    // Private object — stored as just its R2 key, not a public URL. The
+    // Private object, stored as just its R2 key, not a public URL. The
     // only way back to these bytes is routes/downloads.js minting a
     // short-lived presigned URL after checking a valid, unexpired,
     // not-over-its-download-limit token, exactly like it checked a local
@@ -634,7 +634,7 @@ router.post('/', requireAuth, requireCreator, upload.fields([
     `).run(productId, fileKey, file.originalname, file.size);
     // Fire-and-forget, deliberately not awaited: verification (hashing
     // the whole file, PDF page-counting) is real work with nothing in
-    // this response depending on its result — it already wasn't allowed
+    // this response depending on its result, it already wasn't allowed
     // to fail the request (see the catch below), so there's no reason to
     // make the seller sit through it too. Same "not critical enough to
     // block on" logic, just applied to speed as well as failure.
@@ -646,7 +646,7 @@ router.post('/', requireAuth, requireCreator, upload.fields([
       VALUES (?, 'external_link', ?)
     `).run(productId, external_url);
   }
-  // Not exclusive with a file — a creator can ship a manual/installer as the
+  // Not exclusive with a file, a creator can ship a manual/installer as the
   // file and still have each sale claim its own key from this batch.
   if (keyList.length > 0) addKeys(productId, keyList);
 
@@ -656,7 +656,7 @@ router.post('/', requireAuth, requireCreator, upload.fields([
   res.status(201).json(withPromo(product));
 });
 
-// PATCH /api/products/:id — edit, publish, or unpublish. Owner only.
+// PATCH /api/products/:id, edit, publish, or unpublish. Owner only.
 router.patch('/:id', requireAuth, requireCreator, upload.fields([
   { name: 'cover', maxCount: 1 },
   { name: 'file', maxCount: 1 },
@@ -758,7 +758,7 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
     }
   }
 
-  // All validation above has passed — only now do the actual R2 uploads.
+  // All validation above has passed, only now do the actual R2 uploads.
   // Same reasoning as the POST handler above: whichever of these are
   // actually present are independent of each other, so they run
   // concurrently rather than one-after-another.
@@ -813,22 +813,22 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
     product.id
   );
 
-  // A new file or link replaces the old deliverable outright — one file per
+  // A new file or link replaces the old deliverable outright, one file per
   // product (see getProductFile), so the old row is cleared first.
   if (file || external_url) {
     db.prepare('DELETE FROM product_files WHERE product_id = ?').run(product.id);
     if (file) {
       // Upload itself already happened above, in parallel with cover/
-      // preview — fileKey is that result.
+      // preview, fileKey is that result.
       db.prepare(`
         INSERT INTO product_files (product_id, kind, storage_path, original_filename, size_bytes)
         VALUES (?, 'upload', ?, ?, ?)
       `).run(product.id, fileKey, file.originalname, file.size);
-      // A replaced file is a genuinely new upload, worth re-checking —
+      // A replaced file is a genuinely new upload, worth re-checking ,
       // review_status resets to 'clear' first so an old flag from a
       // previous file doesn't linger on a file that's since been swapped out.
       db.prepare("UPDATE products SET review_status = 'clear', flag_reason = NULL WHERE id = ?").run(product.id);
-      // Fire-and-forget — see the identical comment in the POST handler
+      // Fire-and-forget, see the identical comment in the POST handler
       // above. Nothing in this response depends on verification finishing.
       verifyAndRecordFile(product.id, req.creator.id, file, title ?? product.title, description ?? product.description)
         .catch(err => console.error('[content verification]', err));
@@ -845,12 +845,12 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
   res.json(withPromo(db.prepare('SELECT * FROM products WHERE id = ?').get(product.id)));
 });
 
-// DELETE /api/products/:id — owner only, and only if it's never had an
+// DELETE /api/products/:id, owner only, and only if it's never had an
 // order placed against it. A product with purchase history can't be hard
 // deleted: buyers' order history joins straight to the products table (see
 // GET /api/purchases/mine), so removing the row would silently erase their
 // receipt and access. Unpublish (PATCH status='draft') is the right move
-// for a product that's already sold — this is only for a listing that was
+// for a product that's already sold, this is only for a listing that was
 // never actually bought.
 router.delete('/:id', requireAuth, requireCreator, (req, res) => {
   const product = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
@@ -870,7 +870,7 @@ router.delete('/:id', requireAuth, requireCreator, (req, res) => {
   res.json({ ok: true });
 });
 
-// POST /api/products/:id/license-keys — owner only. Additive: tops up
+// POST /api/products/:id/license-keys, owner only. Additive: tops up
 // stock rather than replacing it, so pasting a fresh batch later never
 // disturbs keys already claimed by past buyers.
 router.post('/:id/license-keys', requireAuth, requireCreator, (req, res) => {
@@ -889,9 +889,9 @@ router.post('/:id/license-keys', requireAuth, requireCreator, (req, res) => {
   res.status(201).json({ added: keyList.length, ...keyStats(product.id) });
 });
 
-// POST /api/products/:id/issues — add a new issue (chapter) to a serial
+// POST /api/products/:id/issues, add a new issue (chapter) to a serial
 // product. Owner-only. This is the entire point of "serial": whoever
-// already paid gets every issue this adds from now on, automatically —
+// already paid gets every issue this adds from now on, automatically ,
 // there's no separate purchase or unlock step for issue 2, 3, 4...
 router.post('/:id/issues', requireAuth, requireCreator, upload.single('file'), async (req, res) => {
   const product = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
@@ -909,7 +909,7 @@ router.post('/:id/issues', requireAuth, requireCreator, upload.single('file'), a
 
   const file = req.file;
   if (!file && !externalUrl) {
-    return res.status(400).json({ error: 'Attach a file or provide a link — an issue needs something for buyers to actually get.' });
+    return res.status(400).json({ error: 'Attach a file or provide a link, an issue needs something for buyers to actually get.' });
   }
   if (file && !storage.isConfigured()) {
     return res.status(503).json({ error: 'File storage is not configured yet. Try again shortly.' });
@@ -933,7 +933,7 @@ router.post('/:id/issues', requireAuth, requireCreator, upload.single('file'), a
   `).run(product.id, nextNumber, title, kind, filePath, resolvedExternal, originalFilename);
 
   // Every past buyer already paid for whatever comes next, not just what
-  // existed the day they bought — that's the deal a serial makes. Tell them.
+  // existed the day they bought, that's the deal a serial makes. Tell them.
   const buyers = db.prepare(`
     SELECT DISTINCT b.email FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
     WHERE pu.product_id = ? AND pu.payment_status = 'paid'
@@ -949,9 +949,9 @@ router.post('/:id/issues', requireAuth, requireCreator, upload.single('file'), a
   res.status(201).json({ id: result.lastInsertRowid, issue_number: nextNumber, title, kind, published_at: new Date().toISOString() });
 });
 
-// DELETE /api/products/:id/issues/:issueId — owner-only. For fixing a
+// DELETE /api/products/:id/issues/:issueId, owner-only. For fixing a
 // mistake (wrong file, duplicate), not something a buyer-facing UI exposes
-// as routine — pulling a chapter someone already paid for is a real thing
+// as routine, pulling a chapter someone already paid for is a real thing
 // to be careful with, this just doesn't try to stop you from doing it.
 router.delete('/:id/issues/:issueId', requireAuth, requireCreator, (req, res) => {
   const product = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);

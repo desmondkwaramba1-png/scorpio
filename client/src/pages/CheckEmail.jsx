@@ -6,7 +6,7 @@ import { api } from '../lib/api';
 import AuthShell from '../components/AuthShell.jsx';
 
 // The gate ProtectedRoute sends anyone with no email_verified_at to. Stays
-// on this same page rather than bouncing them out of the app — they're
+// on this same page rather than bouncing them out of the app, they're
 // still logged in, they just can't go further until they've confirmed the
 // address is really theirs. Polls-by-hand (a "I've verified, continue"
 // button) rather than actual polling, since the common case is: open the
@@ -54,14 +54,14 @@ export default function CheckEmail() {
       <h1 style={{ fontSize: '1.4rem', marginBottom: 10 }}>Verify your email</h1>
       <p className="muted" style={{ marginBottom: 28, lineHeight: 1.6 }}>
         We sent a link to <strong style={{ color: 'var(--ink)' }}>{user.email}</strong>. Open it, then come back
-        here — the rest of SCORPIO unlocks once your email is confirmed.
+        here, the rest of SCORPIO unlocks once your email is confirmed.
       </p>
 
       <button className="btn btn--primary btn--block" onClick={checkNow} disabled={checking} style={{ marginBottom: 12 }}>
         <FiRefreshCw size={15} /> {checking ? 'Checking...' : "I've verified, continue"}
       </button>
       <button className="btn btn--ghost btn--block" onClick={resend} disabled={resending || resent}>
-        {resent ? 'Sent — check your inbox' : resending ? 'Sending...' : 'Resend the email'}
+        {resent ? 'Sent, check your inbox' : resending ? 'Sending...' : 'Resend the email'}
       </button>
 
       {error && <p className="error-text" style={{ marginTop: 16 }}>{error}</p>}

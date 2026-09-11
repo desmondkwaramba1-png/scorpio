@@ -95,7 +95,7 @@ export default function Settings() {
               <div>
                 <p style={{ fontWeight: 600, fontSize: '.9rem' }}>Profile photo</p>
                 <label htmlFor="avatar" className="muted" style={{ fontSize: '.82rem', fontWeight: 600, cursor: 'pointer', color: 'var(--green-glow)' }}>
-                  {avatar ? 'Photo updated — save to apply' : (creator.avatar_path ? 'Change photo' : 'Choose a photo')}
+                  {avatar ? 'Photo updated, save to apply' : (creator.avatar_path ? 'Change photo' : 'Choose a photo')}
                 </label>
               </div>
             </div>

@@ -5,12 +5,12 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 
 // A creator has two real destinations (their storefront dashboard, and
-// their own purchase history as a buyer) — the nav used to only ever show
+// their own purchase history as a buyer), the nav used to only ever show
 // one ("Dashboard" replaced "Account" outright the moment a creator profile
 // existed), so a seller who also buys things had no visible way back to
 // their own orders. This folds both into one dropdown instead of picking a
 // winner. A plain buyer has exactly one destination, so they keep the
-// simple direct link — no dropdown needed for the common case.
+// simple direct link, no dropdown needed for the common case.
 function AccountMenu({ creator, logout }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -86,10 +86,10 @@ export default function Nav() {
   }
 
   // The only route to /check-email now that ProtectedRoute doesn't force
-  // anyone there (see its comment — Resend is still unverified, so a hard
+  // anyone there (see its comment, Resend is still unverified, so a hard
   // block there meant no new signup could ever get in at all). Without
   // this, a real logged-in-but-unverified user had no way to even find
-  // the page that lets them verify or resend the email — not a real fix,
+  // the page that lets them verify or resend the email, not a real fix,
   // just a permanent nag instead of a wall.
   const showVerifyBanner = !loading && user && !user.email_verified_at && location.pathname !== '/check-email';
 

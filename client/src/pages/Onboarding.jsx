@@ -9,14 +9,14 @@ import { SITE_HOST } from '../lib/site.js';
 
 const STEPS = ['Basics', 'About', 'Payout', 'Review'];
 
-// Mirrors the backend's exact rule (see routes/creators.js's HANDLE_RE) —
+// Mirrors the backend's exact rule (see routes/creators.js's HANDLE_RE) ,
 // duplicated here isn't ideal, but a handle is validated in exactly one
 // place server-side and there's no shared module between client/server
 // to import it from. Kept in sync deliberately, not incidentally.
 const HANDLE_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])?$/;
 function handleError(handle) {
   if (!handle) return 'Pick a handle.';
-  if (!HANDLE_RE.test(handle)) return 'Lowercase letters, numbers, and hyphens only — no spaces, no starting/ending with a hyphen.';
+  if (!HANDLE_RE.test(handle)) return 'Lowercase letters, numbers, and hyphens only, no spaces, no starting/ending with a hyphen.';
   return null;
 }
 
@@ -35,7 +35,7 @@ export default function Onboarding() {
   if (creator) return <Navigate to="/dashboard" replace />;
 
   const update = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
-  // Lowercase as they type rather than only complaining after the fact —
+  // Lowercase as they type rather than only complaining after the fact ,
   // "TendaiWrites" becoming "tendaiwrites" on its own prevents the single
   // most common way to trip the handle rule, instead of catching it once
   // it's already wrong.

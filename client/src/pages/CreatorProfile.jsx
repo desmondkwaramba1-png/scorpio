@@ -11,7 +11,7 @@ import { SITE_HOST, SITE_ORIGIN } from '../lib/site.js';
 
 export default function CreatorProfile() {
   const { handle: rawHandle } = useParams();
-  // The route is "/:handle" (not "/@:handle" — React Router won't match a
+  // The route is "/:handle" (not "/@:handle", React Router won't match a
   // literal prefix fused with a param in one segment), so the captured
   // value still has the leading "@" from the URL. Strip it before using it
   // as the actual handle anywhere.
@@ -34,8 +34,8 @@ export default function CreatorProfile() {
   }, [handle]);
 
   useSEO({
-    title: creator ? `${creator.name} (@${creator.handle}) — SCORPIO` : undefined,
-    description: creator?.bio || (creator ? `${creator.name}'s storefront on SCORPIO — real guides, templates, and courses.` : undefined),
+    title: creator ? `${creator.name} (@${creator.handle}), SCORPIO` : undefined,
+    description: creator?.bio || (creator ? `${creator.name}'s storefront on SCORPIO, real guides, templates, and courses.` : undefined),
     image: creator?.avatar_path,
     url: `${SITE_ORIGIN}/@${handle}`,
     noindex: handle?.startsWith('demo-')

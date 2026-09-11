@@ -65,7 +65,7 @@ export default function NewProduct() {
       return;
     }
     // A serial's content is its issues, added after the listing exists
-    // (see EditProduct.jsx) — there's nothing to attach at creation time,
+    // (see EditProduct.jsx), there's nothing to attach at creation time,
     // same as a service having nothing to hand over until the work's done.
     if (!isService && !isSerial) {
       const hasKeys = form.license_keys.trim().length > 0;
@@ -163,7 +163,7 @@ export default function NewProduct() {
                 <label htmlFor="price">Price</label>
                 <input id="price" type="number" min="0" step="0.01" required
                   value={form.price} onChange={update('price')} placeholder="5.00" />
-                <small>Enter 0 to give it away free — no EcoCash step, buyers get it instantly.</small>
+                <small>Enter 0 to give it away free, no EcoCash step, buyers get it instantly.</small>
               </div>
               <div style={{ width: 90 }}>
                 <label htmlFor="currency">Currency</label>
@@ -208,7 +208,7 @@ export default function NewProduct() {
             ) : isSerial ? (
               <p className="muted" style={{ fontSize: '.9rem', lineHeight: 1.6 }}>
                 Publish the listing first, then add Issue 1 (and every issue after it) from its Edit page.
-                Anyone who buys gets every issue you publish under this product from then on — that's the whole
+                Anyone who buys gets every issue you publish under this product from then on, that's the whole
                 point of a serial: pay once, chapters keep arriving.
               </p>
             ) : (

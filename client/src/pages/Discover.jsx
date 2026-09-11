@@ -57,9 +57,9 @@ export default function Discover() {
 
   useSEO({
     title: q
-      ? `"${q}" — Search results | SCORPIO`
-      : 'Discover Ebooks, Courses & Templates — SCORPIO Marketplace',
-    description: 'Browse ebooks, guides, templates, and online courses from real Zimbabwean creators on SCORPIO — pay instantly with EcoCash.',
+      ? `"${q}", Search results | SCORPIO`
+      : 'Discover Ebooks, Courses & Templates, SCORPIO Marketplace',
+    description: 'Browse ebooks, guides, templates, and online courses from real Zimbabwean creators on SCORPIO, pay instantly with EcoCash.',
     url: `${SITE_ORIGIN}/discover`
   });
 

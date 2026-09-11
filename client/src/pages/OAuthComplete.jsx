@@ -4,7 +4,7 @@ import { FiShoppingBag, FiShoppingCart } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import AuthShell from '../components/AuthShell.jsx';
 
-// Landed on after a Google/Facebook redirect — the backend already set the
+// Landed on after a Google/Facebook redirect, the backend already set the
 // session cookie, this page just refreshes auth state and routes onward.
 export default function OAuthComplete() {
   const navigate = useNavigate();
@@ -19,7 +19,7 @@ export default function OAuthComplete() {
 
   useEffect(() => {
     refresh().then(({ creator }) => {
-      // Actual account state always wins — a returning creator lands on
+      // Actual account state always wins, a returning creator lands on
       // their dashboard no matter what, same rule as Login.jsx's afterAuth.
       if (creator) { navigate('/dashboard', { replace: true }); return; }
       if (next) { navigate(next, { replace: true }); return; }
@@ -27,7 +27,7 @@ export default function OAuthComplete() {
       if (presetRole === 'buyer') { navigate('/', { replace: true }); return; }
       // Genuinely new account, no explicit role picked on the way in (this
       // is what a plain "Continue with Google" click from the login tab
-      // looks like now — see Login.jsx's oauthRole) — this is the moment to
+      // looks like now, see Login.jsx's oauthRole), this is the moment to
       // actually ask, instead of silently defaulting to buyer.
       if (isNew) { setAsking(true); return; }
       navigate('/', { replace: true });

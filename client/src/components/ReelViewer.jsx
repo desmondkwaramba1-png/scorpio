@@ -7,8 +7,8 @@ import Seal from './Seal.jsx';
 
 // The one thing that has to stay true here, per the brief this was built
 // against: this is not a generic short-video feed. Every reel is a
-// creator's own pitch, and the one element that's always fixed in place —
-// never swiped away, never optional — is the "shop this" card when a
+// creator's own pitch, and the one element that's always fixed in place ,
+// never swiped away, never optional, is the "shop this" card when a
 // product is attached. Autoplay, loop, and story-style tap-to-advance are
 // borrowed from the format everyone already knows; the product card
 // bolted onto it is the part that makes it actually belong to a

@@ -12,7 +12,7 @@ function formatDate(sqliteDatetime) {
 }
 
 // wa.me needs digits only, country code first, no leading zero on the
-// trunk digit — Zimbabwean numbers arrive as 07..., 2637..., or +2637...
+// trunk digit, Zimbabwean numbers arrive as 07..., 2637..., or +2637...
 function whatsappLink(phone) {
   if (!phone) return null;
   const digits = phone.replace(/\D/g, '');
@@ -123,7 +123,7 @@ function OrderRow({ o, creator }) {
       )}
 
       {/* Service orders already surface problems through the dispute flow
-          above (buyer-initiated, held payment) — this covers everything
+          above (buyer-initiated, held payment), this covers everything
           else, and gives sellers a way to flag something too (an abusive
           buyer, a chargeback threat), which nothing did before. */}
       {!fulfillment && (

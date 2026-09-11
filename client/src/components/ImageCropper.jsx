@@ -8,7 +8,7 @@ import { FiZoomIn } from 'react-icons/fi';
 // phone actually fits the shape it's shown in.
 //
 // The frame is sized by CSS (100% of the field, capped), never a fixed
-// pixel width — a hardcoded width was wider than the card on a phone and
+// pixel width, a hardcoded width was wider than the card on a phone and
 // pushed the whole page sideways. All the crop maths reads the frame's
 // real measured size so the output stays correct at any width.
 export default function ImageCropper({ file, aspect = 1, round = false, onCancel, onApply }) {

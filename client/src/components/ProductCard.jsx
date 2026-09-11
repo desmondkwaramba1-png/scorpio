@@ -13,8 +13,8 @@ import { shareOrCopy } from '../lib/share';
 // A "Buy now" / "Add to cart" button pointed at your own product is
 // nonsensical (the backend blocks it too), so those get swapped for an
 // "Edit listing" shortcut. Ownership is worked out from the logged-in
-// creator vs this product's creator_id, wherever the card shows up —
-// Discover, search, a rail — not just passed down from the seller's own
+// creator vs this product's creator_id, wherever the card shows up ,
+// Discover, search, a rail, not just passed down from the seller's own
 // storefront view via the `isOwner` prop.
 export default function ProductCard({ product, isOwner = false }) {
   const p = product;

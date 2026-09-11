@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import AuthShell from '../components/AuthShell.jsx';
 
-// Only reachable via the emailed reset link's ?token= — the WhatsApp-coded
+// Only reachable via the emailed reset link's ?token=, the WhatsApp-coded
 // fallback path this used to support was removed along with the rest of
 // the WhatsApp notification stub (see notify.js), since it never actually
 // sent anything.

@@ -23,7 +23,7 @@ export default function Cart() {
     try {
       await removeFromCart(productId);
     } catch {
-      // best-effort — a stale row reappearing on next load is a smaller
+      // best-effort, a stale row reappearing on next load is a smaller
       // problem than blocking removal on a flaky network request
     }
   }

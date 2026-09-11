@@ -16,7 +16,7 @@ import { shareOrCopy } from '../lib/share';
 import { useSEO } from '../lib/seo';
 import { SITE_ORIGIN } from '../lib/site';
 
-// A short extension read off the actual uploaded file, not a guess — real
+// A short extension read off the actual uploaded file, not a guess, real
 // specificity ("Delivered as PDF") reads as more trustworthy on a page
 // full of otherwise-generic product listings than a vague "digital file"
 // ever would. null for an external-link deliverable, which has no
@@ -28,7 +28,7 @@ function fileFormatLabel(files) {
   return ext && ext.length <= 5 ? ext.toUpperCase() : null;
 }
 
-// A view page, not a checkout form — clicking a product to see what it is
+// A view page, not a checkout form, clicking a product to see what it is
 // shouldn't force a payment form in front of you. Buying is an explicit
 // next step (its own page, its own URL) for people who've decided they want it.
 export default function Product() {
@@ -56,7 +56,7 @@ export default function Product() {
         setProduct(product);
         // /api/creators/:handle doesn't repeat creator_handle on each
         // product row (every item in that list is obviously the same
-        // creator) — CompactProductCard needs it to build a link, so it's
+        // creator), CompactProductCard needs it to build a link, so it's
         // stitched back on here from the outer product we already have.
         api.get(`/api/creators/${product.creator_handle}`)
           .then(({ products }) => setMoreFromCreator(
@@ -70,23 +70,23 @@ export default function Product() {
       .catch(() => setError('This product could not be found. The link may be wrong or it may have been removed.'));
   }, [slug]);
 
-  // Called unconditionally, before the early returns below — a hook can
+  // Called unconditionally, before the early returns below, a hook can
   // never sit after a return that only fires on some renders (the loading
   // skeleton fires on the very first render, before `product` exists, then
   // never again once it loads), or React throws "rendered more hooks than
   // during the previous render" (error #310) the moment the count changes.
   const productUrlForSeo = product ? `/@${product.creator_handle}/${product.slug}` : null;
   useSEO({
-    title: product ? `${product.title} by ${product.creator_name} — SCORPIO` : undefined,
+    title: product ? `${product.title} by ${product.creator_name}, SCORPIO` : undefined,
     description: product
       ? (product.description
         ? product.description.slice(0, 160)
-        : `${product.title} — ${formatMoney(product.price_minor, product.currency)} on SCORPIO. Real work from ${product.creator_name}, not scraped off the internet.`)
+        : `${product.title}, ${formatMoney(product.price_minor, product.currency)} on SCORPIO. Real work from ${product.creator_name}, not scraped off the internet.`)
       : undefined,
     image: product?.cover_path,
     url: productUrlForSeo ? `${SITE_ORIGIN}${productUrlForSeo}` : undefined,
     // Demo/seed listings are real pages (see scripts/seed-marketplace.js)
-    // but templated, near-duplicate content across ~200 of them — kept out
+    // but templated, near-duplicate content across ~200 of them, kept out
     // of the sitemap for the same reason, and told not to index here too,
     // in case Discover's internal links get one crawled anyway.
     noindex: product?.creator_handle?.startsWith('demo-'),
@@ -209,7 +209,7 @@ export default function Product() {
           <p style={{ marginTop: 20, fontSize: '1rem', lineHeight: 1.7, maxWidth: '68ch' }}>{product.description}</p>
         )}
 
-        {/* At most one video here, never both — a product with both a
+        {/* At most one video here, never both, a product with both a
             course preview clip AND a separately-tagged reel used to stack
             two players back to back with near-identical "watch this"
             labels, which is exactly the "products, previews, reels all
@@ -279,10 +279,10 @@ export default function Product() {
             <p className="muted" style={{ fontSize: '.85rem', marginBottom: 14 }}>
               {product.issues?.some(i => i.unlocked)
                 ? "You've got every issue below, and every one still to come."
-                : 'Buy once, get every issue published here from then on — no separate charge per chapter.'}
+                : 'Buy once, get every issue published here from then on, no separate charge per chapter.'}
             </p>
             {!product.issues || product.issues.length === 0 ? (
-              <p className="muted" style={{ fontSize: '.88rem' }}>Nothing published yet — check back soon.</p>
+              <p className="muted" style={{ fontSize: '.88rem' }}>Nothing published yet, check back soon.</p>
             ) : (
               <div style={{ display: 'grid', gap: 8 }}>
                 {product.issues.map(iss => (
@@ -334,7 +334,7 @@ export default function Product() {
                   <span style={{ color: 'var(--green-glow)' }}>{product.pay_what_you_want ? `From ${price}` : price}</span>
                 )}
                 {product.type === 'serial' && (
-                  <span className="muted" style={{ fontSize: '.78rem', fontWeight: 500 }}> once — unlocks every issue</span>
+                  <span className="muted" style={{ fontSize: '.78rem', fontWeight: 500 }}> once, unlocks every issue</span>
                 )}
               </p>
               {product.promo_active && product.discount_limit && (
@@ -431,7 +431,7 @@ export default function Product() {
       <div style={{ gridColumn: '1 / -1' }}>
         <ReviewsSection productSlug={product.slug} />
         <CommentsSection ref={commentsRef} productId={product.id} />
-        {/* Not gated on having bought this — the case this exists for
+        {/* Not gated on having bought this, the case this exists for
             (another seller flagging a copied/similar listing) is exactly
             someone who never bought it and shouldn't have to. */}
         {user && !isOwner && (

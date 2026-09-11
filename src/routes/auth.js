@@ -17,7 +17,7 @@ const router = express.Router();
 
 // R2 objects are only ever served back out as whatever Content-Type they
 // were uploaded with, but an unrestricted upload is still a stored-XSS
-// risk if it ever ends up served from this domain's own origin — a profile
+// risk if it ever ends up served from this domain's own origin, a profile
 // photo has one legitimate shape, enforce it regardless.
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 function imageFileFilter(req, file, cb) {
@@ -104,7 +104,7 @@ router.post('/signup', authLimiter, (req, res) => {
   sendEmail(
     email,
     'Verify your SCORPIO account',
-    `Welcome to SCORPIO. One quick step before you're all set — confirm this is really your email address.\n\n${FRONTEND_URL}/verify-email?token=${token}`
+    `Welcome to SCORPIO. One quick step before you're all set, confirm this is really your email address.\n\n${FRONTEND_URL}/verify-email?token=${token}`
   );
 
   const session = createSession(user.id);
@@ -112,7 +112,7 @@ router.post('/signup', authLimiter, (req, res) => {
   res.status(201).json({ user: publicUser(user), creator: null });
 });
 
-// POST /api/auth/login — identifier is a username or an email.
+// POST /api/auth/login, identifier is a username or an email.
 router.post('/login', authLimiter, (req, res) => {
   const { identifier, password } = req.body;
   if (!identifier || !password) {
@@ -137,7 +137,7 @@ router.post('/logout', (req, res) => {
   res.json({ ok: true });
 });
 
-// POST /api/auth/verify-email — a POST triggered by the verify-email page's
+// POST /api/auth/verify-email, a POST triggered by the verify-email page's
 // own fetch call, not a bare link click. Email link-scanners auto-GET links
 // before a human ever clicks; a GET endpoint here would let a scanner burn
 // the one-time token before the real user arrives.
@@ -161,9 +161,9 @@ router.post('/verify-email', (req, res) => {
   res.json({ verified: true });
 });
 
-// POST /api/auth/resend-verification — the "check your email" gate's own
+// POST /api/auth/resend-verification, the "check your email" gate's own
 // resend button, and what VerifyEmail.jsx points a dead/expired link back
-// to. Old unconsumed tokens are left alone (harmless — verify-email only
+// to. Old unconsumed tokens are left alone (harmless, verify-email only
 // ever needs one to succeed) rather than deleted, since deleting rows out
 // from under a concurrent request is more risk than it's worth here.
 router.post('/resend-verification', authLimiter, requireAuth, (req, res) => {
@@ -181,7 +181,7 @@ router.post('/resend-verification', authLimiter, requireAuth, (req, res) => {
   res.json({ sent: true });
 });
 
-// POST /api/auth/forgot-password — always responds { sent: true } regardless
+// POST /api/auth/forgot-password, always responds { sent: true } regardless
 // of whether the account exists, so this endpoint can't be used to check
 // which usernames/emails are registered.
 router.post('/forgot-password', authLimiter, (req, res) => {
@@ -200,14 +200,14 @@ router.post('/forgot-password', authLimiter, (req, res) => {
     sendEmail(
       user.email,
       'Reset your SCORPIO password',
-      `Someone (hopefully you) asked to reset the password on this account. This link expires in ${RESET_TOKEN_TTL_MINUTES} minutes — if that wasn't you, just ignore this.\n\n${FRONTEND_URL}/reset-password?token=${token}`
+      `Someone (hopefully you) asked to reset the password on this account. This link expires in ${RESET_TOKEN_TTL_MINUTES} minutes, if that wasn't you, just ignore this.\n\n${FRONTEND_URL}/reset-password?token=${token}`
     );
   }
 
   res.json({ sent: true });
 });
 
-// POST /api/auth/reset-password — token is either the emailed link token or
+// POST /api/auth/reset-password, token is either the emailed link token or
 // the WhatsApp-delivered code; both live in the same table.
 router.post('/reset-password', authLimiter, (req, res) => {
   const { token, password } = req.body;
@@ -226,7 +226,7 @@ router.post('/reset-password', authLimiter, (req, res) => {
   db.prepare("UPDATE password_reset_tokens SET consumed_at = datetime('now') WHERE user_id = ? AND consumed_at IS NULL")
     .run(row.user_id);
   // A password reset is exactly the moment a session might have been
-  // stolen (that's often *why* someone resets) — leaving old sessions
+  // stolen (that's often *why* someone resets), leaving old sessions
   // valid would mean whoever had that cookie just keeps their access
   // right through the reset. Sign out everywhere, including whichever
   // device is doing this reset; they'll need to log back in either way.
@@ -235,7 +235,7 @@ router.post('/reset-password', authLimiter, (req, res) => {
   res.json({ ok: true });
 });
 
-// POST /api/auth/accept-terms — the gate for accounts that never saw the
+// POST /api/auth/accept-terms, the gate for accounts that never saw the
 // signup checkbox (Google/Facebook sign-in skips the form entirely).
 router.post('/accept-terms', requireAuth, (req, res) => {
   db.prepare("UPDATE users SET terms_accepted_at = datetime('now') WHERE id = ?").run(req.user.id);
@@ -243,9 +243,9 @@ router.post('/accept-terms', requireAuth, (req, res) => {
   res.json({ user: publicUser(user) });
 });
 
-// PATCH /api/auth/me — lets any logged-in user (buyer or creator) set their
+// PATCH /api/auth/me, lets any logged-in user (buyer or creator) set their
 // own profile photo. Separate from PATCH /api/creators/me, which only
-// exists for users who've completed creator onboarding — every account
+// exists for users who've completed creator onboarding, every account
 // should be able to add a photo, not just sellers.
 router.patch('/me', requireAuth, avatarUpload.single('avatar'), async (req, res) => {
   const avatarUrl = req.file ? await uploadAvatar(req.file) : req.user.avatar_url;
@@ -258,7 +258,7 @@ router.patch('/me', requireAuth, avatarUpload.single('avatar'), async (req, res)
   res.json({ user: publicUser(user) });
 });
 
-// GET /api/auth/me — "who am I", called on every page load. Not auth-gated:
+// GET /api/auth/me, "who am I", called on every page load. Not auth-gated:
 // an anonymous visitor is a normal case (user/creator come back null), not
 // an error.
 router.get('/me', (req, res) => {

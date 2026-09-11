@@ -83,7 +83,7 @@ router.get('*', (req, res) => {
     `).get(product[1], product[2]);
     if (row) {
       return res.send(render({
-        title: `${row.title} — ${money(row.price_minor, row.currency)} · SCORPIO`,
+        title: `${row.title}, ${money(row.price_minor, row.currency)} · SCORPIO`,
         description: truncate(row.description || `${row.title}, from ${row.name} on SCORPIO. Pay instantly with EcoCash.`),
         image: ogImage(row.cover_path),
         url: `${SITE}/@${row.handle}/${row.slug}`,
@@ -99,7 +99,7 @@ router.get('*', (req, res) => {
     if (c) {
       return res.send(render({
         title: `${c.name} · SCORPIO`,
-        description: truncate(c.bio || `${c.name}'s storefront on SCORPIO — digital products from a real Zimbabwean creator, paid with EcoCash.`),
+        description: truncate(c.bio || `${c.name}'s storefront on SCORPIO, digital products from a real Zimbabwean creator, paid with EcoCash.`),
         image: ogImage(c.avatar_path),
         url: `${SITE}/@${c.handle}`,
         type: 'profile',
@@ -109,8 +109,8 @@ router.get('*', (req, res) => {
 
   // Anything else (homepage, /discover, a dead link) — generic branded card.
   return res.send(render({
-    title: "SCORPIO — Zimbabwe's Marketplace for Ebooks, Courses & Templates",
-    description: 'Buy ebooks, guides, templates and online courses from real Zimbabwean creators — pay instantly with EcoCash. Or open your own storefront in five minutes.',
+    title: "SCORPIO, Zimbabwe's Marketplace for Ebooks, Courses & Templates",
+    description: 'Buy ebooks, guides, templates and online courses from real Zimbabwean creators, pay instantly with EcoCash. Or open your own storefront in five minutes.',
     image: DEFAULT_IMAGE,
     url: path ? `${SITE}/${path}` : SITE,
   }));

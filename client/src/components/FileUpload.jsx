@@ -3,7 +3,7 @@ import { FiUploadCloud, FiImage, FiFilm, FiMusic, FiFileText, FiCheckCircle } fr
 import ImageCropper from './ImageCropper.jsx';
 
 // One icon that actually matches what's being asked for, derived from the
-// `accept` string the caller already passes — a cover image shows a
+// `accept` string the caller already passes, a cover image shows a
 // picture icon, a course video shows a film icon, an ebook PDF shows a
 // document icon, instead of every field showing the same generic cloud.
 function kindFromAccept(accept = '') {
@@ -23,7 +23,7 @@ const ICONS = {
   any: FiUploadCloud,
 };
 
-// `crop` (optional): { aspect, round } — when set, an image the person
+// `crop` (optional): { aspect, round }, when set, an image the person
 // picks opens a crop step first and `onChange` only fires with the cropped
 // result, so a phone photo lands in the shape it's displayed in.
 export default function FileUpload({ id, label, accept, onChange, hint, preview, previewKind, crop }) {

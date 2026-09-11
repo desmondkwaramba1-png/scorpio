@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 
 // Rendered once, site-wide (see App.jsx), not just on the homepage the
-// way this used to be — "Report an issue" needs to be reachable from
+// way this used to be, "Report an issue" needs to be reachable from
 // every page, including for a logged-out visitor hitting something like
 // "I can't log in," which a homepage-only footer couldn't guarantee.
 export default function Footer() {

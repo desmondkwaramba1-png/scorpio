@@ -19,7 +19,7 @@ export default function VerifyEmail() {
       .then(async () => {
         if (cancelled) return;
         setStatus('verified');
-        // Pull the now-verified session down, then take them straight in —
+        // Pull the now-verified session down, then take them straight in ,
         // a confirmed email means the ProtectedRoute email gate is cleared,
         // so there's nothing left to stop at. If the link was opened on a
         // device with no session, /dashboard bounces to /login on its own.

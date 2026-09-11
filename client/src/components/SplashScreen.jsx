@@ -4,8 +4,8 @@ import { FiBookOpen, FiFileText, FiPlayCircle } from 'react-icons/fi';
 const SEEN_KEY = 'scorpio_splash_seen';
 const NAME = 'Scorpio';
 
-// Small ambient marks for what's actually on the marketplace — a book, a
-// template/guide page, a course play button — plus a tiny scorpion
+// Small ambient marks for what's actually on the marketplace, a book, a
+// template/guide page, a course play button, plus a tiny scorpion
 // silhouette, each gently floating in a fixed spot. Positioned to frame
 // the mark rather than crowd it: nothing sits within ~35% of center.
 const FLOATERS = [
@@ -16,7 +16,7 @@ const FLOATERS = [
 ];
 
 // A simplified, single-path silhouette (not the full multi-stroke hero
-// mark) — plenty of detail at 20px, and cheap to render several times
+// mark), plenty of detail at 20px, and cheap to render several times
 // over as a small ambient icon.
 function MiniScorpion({ size }) {
   return (
@@ -91,7 +91,7 @@ export default function SplashScreen() {
           {/* tail, curling from the body's rear up and over to the stinger */}
           <path ref={el => (pathRefs.current[0] = el)} strokeWidth="7"
             d="M150 150 Q160 118 138 96 Q118 78 96 84 Q70 92 74 66 Q77 46 100 40" />
-          {/* body: a closed ellipse needs two 180-degree arcs — a single arc
+          {/* body: a closed ellipse needs two 180-degree arcs, a single arc
               command with matching start/end points doesn't reliably render
               a full circle across browsers */}
           <path ref={el => (pathRefs.current[1] = el)} strokeWidth="7"

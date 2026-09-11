@@ -1,4 +1,4 @@
-// The shared frame for every auth-flow screen — login, signup, onboarding,
+// The shared frame for every auth-flow screen, login, signup, onboarding,
 // the post-OAuth role question, password reset, email verification. Just a
 // bordered card on a soft background; no logo up top (the nav already
 // carries the wordmark, and anything more read as shouting).

@@ -20,7 +20,7 @@ export default function Reels() {
     api.get('/api/products/mine').then(all => setProducts(all.filter(p => p.status === 'published'))).catch(() => {});
 
     // /api/reels filters by handle, and this page doesn't have the
-    // creator's own handle without an extra round trip — /api/auth/me
+    // creator's own handle without an extra round trip, /api/auth/me
     // already carries it, and newly-uploaded reels get appended to state
     // directly in submit() below rather than re-fetched.
     api.get('/api/auth/me').then(({ creator }) => {

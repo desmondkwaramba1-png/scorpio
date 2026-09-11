@@ -40,12 +40,12 @@ export default function Checkout() {
     e.preventDefault();
     setStatus('submitting');
     try {
-      // 30s, not the usual 15s default — see the identical note in
+      // 30s, not the usual 15s default, see the identical note in
       // CartCheckout.jsx: this waits on Dischub actually triggering the
       // EcoCash prompt, which can genuinely take longer than a normal call.
       const data = await api.post('/api/purchases', { ...checkout, product_slug: slug }, 30000);
       if (data.free) {
-        // Nothing was charged, so there's no order to poll status on —
+        // Nothing was charged, so there's no order to poll status on ,
         // markPurchasePaid already ran synchronously server-side (see
         // purchases.js), the download is ready right now. Straight to the
         // library where it's waiting.
@@ -83,7 +83,7 @@ export default function Checkout() {
   const productUrl = `/@${handle}/${slug}`;
 
   // Buying without an account would mean this purchase can never be shown
-  // to them again — no library, no re-download. An account is what makes
+  // to them again, no library, no re-download. An account is what makes
   // "your purchases are always here" actually true.
   if (!user) {
     return (
@@ -133,7 +133,7 @@ export default function Checkout() {
                 <span style={{ color: 'var(--green-glow)' }}>{product.pay_what_you_want && !isFree ? `From ${price}` : price}</span>
               )}
               {product.type === 'serial' && (
-                <span className="muted" style={{ fontSize: '.78rem', fontWeight: 500 }}> once — unlocks every issue</span>
+                <span className="muted" style={{ fontSize: '.78rem', fontWeight: 500 }}> once, unlocks every issue</span>
               )}
             </p>
           </div>
@@ -187,13 +187,13 @@ export default function Checkout() {
             {status === 'failed' && <p className="error-text">{checkoutError || "Payment didn't go through. Try again."}</p>}
             <button className="btn btn--gold btn--block" disabled={status === 'submitting'} type="submit">
               {status === 'submitting' ? (isFree ? 'Getting it...' : 'Sending EcoCash prompt...')
-                : isFree ? 'Get it now — free'
+                : isFree ? 'Get it now, free'
                 : product.type === 'service' ? `Order for ${price}`
                 : `Buy for ${product.promo_active ? discountedPrice : price}`}
             </button>
             {isFree && (
               <p className="muted" style={{ fontSize: '.76rem', textAlign: 'center', marginTop: 10 }}>
-                No payment needed — it's yours the moment you click.
+                No payment needed, it's yours the moment you click.
               </p>
             )}
             {!isFree && (

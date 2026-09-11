@@ -61,7 +61,7 @@ export default function EditProduct() {
   }, [id]);
 
   // Issues aren't on /mine (every other product's summary would carry the
-  // weight of a list it never uses) — fetched separately, only once the
+  // weight of a list it never uses), fetched separately, only once the
   // product's slug is known and only for a serial. The owner view of
   // GET /:slug already comes back fully unlocked, so this is the same data
   // a buyer who purchased would see, not a separate creator-only shape.
@@ -77,7 +77,7 @@ export default function EditProduct() {
     setIssueError(null);
     if (!newIssue.title.trim()) { setIssueError('Give this issue a title.'); return; }
     if (!newIssueFile && !newIssue.external_url.trim()) {
-      setIssueError('Attach a file or paste a link — buyers need something to actually get.');
+      setIssueError('Attach a file or paste a link, buyers need something to actually get.');
       return;
     }
     setAddingIssue(true);
@@ -220,7 +220,7 @@ export default function EditProduct() {
   const publicUrl = creator ? `/@${creator.handle}/${product.slug}` : null;
   const isCourse = form.category === 'courses';
   // A legacy product from a category we've since paused (e.g. "writing")
-  // stays editable in its own category — it just can't be switched to any
+  // stays editable in its own category, it just can't be switched to any
   // other paused category, only forward into one of the active ones.
   const categoryOptions = ACTIVE_CATEGORIES.some(c => c.value === product.category)
     ? ACTIVE_CATEGORIES
@@ -281,7 +281,7 @@ export default function EditProduct() {
                 <label htmlFor="price">Price</label>
                 <input id="price" type="number" min="0" step="0.01" required
                   value={form.price} onChange={update('price')} />
-                <small>0 makes it free — no EcoCash step, buyers get it instantly.</small>
+                <small>0 makes it free, no EcoCash step, buyers get it instantly.</small>
               </div>
               <div style={{ width: 90 }}>
                 <label htmlFor="currency">Currency</label>
@@ -361,7 +361,7 @@ export default function EditProduct() {
             </FormSection>
           ) : product.type === 'serial' ? (
             <FormSection icon={FiFilePlus} title="Issues"
-              note="Everyone who's bought this gets every issue you publish here, past and future — no separate unlock step.">
+              note="Everyone who's bought this gets every issue you publish here, past and future, no separate unlock step.">
               <form onSubmit={addIssue} style={{ marginBottom: 20 }}>
                 <div className="field">
                   <label htmlFor="issue_title">New issue title</label>
@@ -379,7 +379,7 @@ export default function EditProduct() {
                   <input id="issue_url" value={newIssue.external_url}
                     onChange={e => setNewIssue(i => ({ ...i, external_url: e.target.value }))}
                     placeholder="https://..." />
-                  <small>Use one or the other — a file you upload here, or a link to where it already lives.</small>
+                  <small>Use one or the other, a file you upload here, or a link to where it already lives.</small>
                 </div>
                 {issueError && <p className="error-text" style={{ marginBottom: 10 }}>{issueError}</p>}
                 <button type="submit" className="btn btn--ghost btn--sm" disabled={addingIssue}>
@@ -390,7 +390,7 @@ export default function EditProduct() {
               {issues === null ? (
                 <p className="muted" style={{ fontSize: '.85rem' }}>Loading issues...</p>
               ) : issues.length === 0 ? (
-                <p className="muted" style={{ fontSize: '.85rem' }}>No issues yet — publish the first one above.</p>
+                <p className="muted" style={{ fontSize: '.85rem' }}>No issues yet, publish the first one above.</p>
               ) : (
                 <div style={{ display: 'grid', gap: 8 }}>
                   {issues.map(iss => (

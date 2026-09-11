@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiUsers, FiPackage } from 'react-icons/fi';
 
-// No text Seal badge here on purpose — at this card's width there's no
+// No text Seal badge here on purpose, at this card's width there's no
 // room for "Verified" without shoving the name itself into truncation
 // (a real problem the first version of this card had). The gold avatar
 // ring (see .creator-card--verified in index.css) already carries that

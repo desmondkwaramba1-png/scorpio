@@ -1,6 +1,6 @@
-// Email: real delivery via Resend once RESEND_API_KEY is set — falls back
+// Email: real delivery via Resend once RESEND_API_KEY is set, falls back
 // to a console stub otherwise, so the app never crashes on a missing key.
-// (WhatsApp notifications were removed — they were a stub that only ever
+// (WhatsApp notifications were removed, they were a stub that only ever
 // logged to the console, never actually sent anything. The wa.me contact-
 // seller links elsewhere in the app are unrelated and stay: those are
 // plain deep links the buyer's own browser opens, no API or stub involved.)
@@ -13,11 +13,11 @@ function escapeHtml(s) {
 }
 
 // Every email on the platform goes through this one function, so this is
-// the only place branding lives — every call site just passes a plain
+// the only place branding lives, every call site just passes a plain
 // subject/body string (unchanged from before this existed) and gets a
 // real branded HTML email out the other end, not a bare wall of text.
 // The FIRST link found in the body becomes a styled button (the one
-// action every one of these emails actually has — verify, reset, view an
+// action every one of these emails actually has, verify, reset, view an
 // order); the plain URL still prints underneath it, since some inboxes
 // strip button styling and a dead-looking button with no fallback is
 // worse than no button at all.
@@ -39,7 +39,7 @@ function renderHtml(subject, body) {
     </p>` : '';
 
   // The button renders right where the link actually was in the original
-  // text, not always tacked on at the very end — a body with the link
+  // text, not always tacked on at the very end, a body with the link
   // mid-message (paragraph, then link, then more text) otherwise left an
   // orphaned line above the button with an unrelated paragraph awkwardly
   // wedged between them.
@@ -50,7 +50,7 @@ function renderHtml(subject, body) {
     .filter(Boolean)
     .map(block => {
       const hasUrl = ctaUrl && block.includes(ctaUrl);
-      // The URL itself becomes the button, not printed twice inline — but
+      // The URL itself becomes the button, not printed twice inline, but
       // a block like "Reset your password: <url>" has real lead-in text
       // worth keeping. Strip just the URL substring (plus a trailing
       // colon it's commonly attached to); only drop the block entirely if
@@ -62,7 +62,7 @@ function renderHtml(subject, body) {
     })
     .filter(Boolean)
     .join('')
-    + (ctaUrl && !buttonPlaced ? buttonHtml : ''); // link block had nothing else on it and got fully dropped above — still show the button
+    + (ctaUrl && !buttonPlaced ? buttonHtml : ''); // link block had nothing else on it and got fully dropped above, still show the button
 
   return `<!doctype html>
 <html>
@@ -89,7 +89,7 @@ function renderHtml(subject, body) {
 
 async function sendEmail(to, subject, body) {
   if (!RESEND_API_KEY) {
-    console.log(`[STUB EMAIL — set RESEND_API_KEY to send for real] To: ${to}\nSubject: ${subject}\n${body}\n`);
+    console.log(`[STUB EMAIL, set RESEND_API_KEY to send for real] To: ${to}\nSubject: ${subject}\n${body}\n`);
     return;
   }
 
@@ -101,10 +101,10 @@ async function sendEmail(to, subject, body) {
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      console.error(`[EMAIL FAILED] To: ${to} — ${data.message || res.statusText}`);
+      console.error(`[EMAIL FAILED] To: ${to}, ${data.message || res.statusText}`);
     }
   } catch (err) {
-    console.error(`[EMAIL FAILED] To: ${to} — ${err.message}`);
+    console.error(`[EMAIL FAILED] To: ${to}, ${err.message}`);
   }
 }
 

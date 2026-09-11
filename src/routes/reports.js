@@ -1,4 +1,4 @@
-// Buyer or seller reporting a problem with an ordinary order — see
+// Buyer or seller reporting a problem with an ordinary order, see
 // migrations/027_reports.sql for why this exists alongside the older
 // service-order dispute system rather than folding into it.
 const express = require('express');
@@ -10,9 +10,9 @@ const router = express.Router();
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// POST /api/reports — { purchase_id, reason }. The reporter must actually
+// POST /api/reports, { purchase_id, reason }. The reporter must actually
 // be a party to the order (the buyer who paid, or the creator who sold
-// it) — anyone else, 403. Which one they are becomes reporter_role,
+// it), anyone else, 403. Which one they are becomes reporter_role,
 // stored so the admin queue can show "buyer says" vs "seller says"
 // without re-deriving it.
 router.post('/', requireAuth, (req, res) => {
@@ -39,7 +39,7 @@ router.post('/', requireAuth, (req, res) => {
   else return res.status(403).json({ error: "You're not part of this order." });
 
   const existing = db.prepare(`SELECT id FROM reports WHERE purchase_id = ? AND status = 'open'`).get(purchaseId);
-  if (existing) return res.status(409).json({ error: 'This order already has an open report — no need to send another.' });
+  if (existing) return res.status(409).json({ error: 'This order already has an open report, no need to send another.' });
 
   const result = db.prepare(`
     INSERT INTO reports (purchase_id, reporter_user_id, reporter_role, reason)
@@ -49,12 +49,12 @@ router.post('/', requireAuth, (req, res) => {
   res.status(201).json({ id: result.lastInsertRowid, status: 'open' });
 });
 
-// POST /api/reports/product — { product_id, reason }. No purchase
+// POST /api/reports/product, { product_id, reason }. No purchase
 // required: this is for exactly the case the purchase-scoped report above
-// can't cover — a seller flagging another seller's listing as a copy or
+// can't cover, a seller flagging another seller's listing as a copy or
 // otherwise a problem, or any logged-in user flagging a product as
 // misleading, before ever buying it. Any logged-in user except the
-// product's own owner (reporting your own listing makes no sense — use
+// product's own owner (reporting your own listing makes no sense, use
 // the dashboard to edit or unpublish it instead).
 router.post('/product', requireAuth, (req, res) => {
   const productId = Number(req.body.product_id);
@@ -86,8 +86,8 @@ router.post('/product', requireAuth, (req, res) => {
   res.status(201).json({ id: result.lastInsertRowid, status: 'open' });
 });
 
-// POST /api/reports/general — { subject, reason, email }. No purchase, no
-// product, no login required — this is the catch-all for a problem that
+// POST /api/reports/general, { subject, reason, email }. No purchase, no
+// product, no login required, this is the catch-all for a problem that
 // doesn't fit the two scoped report types above: a broken page, "I can't
 // log in," general feedback. Deliberately open to logged-out visitors,
 // since requiring login here would rule out reporting the exact class of

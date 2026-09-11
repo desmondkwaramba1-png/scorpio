@@ -7,12 +7,12 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import Marketplace from './pages/Marketplace.jsx';
 
-// Route-based code splitting — on a slow connection, shipping the entire
+// Route-based code splitting, on a slow connection, shipping the entire
 // app (every dashboard page, every auth screen, the checkout flow) in one
 // bundle before the very first page can render is real dead weight. Only
 // Marketplace stays a normal eager import: it's overwhelmingly the first
 // page a new visitor actually lands on, so there's nothing to gain by
-// deferring it — everything reachable from a click loads on demand instead.
+// deferring it, everything reachable from a click loads on demand instead.
 const Discover = lazy(() => import('./pages/Discover.jsx'));
 const Creators = lazy(() => import('./pages/Creators.jsx'));
 const Login = lazy(() => import('./pages/Login.jsx'));

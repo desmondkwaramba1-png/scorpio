@@ -7,19 +7,19 @@ import ReelViewer from '../components/ReelViewer.jsx';
 import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../lib/launchScope.js';
 
 // The first-encounter moment (badge + pitch + Get Started) is a one-time
-// thing — real the very first time someone lands here, dead weight on
+// thing, real the very first time someone lands here, dead weight on
 // every visit after. localStorage (not sessionStorage, unlike the splash)
 // so it's gone for good after the first real visit, not just the first tab.
 // The buyer/seller choice itself lives on /login now (its "Create account"
-// tab), not here — this is just the door into it. "Just browsing" dismisses
+// tab), not here, this is just the door into it. "Just browsing" dismisses
 // inline within the same visit, no reload needed.
 //
-// hasSeenPitch is read-only on purpose — it must NOT also set the flag.
+// hasSeenPitch is read-only on purpose, it must NOT also set the flag.
 // StrictMode (see main.jsx) deliberately double-invokes useState's lazy
 // initializer in dev to catch exactly an impure-initializer bug like that:
 // the first call would set the flag and return true, then the second
 // (discarded-and-rerun) call would see its own flag already set and return
-// false — so the pitch would never show even on a genuine first visit. The
+// false, so the pitch would never show even on a genuine first visit. The
 // actual "mark as seen" write happens once, safely, in the effect below.
 const HERO_SEEN_KEY = 'scorpio_seen_marketplace_pitch';
 function hasSeenPitch() {
@@ -27,7 +27,7 @@ function hasSeenPitch() {
   return !!localStorage.getItem(HERO_SEEN_KEY);
 }
 
-// One line of real "you want X, here it is" pitch per category — the
+// One line of real "you want X, here it is" pitch per category, the
 // Amazon-homepage trick of naming the row like a person would, not like a
 // filter ("Guides & templates" the label vs. "Downloads worth having" the row).
 const CATEGORY_TAGLINES = {
@@ -44,10 +44,10 @@ const CATEGORY_TAGLINES = {
   other: 'More worth discovering'
 };
 
-// The "meet your creators" tray — a story-bubble row of who's actually
+// The "meet your creators" tray, a story-bubble row of who's actually
 // behind the listings. A creator with reels gets a ring + play glyph and
 // opens the ReelViewer scoped to just their videos; a creator with none
-// yet is still a real, useful tap — it just goes straight to their
+// yet is still a real, useful tap, it just goes straight to their
 // storefront instead of a dead-end "no videos" state.
 function CreatorSpotlight({ creators, reelsByCreator, onPlay }) {
   if (!creators || creators.length === 0) return null;
@@ -126,7 +126,7 @@ export default function Marketplace() {
 
   // The actual persistent write, isolated to an effect where a side effect
   // belongs. Safe under StrictMode's dev-only double-invoke of effects too
-  // — setting the same localStorage value twice is a no-op the second time.
+  //, setting the same localStorage value twice is a no-op the second time.
   useEffect(() => {
     localStorage.setItem(HERO_SEEN_KEY, '1');
   }, []);
@@ -138,7 +138,7 @@ export default function Marketplace() {
     ]).then(([popular, newest]) => {
       setTrending(popular);
       // With little to no like activity yet, "popular" and "newest" can
-      // return the exact same products in the exact same order — the tie
+      // return the exact same products in the exact same order, the tie
       // in like_count breaks on created_at DESC either way. Drop anything
       // already shown in Trending so New Arrivals isn't just a rerun of it.
       const trendingIds = new Set(popular.map(p => p.id));
@@ -146,10 +146,10 @@ export default function Marketplace() {
     });
 
     fetch('/api/creators?limit=14').then(r => r.json()).then(setSpotlightCreators).catch(() => setSpotlightCreators([]));
-    // Recent reels across everyone, grouped by creator handle client-side —
+    // Recent reels across everyone, grouped by creator handle client-side ,
     // one request instead of asking "does this creator have reels?" once
     // per avatar in the tray. A creator absent from this batch just means
-    // no reels among the most recent ones, not "definitely none" — an
+    // no reels among the most recent ones, not "definitely none", an
     // acceptable trade for one fetch instead of N.
     fetch('/api/reels?limit=60').then(r => r.json()).then(reels => {
       const grouped = {};
@@ -157,11 +157,11 @@ export default function Marketplace() {
       setReelsByCreator(grouped);
     }).catch(() => {});
 
-    // One curated row per category, Amazon-homepage style — fetched
+    // One curated row per category, Amazon-homepage style, fetched
     // independently of trending/new so a slow category doesn't hold up the
     // rest of the page, and rows for categories nobody's listed in yet
     // just never appear (Rail already hides on an empty array). Skipped
-    // entirely with a single active category — it'd just duplicate New
+    // entirely with a single active category, it'd just duplicate New
     // arrivals below.
     if (ACTIVE_CATEGORIES.length > 1) {
       ACTIVE_CATEGORIES.forEach(c => {
@@ -249,7 +249,7 @@ export default function Marketplace() {
 
       {/* Same rule as the hero pitch above: this is a first-encounter pitch
           ("here's the other path you could've picked"), not a standing
-          fixture of the shop. A returning visitor already made that call —
+          fixture of the shop. A returning visitor already made that call ,
           re-pitching them "become a seller" every time they check the
           marketplace is exactly the repeat-visit clutter we cut the hero
           pitch for. */}

@@ -8,7 +8,7 @@ import { canNativeShare, shareOrCopy } from '../lib/share';
 // Only WhatsApp and Facebook have a real "share this URL" web intent, so
 // those get their own direct link in the fallback menu. Everywhere else
 // (Instagram, TikTok, anything else installed) is handled for real by the
-// native OS share sheet on devices that support it — that's the only
+// native OS share sheet on devices that support it, that's the only
 // mechanism that can actually hand a link to those apps.
 const DIRECT_LINKS = [
   { id: 'whatsapp', label: 'WhatsApp', icon: FaWhatsapp, color: '#25D366',

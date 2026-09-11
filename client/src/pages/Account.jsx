@@ -21,7 +21,7 @@ const FULFILLMENT_LABEL = {
 };
 
 // wa.me needs digits only, country code first, no leading zero on the
-// trunk digit — Zimbabwean numbers arrive as 07..., 2637..., or +2637...
+// trunk digit, Zimbabwean numbers arrive as 07..., 2637..., or +2637...
 function whatsappLink(phone) {
   if (!phone) return null;
   const digits = phone.replace(/\D/g, '');
@@ -286,7 +286,7 @@ function OrderRow({ purchase, onResend }) {
         />
       )}
       {/* Service orders already have their own dispute flow above (held
-          payment, refund/release resolution) — this is the equivalent for
+          payment, refund/release resolution), this is the equivalent for
           every other order type, which never had any way to flag a
           problem at all. */}
       {!purchase.service && purchase.payment_status === 'paid' && (

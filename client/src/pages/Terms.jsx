@@ -20,7 +20,7 @@ function Section({ icon: Icon, title, children }) {
 }
 
 // Every visitor accepts these terms once, buyer or creator, before their
-// role is even decided (see ProtectedRoute.jsx — it gates on
+// role is even decided (see ProtectedRoute.jsx, it gates on
 // terms_accepted_at alone, not on having a creator profile, since a plain
 // buyer signup never creates one). The fee/payout stat row used to sit at
 // the very top regardless of that, so a buyer's first real read of the
@@ -52,7 +52,7 @@ export default function Terms() {
           Every purchase, digital or service, carries a 5-day window from delivery to report a problem
           for a refund, reviewed by the SCORPIO team. Money isn't released to the seller until that
           window passes without a report, or the buyer actively confirms they're satisfied. This holds
-          for downloads and license keys too, not only services — getting the file doesn't start the
+          for downloads and license keys too, not only services, getting the file doesn't start the
           seller's clock any earlier.
         </Section>
 
@@ -78,7 +78,7 @@ export default function Terms() {
         <h2 style={{ fontSize: '1.05rem' }}>Selling on SCORPIO</h2>
       </div>
       <p className="muted" style={{ fontSize: '.88rem', marginBottom: 16 }}>
-        Only relevant once you open a storefront — skip this if you're just here to buy.
+        Only relevant once you open a storefront, skip this if you're just here to buy.
       </p>
 
       <div className="stat-grid" style={{ marginBottom: 14 }}>

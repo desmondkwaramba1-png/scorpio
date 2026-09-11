@@ -8,7 +8,7 @@ const { sendEmail } = require('./notify');
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // Both the webhook and the status-poll route can call this for the same
-// order — Dischub's own docs note the webhook can arrive more than once,
+// order, Dischub's own docs note the webhook can arrive more than once,
 // and a buyer refreshing the return page triggers another poll. Guarding on
 // "already paid" here is the actual double-credit protection, not just a
 // nice-to-have: quantity_sold and download tokens must never be created twice.
@@ -20,7 +20,7 @@ function markPurchasePaid(purchaseId) {
   const product = db.prepare('SELECT * FROM products WHERE id = ?').get(purchase.product_id);
   db.prepare('UPDATE products SET quantity_sold = quantity_sold + 1 WHERE id = ?').run(product.id);
   // Only a completed, paid order actually consumes a "first X buyers" promo
-  // slot — a pending or failed checkout attempt never should.
+  // slot, a pending or failed checkout attempt never should.
   if (purchase.discount_applied) {
     db.prepare('UPDATE products SET discount_claimed = discount_claimed + 1 WHERE id = ?').run(product.id);
   }
@@ -37,20 +37,20 @@ function markPurchasePaid(purchaseId) {
     sendEmail(
       buyer.email,
       `Order placed: ${product.title}`,
-      `Thanks for your order. Your payment is held safely until the seller marks it delivered — you'll get another email when that happens, with a chance to confirm or report a problem before it's released to them.`
+      `Thanks for your order. Your payment is held safely until the seller marks it delivered, you'll get another email when that happens, with a chance to confirm or report a problem before it's released to them.`
     );
     return db.prepare('SELECT * FROM purchases WHERE id = ?').get(purchaseId);
   }
 
   // Digital goods hand the file/key over immediately, but the money still
-  // goes through the same buyer-protection hold a service order gets —
+  // goes through the same buyer-protection hold a service order gets ,
   // just starting from "delivered" instead of "awaiting_delivery," since
   // there's nothing pending on the seller's side. See wallet.js/escrow.js.
   startDeliveredHold(purchaseId);
 
   const hasFile = productHasFile(product.id);
   // Claimed even if the product also has a file (e.g. a PDF manual plus a
-  // license key) — the two deliverables aren't mutually exclusive. If this
+  // license key), the two deliverables aren't mutually exclusive. If this
   // comes back null despite productHasKeys() being true, checkout-time
   // stock checks failed to prevent an overselling race; the buyer's email
   // just won't mention a key, and the creator sees 0 left to add more to.

@@ -35,7 +35,7 @@ function StarInput({ value, onChange }) {
 }
 
 // Reviews are gated on an actual paid purchase, checked server-side (see
-// GET .../reviews' eligible_to_review) — this component never shows a form
+// GET .../reviews' eligible_to_review), this component never shows a form
 // to someone who hasn't bought the product and would just get a 403.
 const ReviewsSection = forwardRef(function ReviewsSection({ productSlug }, ref) {
   const { user } = useAuth();

@@ -5,10 +5,10 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api';
 
 // The catch-all for a problem that isn't about a specific order or
-// product — those have their own report paths (Account/Dashboard orders,
+// product, those have their own report paths (Account/Dashboard orders,
 // and the product page itself; see ReportProblem.jsx). This one exists
 // for "the checkout page is broken," "I can't log in," general feedback
-// — and is deliberately reachable while logged out, since requiring
+//, and is deliberately reachable while logged out, since requiring
 // login here would rule out reporting the exact class of problem
 // ("I can't log in") it exists to catch.
 export default function ReportIssue() {
@@ -50,7 +50,7 @@ export default function ReportIssue() {
     <div className="wrap" style={{ maxWidth: 420, padding: '56px 20px 80px' }}>
       <h1 style={{ fontSize: '1.7rem', marginBottom: 10 }}>Report an issue</h1>
       <p className="muted" style={{ marginBottom: 28 }}>
-        Found a bug, something broken, or just have feedback? Tell us — this isn't for a problem with a
+        Found a bug, something broken, or just have feedback? Tell us, this isn't for a problem with a
         specific order (there's a "Report a problem" button right on the order for that).
       </p>
 
@@ -63,7 +63,7 @@ export default function ReportIssue() {
           <label htmlFor="reason">What happened?</label>
           <textarea
             id="reason" required rows={5} value={reason} onChange={e => setReason(e.target.value)}
-            placeholder="The more detail, the faster we can fix it — what page, what you did, what you expected instead."
+            placeholder="The more detail, the faster we can fix it, what page, what you did, what you expected instead."
           />
         </div>
         {!user && (

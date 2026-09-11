@@ -14,7 +14,7 @@ export function CartProvider({ children }) {
       const data = await api.get('/api/cart/count');
       setCount(data.cart_count);
     } catch {
-      // not logged in / transient error — badge just stays at its last value
+      // not logged in / transient error, badge just stays at its last value
     }
   }, [user]);
 

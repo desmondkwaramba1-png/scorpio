@@ -1166,9 +1166,16 @@ img{max-width:100%;display:block;}
   overflow:hidden;background:#000;box-shadow:var(--shadow-2);
 }
 .reel-viewer__progress{position:absolute;top:10px;left:10px;right:10px;z-index:3;display:flex;gap:4px;}
-.reel-viewer__progress-bar{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.3);overflow:hidden;}
+.reel-viewer__progress-bar{position:relative;flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.3);overflow:hidden;}
 .reel-viewer__progress-bar.is-done{background:#fff;}
-.reel-viewer__progress-bar.is-active{background:linear-gradient(90deg,#fff 50%,rgba(255,255,255,.3) 50%);}
+/* Real playback position, not a fixed guess, ReelViewer sets this
+   transform on every video timeupdate (currentTime / duration). scaleX
+   on an absolutely-positioned fill instead of animating width, so this
+   updates ~4x/second without ever costing a layout pass. */
+.reel-viewer__progress-fill{
+  position:absolute;inset:0;background:#fff;border-radius:inherit;
+  transform-origin:left;transform:scaleX(0);
+}
 .reel-viewer__close,.reel-viewer__mute{
   position:absolute;top:22px;z-index:3;width:34px;height:34px;border-radius:50%;
   background:rgba(0,0,0,.4);color:#fff;display:flex;align-items:center;justify-content:center;
@@ -1180,6 +1187,12 @@ img{max-width:100%;display:block;}
 .reel-viewer__tap-zone{position:absolute;top:0;bottom:0;width:32%;background:none;border:none;cursor:pointer;z-index:2;}
 .reel-viewer__tap-zone--left{left:0;}
 .reel-viewer__tap-zone--right{right:0;}
+.reel-viewer__next-up{
+  position:absolute;top:32px;left:50%;transform:translateX(-50%);z-index:3;
+  padding:7px 14px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;
+  font-size:.78rem;font-weight:600;backdrop-filter:blur(4px);
+  animation:fade-in-up .2s ease both;
+}
 .reel-viewer__overlay{
   position:absolute;left:0;right:0;bottom:0;padding:20px 16px 96px;z-index:2;
   background:linear-gradient(180deg, transparent, rgba(0,0,0,.75));color:#fff;

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { FiShield, FiCompass, FiShare2, FiCheck, FiEdit2, FiShoppingCart, FiLock, FiZap, FiFileText, FiPlay } from 'react-icons/fi';
+import { FiShield, FiCompass, FiShare2, FiCheck, FiEdit2, FiShoppingCart, FiLock, FiZap, FiFileText, FiPlay, FiDownload } from 'react-icons/fi';
 import Seal from '../components/Seal.jsx';
 import EngagementBar from '../components/EngagementBar.jsx';
 import CommentsSection from '../components/CommentsSection.jsx';
@@ -139,7 +139,7 @@ export default function Product() {
 
   const soldOut = (product.quantity_limit !== null && product.quantity_sold >= product.quantity_limit)
     || (product.total_keys > 0 && product.unclaimed_keys <= 0);
-  const price = formatMoney(product.price_minor, product.currency);
+  const price = product.price_minor === 0 ? 'Free' : formatMoney(product.price_minor, product.currency);
   const discountedPrice = product.promo_active ? formatMoney(product.discounted_price_minor, product.currency) : null;
   const productUrl = `/@${product.creator_handle}/${product.slug}`;
   const checkoutUrl = `${productUrl}/checkout`;
@@ -273,12 +273,40 @@ export default function Product() {
           <span className="badge badge--gold" style={{ marginTop: 18, display: 'inline-flex' }}>DRAFT (only visible to you)</span>
         )}
 
-        {product.type === 'serial' && product.issues?.length > 0 && (
+        {product.type === 'serial' && (
           <div className="card card--pad" style={{ marginTop: 28 }}>
-            <p style={{ fontWeight: 600, marginBottom: 8 }}>Latest issue</p>
-            <p className="muted" style={{ fontSize: '.92rem' }}>
-              #{product.issues[0].issue_number}: {product.issues[0].title}
+            <p style={{ fontWeight: 600, marginBottom: 4 }}>Issues</p>
+            <p className="muted" style={{ fontSize: '.85rem', marginBottom: 14 }}>
+              {product.issues?.some(i => i.unlocked)
+                ? "You've got every issue below, and every one still to come."
+                : 'Buy once, get every issue published here from then on — no separate charge per chapter.'}
             </p>
+            {!product.issues || product.issues.length === 0 ? (
+              <p className="muted" style={{ fontSize: '.88rem' }}>Nothing published yet — check back soon.</p>
+            ) : (
+              <div style={{ display: 'grid', gap: 8 }}>
+                {product.issues.map(iss => (
+                  <div key={iss.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                    padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)'
+                  }}>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontWeight: 600, fontSize: '.9rem' }}>Issue {iss.issue_number}: {iss.title}</p>
+                      <p className="muted" style={{ fontSize: '.78rem' }}>{new Date(iss.published_at).toLocaleDateString()}</p>
+                    </div>
+                    {iss.unlocked ? (
+                      <a href={`/api/downloads/issue/${iss.id}`} className="btn btn--ghost btn--sm" style={{ flexShrink: 0 }}>
+                        <FiDownload size={13} /> Get it
+                      </a>
+                    ) : (
+                      <span className="muted" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '.82rem', flexShrink: 0 }}>
+                        <FiLock size={12} /> Locked
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -305,7 +333,9 @@ export default function Product() {
                 ) : (
                   <span style={{ color: 'var(--green-glow)' }}>{product.pay_what_you_want ? `From ${price}` : price}</span>
                 )}
-                {product.type === 'serial' && <span className="muted" style={{ fontSize: '.78rem', fontWeight: 500 }}> / issue</span>}
+                {product.type === 'serial' && (
+                  <span className="muted" style={{ fontSize: '.78rem', fontWeight: 500 }}> once — unlocks every issue</span>
+                )}
               </p>
               {product.promo_active && product.discount_limit && (
                 <p className="muted" style={{ fontSize: '.78rem', marginTop: 2 }}>
@@ -360,9 +390,11 @@ export default function Product() {
               ) : (
                 <>
                   <Link to={checkoutUrl} className="btn btn--gold btn--block">
-                    {product.type === 'service' ? `Order for ${price}` : `Buy for ${product.promo_active ? discountedPrice : price}`}
+                    {product.type === 'service' ? `Order for ${price}`
+                      : product.price_minor === 0 ? 'Get for free'
+                      : `Buy for ${product.promo_active ? discountedPrice : price}`}
                   </Link>
-                  {!product.pay_what_you_want && product.type !== 'service' && (
+                  {!product.pay_what_you_want && product.price_minor !== 0 && product.type !== 'service' && (
                     <button onClick={handleAddToCart} className="btn btn--ghost btn--block" style={{ marginTop: 10 }}>
                       {addedToCart ? <><FiCheck size={15} /> Added to cart</> : <><FiShoppingCart size={15} /> Add to cart</>}
                     </button>

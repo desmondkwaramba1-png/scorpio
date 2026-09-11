@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db/schema');
 const storage = require('../lib/storage');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -73,6 +74,41 @@ router.get('/:token/view', async (req, res) => {
     // Range requests on the redirected URL exactly like sendFile() did
     // from local disk, so a <video> element can still seek.
     const url = await storage.getPresignedUrl(file.storage_path);
+    res.redirect(url);
+  } catch (err) {
+    console.error('[downloads]', err.message);
+    res.status(404).send('That file could not be found.');
+  }
+});
+
+// GET /api/downloads/issue/:issueId — a serial issue's file, not a product
+// file. Different access-control shape on purpose: issues aren't emailed
+// out one at a time with their own token (a serial keeps adding them, so
+// there's no single moment to mail a link), so this checks the live
+// session instead — logged in, and holding a paid purchase of the issue's
+// product. Whoever bought the product gets every issue under it, past and
+// future, which is exactly what this query allows for free (no per-issue
+// purchase row to create or check).
+router.get('/issue/:issueId', requireAuth, async (req, res) => {
+  const issue = db.prepare('SELECT * FROM issues WHERE id = ?').get(req.params.issueId);
+  if (!issue) return res.status(404).send('This issue could not be found.');
+
+  const owns = db.prepare(`
+    SELECT 1 FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
+    WHERE b.user_id = ? AND pu.product_id = ? AND pu.payment_status = 'paid'
+  `).get(req.user.id, issue.product_id);
+  if (!owns) return res.status(403).send("You don't have access to this issue.");
+
+  if (issue.kind === 'external_link') {
+    return res.redirect(issue.external_url);
+  }
+  if (!issue.file_path) return res.status(404).send('No file is attached to this issue.');
+
+  try {
+    const filename = issue.original_filename || 'download';
+    const url = await storage.getPresignedUrl(issue.file_path, {
+      contentDisposition: `attachment; filename="${filename.replace(/"/g, '')}"`
+    });
     res.redirect(url);
   } catch (err) {
     console.error('[downloads]', err.message);

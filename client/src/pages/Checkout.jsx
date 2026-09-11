@@ -44,6 +44,14 @@ export default function Checkout() {
       // CartCheckout.jsx: this waits on Dischub actually triggering the
       // EcoCash prompt, which can genuinely take longer than a normal call.
       const data = await api.post('/api/purchases', { ...checkout, product_slug: slug }, 30000);
+      if (data.free) {
+        // Nothing was charged, so there's no order to poll status on —
+        // markPurchasePaid already ran synchronously server-side (see
+        // purchases.js), the download is ready right now. Straight to the
+        // library where it's waiting.
+        navigate('/account?got=1');
+        return;
+      }
       // Non-redirecting flow: an EcoCash prompt was just pushed straight to
       // their phone, no external page to send them to. This is a client-
       // side route change to the same polling page PaymentReturn.jsx
@@ -69,7 +77,8 @@ export default function Checkout() {
 
   const soldOut = (product.quantity_limit !== null && product.quantity_sold >= product.quantity_limit)
     || (product.total_keys > 0 && product.unclaimed_keys <= 0);
-  const price = formatMoney(product.price_minor, product.currency);
+  const isFree = product.price_minor === 0 && !product.pay_what_you_want;
+  const price = product.price_minor === 0 ? 'Free' : formatMoney(product.price_minor, product.currency);
   const discountedPrice = product.promo_active ? formatMoney(product.discounted_price_minor, product.currency) : null;
   const productUrl = `/@${handle}/${slug}`;
 
@@ -121,9 +130,11 @@ export default function Checkout() {
                   <span style={{ color: 'var(--green-glow)' }}>{discountedPrice}</span>
                 </>
               ) : (
-                <span style={{ color: 'var(--green-glow)' }}>{product.pay_what_you_want ? `From ${price}` : price}</span>
+                <span style={{ color: 'var(--green-glow)' }}>{product.pay_what_you_want && !isFree ? `From ${price}` : price}</span>
               )}
-              {product.type === 'serial' && <span className="muted" style={{ fontSize: '.78rem', fontWeight: 500 }}> / issue</span>}
+              {product.type === 'serial' && (
+                <span className="muted" style={{ fontSize: '.78rem', fontWeight: 500 }}> once — unlocks every issue</span>
+              )}
             </p>
           </div>
         </div>
@@ -143,23 +154,28 @@ export default function Checkout() {
               <input id="buyer_email" type="email" required value={checkout.email}
                 onChange={e => setCheckout(c => ({ ...c, email: e.target.value }))} />
             </div>
-            <div className="field input-icon">
-              <label htmlFor="buyer_phone">EcoCash number</label>
-              <FiPhone size={15} />
-              <input id="buyer_phone" required value={checkout.phone} placeholder="0780070488"
-                onChange={e => setCheckout(c => ({ ...c, phone: e.target.value }))} />
-            </div>
+            {!isFree && (
+              <div className="field input-icon">
+                <label htmlFor="buyer_phone">EcoCash number</label>
+                <FiPhone size={15} />
+                <input id="buyer_phone" required value={checkout.phone} placeholder="0780070488"
+                  onChange={e => setCheckout(c => ({ ...c, phone: e.target.value }))} />
+              </div>
+            )}
             {!!product.pay_what_you_want && (
               <div className="field">
                 <label htmlFor="buyer_amount">Amount ({product.currency})</label>
                 <input id="buyer_amount" type="number" min={(product.min_price_minor || 0) / 100} step="0.01" required
                   value={checkout.amount} onChange={e => setCheckout(c => ({ ...c, amount: e.target.value }))} />
+                <small>Enter 0 for free, if the creator's minimum allows it.</small>
               </div>
             )}
 
-            <div className="pay-methods">
-              <span className="pay-method"><FiSmartphone size={13} /> EcoCash</span>
-            </div>
+            {!isFree && (
+              <div className="pay-methods">
+                <span className="pay-method"><FiSmartphone size={13} /> EcoCash</span>
+              </div>
+            )}
 
             {product.type === 'service' && (
               <div className="trust-line">
@@ -170,13 +186,21 @@ export default function Checkout() {
 
             {status === 'failed' && <p className="error-text">{checkoutError || "Payment didn't go through. Try again."}</p>}
             <button className="btn btn--gold btn--block" disabled={status === 'submitting'} type="submit">
-              {status === 'submitting' ? 'Sending EcoCash prompt...'
+              {status === 'submitting' ? (isFree ? 'Getting it...' : 'Sending EcoCash prompt...')
+                : isFree ? 'Get it now — free'
                 : product.type === 'service' ? `Order for ${price}`
                 : `Buy for ${product.promo_active ? discountedPrice : price}`}
             </button>
-            <p className="muted" style={{ fontSize: '.76rem', textAlign: 'center', marginTop: 10 }}>
-              You'll get an EcoCash prompt on your phone to approve this payment. No need to leave this page.
-            </p>
+            {isFree && (
+              <p className="muted" style={{ fontSize: '.76rem', textAlign: 'center', marginTop: 10 }}>
+                No payment needed — it's yours the moment you click.
+              </p>
+            )}
+            {!isFree && (
+              <p className="muted" style={{ fontSize: '.76rem', textAlign: 'center', marginTop: 10 }}>
+                You'll get an EcoCash prompt on your phone to approve this payment. No need to leave this page.
+              </p>
+            )}
           </form>
         )}
       </div>

@@ -69,6 +69,13 @@ router.post('/', requireAuth, (req, res) => {
   if (product.pay_what_you_want) {
     return res.status(400).json({ error: 'This product lets you name your price. Buy it directly from its page instead of the cart.' });
   }
+  // Free products settle instantly with no EcoCash step at all (see
+  // purchases.js) — mixing that into a shared, possibly multi-item cart
+  // total that DOES need a real charge just complicates the checkout for
+  // no benefit. Get it straight from the product page instead.
+  if (product.price_minor === 0) {
+    return res.status(400).json({ error: 'This product is free — get it directly from its page instead of the cart.' });
+  }
   // Services need their own checkout so the escrow/payment-protection
   // messaging actually shows — the shared cart checkout doesn't know how
   // to explain that to a buyer mid-cart.

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { FiTrash2, FiAlertTriangle, FiExternalLink, FiTag, FiKey, FiImage, FiBriefcase, FiPackage } from 'react-icons/fi';
+import { FiTrash2, FiAlertTriangle, FiExternalLink, FiTag, FiKey, FiImage, FiBriefcase, FiPackage, FiFilePlus, FiX } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
@@ -32,6 +32,11 @@ export default function EditProduct() {
   const [newKeys, setNewKeys] = useState('');
   const [addingKeys, setAddingKeys] = useState(false);
   const [keysError, setKeysError] = useState(null);
+  const [issues, setIssues] = useState(null);
+  const [newIssue, setNewIssue] = useState({ title: '', external_url: '' });
+  const [newIssueFile, setNewIssueFile] = useState(null);
+  const [addingIssue, setAddingIssue] = useState(false);
+  const [issueError, setIssueError] = useState(null);
 
   useEffect(() => {
     api.get('/api/products/mine')
@@ -54,6 +59,52 @@ export default function EditProduct() {
       })
       .catch(err => setLoadError(err.message));
   }, [id]);
+
+  // Issues aren't on /mine (every other product's summary would carry the
+  // weight of a list it never uses) — fetched separately, only once the
+  // product's slug is known and only for a serial. The owner view of
+  // GET /:slug already comes back fully unlocked, so this is the same data
+  // a buyer who purchased would see, not a separate creator-only shape.
+  useEffect(() => {
+    if (!product || product.type !== 'serial') return;
+    api.get(`/api/products/${product.slug}`)
+      .then(p => setIssues(p.issues || []))
+      .catch(() => setIssues([]));
+  }, [product]);
+
+  async function addIssue(e) {
+    e.preventDefault();
+    setIssueError(null);
+    if (!newIssue.title.trim()) { setIssueError('Give this issue a title.'); return; }
+    if (!newIssueFile && !newIssue.external_url.trim()) {
+      setIssueError('Attach a file or paste a link — buyers need something to actually get.');
+      return;
+    }
+    setAddingIssue(true);
+    const body = new FormData();
+    body.append('title', newIssue.title);
+    if (newIssue.external_url.trim()) body.append('external_url', newIssue.external_url.trim());
+    if (newIssueFile) body.append('file', newIssueFile);
+    try {
+      const created = await api.post(`/api/products/${product.id}/issues`, body);
+      setIssues(list => [{ ...created, unlocked: true }, ...list]);
+      setNewIssue({ title: '', external_url: '' });
+      setNewIssueFile(null);
+    } catch (err) {
+      setIssueError(err.message);
+    } finally {
+      setAddingIssue(false);
+    }
+  }
+
+  async function removeIssue(issueId) {
+    try {
+      await api.delete(`/api/products/${product.id}/issues/${issueId}`);
+      setIssues(list => list.filter(i => i.id !== issueId));
+    } catch (err) {
+      setIssueError(err.message);
+    }
+  }
 
   const update = (key) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -163,7 +214,9 @@ export default function EditProduct() {
     );
   }
 
-  const price = form.price ? formatMoney(Math.round(parseFloat(form.price || '0') * 100), form.currency) : null;
+  const price = form.price === '' ? null
+    : parseFloat(form.price) === 0 ? 'Free'
+    : formatMoney(Math.round(parseFloat(form.price || '0') * 100), form.currency);
   const publicUrl = creator ? `/@${creator.handle}/${product.slug}` : null;
   const isCourse = form.category === 'courses';
   // A legacy product from a category we've since paused (e.g. "writing")
@@ -228,6 +281,7 @@ export default function EditProduct() {
                 <label htmlFor="price">Price</label>
                 <input id="price" type="number" min="0" step="0.01" required
                   value={form.price} onChange={update('price')} />
+                <small>0 makes it free — no EcoCash step, buyers get it instantly.</small>
               </div>
               <div style={{ width: 90 }}>
                 <label htmlFor="currency">Currency</label>
@@ -304,6 +358,57 @@ export default function EditProduct() {
                   style={{ minHeight: 110 }} />
                 <small>Revisions, what you need from the buyer, cancellation policy. Set expectations before they pay, not after.</small>
               </div>
+            </FormSection>
+          ) : product.type === 'serial' ? (
+            <FormSection icon={FiFilePlus} title="Issues"
+              note="Everyone who's bought this gets every issue you publish here, past and future — no separate unlock step.">
+              <form onSubmit={addIssue} style={{ marginBottom: 20 }}>
+                <div className="field">
+                  <label htmlFor="issue_title">New issue title</label>
+                  <input id="issue_title" value={newIssue.title}
+                    onChange={e => setNewIssue(i => ({ ...i, title: e.target.value }))}
+                    placeholder={`Issue ${(issues?.length || 0) + 1}`} />
+                </div>
+                <div className="field">
+                  <label htmlFor="issue_file">File</label>
+                  <FileUpload id="issue_file" onChange={e => setNewIssueFile(e.target.files[0])}
+                    label={newIssueFile ? newIssueFile.name : 'Choose a file'} />
+                </div>
+                <div className="field" style={{ marginBottom: 10 }}>
+                  <label htmlFor="issue_url">Or a link instead</label>
+                  <input id="issue_url" value={newIssue.external_url}
+                    onChange={e => setNewIssue(i => ({ ...i, external_url: e.target.value }))}
+                    placeholder="https://..." />
+                  <small>Use one or the other — a file you upload here, or a link to where it already lives.</small>
+                </div>
+                {issueError && <p className="error-text" style={{ marginBottom: 10 }}>{issueError}</p>}
+                <button type="submit" className="btn btn--ghost btn--sm" disabled={addingIssue}>
+                  {addingIssue ? 'Adding...' : 'Publish issue'}
+                </button>
+              </form>
+
+              {issues === null ? (
+                <p className="muted" style={{ fontSize: '.85rem' }}>Loading issues...</p>
+              ) : issues.length === 0 ? (
+                <p className="muted" style={{ fontSize: '.85rem' }}>No issues yet — publish the first one above.</p>
+              ) : (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {issues.map(iss => (
+                    <div key={iss.id} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                      padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)'
+                    }}>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontWeight: 600, fontSize: '.9rem' }}>Issue {iss.issue_number}: {iss.title}</p>
+                        <p className="muted" style={{ fontSize: '.78rem' }}>{new Date(iss.published_at).toLocaleDateString()}</p>
+                      </div>
+                      <button type="button" onClick={() => removeIssue(iss.id)} className="btn btn--ghost btn--sm" title="Remove issue">
+                        <FiX size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </FormSection>
           ) : (
             <>

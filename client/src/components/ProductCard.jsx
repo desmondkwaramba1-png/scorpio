@@ -112,6 +112,8 @@ export default function ProductCard({ product, isOwner = false }) {
               </span>
               {formatMoney(p.discounted_price_minor, p.currency)}
             </>
+          ) : p.price_minor === 0 ? (
+            <span style={{ color: 'var(--green-glow)' }}>Free</span>
           ) : (
             p.pay_what_you_want ? `From ${formatMoney(p.price_minor, p.currency)}` : formatMoney(p.price_minor, p.currency)
           )}
@@ -145,10 +147,10 @@ export default function ProductCard({ product, isOwner = false }) {
               onClick={e => e.stopPropagation()}
               className="btn btn--gold btn--sm product-card__buy"
             >
-              {p.type === 'service' ? 'Order now' : 'Buy now'}
+              {p.type === 'service' ? 'Order now' : p.price_minor === 0 ? 'Get for free' : 'Buy now'}
             </Link>
           )}
-          {!owned && !soldOut && !p.pay_what_you_want && p.type !== 'service' && (
+          {!owned && !soldOut && !p.pay_what_you_want && p.price_minor !== 0 && p.type !== 'service' && (
             <button
               onClick={handleAddToCart}
               className="btn btn--ghost btn--sm"

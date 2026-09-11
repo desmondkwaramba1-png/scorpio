@@ -239,11 +239,8 @@ router.post('/:id/resend-download', requireAuth, (req, res) => {
 router.post('/', checkoutLimiter, requireAuth, async (req, res) => {
   const { email, name, phone, product_slug, amount } = req.body;
 
-  if (!email || !product_slug || !phone) {
-    return res.status(400).json({ error: 'email, phone, and product_slug are required.' });
-  }
-  if (!isValidSenderPhone(phone)) {
-    return res.status(400).json({ error: 'Enter a valid EcoCash number, e.g. 0780070488 or +263780070488.' });
+  if (!email || !product_slug) {
+    return res.status(400).json({ error: 'email and product_slug are required.' });
   }
 
   const product = db.prepare("SELECT * FROM products WHERE slug = ? AND status = 'published'").get(product_slug);
@@ -276,8 +273,20 @@ router.post('/', checkoutLimiter, requireAuth, async (req, res) => {
     amountMinor = applyDiscount(product.price_minor, product.discount_percent);
     discountApplied = true;
   }
-  if (amountMinor <= 0 || amountMinor >= 10000000) {
-    return res.status(400).json({ error: 'amount must be greater than 0 and less than 100,000.' });
+  if (amountMinor < 0 || amountMinor >= 10000000) {
+    return res.status(400).json({ error: 'amount must be zero or more, and less than 100,000.' });
+  }
+  const isFree = amountMinor === 0;
+
+  // EcoCash only enters the picture when money is actually changing hands
+  // — a free product (or a pay-what-you-want buyer choosing $0, when the
+  // creator's own minimum allows it) has nothing to charge, so there's no
+  // phone number to validate or prompt to send.
+  if (!isFree) {
+    if (!phone) return res.status(400).json({ error: 'phone is required.' });
+    if (!isValidSenderPhone(phone)) {
+      return res.status(400).json({ error: 'Enter a valid EcoCash number, e.g. 0780070488 or +263780070488.' });
+    }
   }
 
   let buyer = db.prepare('SELECT * FROM buyers WHERE email = ?').get(email);
@@ -296,6 +305,16 @@ router.post('/', checkoutLimiter, requireAuth, async (req, res) => {
     VALUES (?, ?, ?, ?, 'pending', ?)
   `).run(buyer.id, product.id, amountMinor, product.currency, discountApplied ? 1 : 0);
   const purchaseId = insert.lastInsertRowid;
+
+  if (isFree) {
+    // Nothing to charge — skip Dischub/EcoCash entirely and settle the
+    // order immediately. markPurchasePaid does the exact same work a real
+    // payment completion does (stock count, escrow hold, download token,
+    // confirmation email); a free product isn't a special case for any of
+    // that, only for how it gets marked paid in the first place.
+    markPurchasePaid(purchaseId);
+    return res.status(201).json({ free: true, purchase_id: purchaseId });
+  }
 
   // Random suffix so order_id isn't just the sequential purchase id —
   // otherwise anyone could enumerate ZS1, ZS2, ZS3... against the status

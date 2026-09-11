@@ -13,8 +13,10 @@ const { addKeys, keyStats } = require('../lib/licenseKeys');
 const { runVerification } = require('../lib/contentVerification');
 const { optimizeImage } = require('../lib/imageProcessing');
 const storage = require('../lib/storage');
+const { sendEmail } = require('../lib/notify');
 
 const router = express.Router();
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // Uploads are served back out as static files with whatever content-type
 // the extension implies, so an unrestricted cover upload is a stored-XSS
@@ -246,9 +248,24 @@ router.get('/:slug', (req, res) => {
   }
 
   if (product.type === 'serial') {
-    product.issues = db.prepare(
-      'SELECT * FROM issues WHERE product_id = ? ORDER BY issue_number DESC'
+    // A buyer who's paid gets every issue this purchase covers, past and
+    // future — but the file/link itself is only in the response once
+    // they've actually paid (or it's the owner previewing). Everyone else
+    // sees the table of contents (title, issue number, date) with no
+    // access, same as the buy-panel already shows for the main file.
+    const unlocked = isOwner || (req.user && db.prepare(`
+      SELECT 1 FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
+      WHERE b.user_id = ? AND pu.product_id = ? AND pu.payment_status = 'paid'
+    `).get(req.user.id, product.id));
+
+    const issues = db.prepare(
+      'SELECT id, issue_number, title, kind, file_path, external_url, original_filename, published_at FROM issues WHERE product_id = ? ORDER BY issue_number DESC'
     ).all(product.id);
+    product.issues = issues.map(({ file_path, ...i }) => ({
+      ...i,
+      unlocked: !!unlocked,
+      external_url: unlocked ? i.external_url : null
+    }));
   }
   product.files = db.prepare(
     'SELECT id, kind, external_url, original_filename FROM product_files WHERE product_id = ?'
@@ -489,6 +506,7 @@ router.post('/', requireAuth, requireCreator, upload.fields([
   const previewVideo = req.files?.preview_video?.[0];
   const keyList = parseKeyList(license_keys);
   const isService = type === 'service';
+  const isSerial = type === 'serial';
 
   if (!title || !type || !category) {
     return res.status(400).json({ error: 'title, type, and category are required.' });
@@ -514,8 +532,12 @@ router.post('/', requireAuth, requireCreator, upload.fields([
   // work doesn't exist yet, only the seller's portfolio and track record
   // do. What a buyer gets is delivered per-order later (see
   // POST /:id/deliver), not attached to the listing itself.
+  // A serial product's content is its issues (see POST /:id/issues) —
+  // chapter one doesn't have to exist the moment the listing goes up, only
+  // before the first buyer would reasonably expect something. Same
+  // "nothing to hand over yet" shape as a service, different reason.
   const willPublish = status !== 'draft';
-  if (willPublish && !isService && !file && !external_url && keyList.length === 0) {
+  if (willPublish && !isService && !isSerial && !file && !external_url && keyList.length === 0) {
     return res.status(400).json({ error: 'Attach a file, an external link, or paste license keys before publishing. Buyers need something to actually receive.' });
   }
   if (isService && pay_what_you_want) {
@@ -524,8 +546,11 @@ router.post('/', requireAuth, requireCreator, upload.fields([
 
   const isPWYW = pay_what_you_want === 'true' || pay_what_you_want === true;
   const priceMinor = toMinor(price);
-  if (!isPWYW && (priceMinor === null || priceMinor <= 0)) {
-    return res.status(400).json({ error: 'price must be a positive number.' });
+  // 0 is allowed — a free listing. Checkout (purchases.js) already treats
+  // an amount of exactly 0 as "nothing to charge" and skips EcoCash
+  // entirely, so a $0 price here is a real, supported product, not a bug.
+  if (!isPWYW && (priceMinor === null || priceMinor < 0)) {
+    return res.status(400).json({ error: 'price must be zero or a positive number.' });
   }
   let minPriceMinor = null;
   if (isPWYW) {
@@ -675,7 +700,7 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
     priceMinor = minPriceMinor || 0;
   } else if (price !== undefined) {
     priceMinor = toMinor(price);
-    if (priceMinor === null || priceMinor <= 0) return res.status(400).json({ error: 'price must be a positive number.' });
+    if (priceMinor === null || priceMinor < 0) return res.status(400).json({ error: 'price must be zero or a positive number.' });
   }
   const productCurrency = currency !== undefined
     ? (['USD', 'ZWG'].includes(currency) ? currency : product.currency)
@@ -725,7 +750,7 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
   }
 
   const willPublish = status === 'published';
-  if (willPublish && !isService) {
+  if (willPublish && !isService && product.type !== 'serial') {
     const willHaveFile = file || external_url || db.prepare('SELECT 1 FROM product_files WHERE product_id = ?').get(product.id);
     const willHaveKeys = keyStats(product.id).total > 0;
     if (!willHaveFile && !willHaveKeys) {
@@ -862,6 +887,82 @@ router.post('/:id/license-keys', requireAuth, requireCreator, (req, res) => {
 
   addKeys(product.id, keyList);
   res.status(201).json({ added: keyList.length, ...keyStats(product.id) });
+});
+
+// POST /api/products/:id/issues — add a new issue (chapter) to a serial
+// product. Owner-only. This is the entire point of "serial": whoever
+// already paid gets every issue this adds from now on, automatically —
+// there's no separate purchase or unlock step for issue 2, 3, 4...
+router.post('/:id/issues', requireAuth, requireCreator, upload.single('file'), async (req, res) => {
+  const product = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
+  if (!product) return res.status(404).json({ error: 'Product not found.' });
+  if (product.creator_id !== req.creator.id) {
+    return res.status(403).json({ error: "You don't own this product." });
+  }
+  if (product.type !== 'serial') {
+    return res.status(400).json({ error: 'Only serial products can have issues.' });
+  }
+
+  const title = (req.body.title || '').trim();
+  const externalUrl = (req.body.external_url || '').trim();
+  if (!title) return res.status(400).json({ error: 'title is required.' });
+
+  const file = req.file;
+  if (!file && !externalUrl) {
+    return res.status(400).json({ error: 'Attach a file or provide a link — an issue needs something for buyers to actually get.' });
+  }
+  if (file && !storage.isConfigured()) {
+    return res.status(503).json({ error: 'File storage is not configured yet. Try again shortly.' });
+  }
+
+  const nextNumber = (db.prepare('SELECT MAX(issue_number) AS n FROM issues WHERE product_id = ?').get(product.id).n || 0) + 1;
+
+  let kind = 'external_link', filePath = null, originalFilename = null, resolvedExternal = externalUrl || null;
+  if (file) {
+    kind = 'upload';
+    const key = objectKey('issue-files', file.originalname);
+    await storage.uploadBuffer(key, file.buffer, file.mimetype);
+    filePath = key;
+    originalFilename = file.originalname;
+    resolvedExternal = null;
+  }
+
+  const result = db.prepare(`
+    INSERT INTO issues (product_id, issue_number, title, kind, file_path, external_url, original_filename)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(product.id, nextNumber, title, kind, filePath, resolvedExternal, originalFilename);
+
+  // Every past buyer already paid for whatever comes next, not just what
+  // existed the day they bought — that's the deal a serial makes. Tell them.
+  const buyers = db.prepare(`
+    SELECT DISTINCT b.email FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
+    WHERE pu.product_id = ? AND pu.payment_status = 'paid'
+  `).all(product.id);
+  for (const b of buyers) {
+    sendEmail(
+      b.email,
+      `New issue: ${product.title}`,
+      `${req.creator.name} just published a new issue for ${product.title}, which you already have access to:\n\n${title}\n\nRead it: ${FRONTEND_URL}/@${req.creator.handle}/${product.slug}`
+    );
+  }
+
+  res.status(201).json({ id: result.lastInsertRowid, issue_number: nextNumber, title, kind, published_at: new Date().toISOString() });
+});
+
+// DELETE /api/products/:id/issues/:issueId — owner-only. For fixing a
+// mistake (wrong file, duplicate), not something a buyer-facing UI exposes
+// as routine — pulling a chapter someone already paid for is a real thing
+// to be careful with, this just doesn't try to stop you from doing it.
+router.delete('/:id/issues/:issueId', requireAuth, requireCreator, (req, res) => {
+  const product = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
+  if (!product) return res.status(404).json({ error: 'Product not found.' });
+  if (product.creator_id !== req.creator.id) {
+    return res.status(403).json({ error: "You don't own this product." });
+  }
+  const issue = db.prepare('SELECT * FROM issues WHERE id = ? AND product_id = ?').get(req.params.issueId, product.id);
+  if (!issue) return res.status(404).json({ error: 'Issue not found.' });
+  db.prepare('DELETE FROM issues WHERE id = ?').run(issue.id);
+  res.json({ ok: true });
 });
 
 module.exports = router;

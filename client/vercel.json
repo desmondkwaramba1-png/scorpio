@@ -9,7 +9,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(facebookexternalhit|Facebot|Twitterbot|WhatsApp|LinkedInBot|Slackbot|Slack-ImgProxy|TelegramBot|Discordbot|Pinterest|redditbot|Applebot|SkypeUriPreview|vkShare|W3C_Validator|Embedly|Iframely|nuzzel|Mastodon|Pleroma|Google-InspectionTool|Yahoo Link Preview|facebookcatalog).*"
+          "value": ".*(facebookexternalhit|Facebot|Twitterbot|WhatsApp|LinkedInBot|Slackbot|Slack-ImgProxy|TelegramBot|Discordbot|Pinterest|redditbot|SkypeUriPreview|vkShare|W3C_Validator|Embedly|Iframely|nuzzel|Mastodon|Pleroma|Yahoo Link Preview|facebookcatalog).*"
         }
       ],
       "destination": "https://scorpio-api.fly.dev/share/:path"

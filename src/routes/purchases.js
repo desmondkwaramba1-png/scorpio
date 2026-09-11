@@ -6,7 +6,7 @@ const db = require('../db/schema');
 const { createOrder, checkOrderStatus, isValidSenderPhone } = require('../services/payment');
 const { toMinor } = require('../lib/money');
 const { isPromoActive, applyDiscount } = require('../lib/promotions');
-const { checkoutLimiter } = require('../middleware/rateLimit');
+const { checkoutLimiter, orderLookupLimiter } = require('../middleware/rateLimit');
 const { requireAuth, requireCreator } = require('../middleware/auth');
 const { createDownloadToken, getActiveTokenForPurchase, productHasFile, getProductFile, isVideoFilename, isAudioFilename } = require('../lib/downloads');
 const { productHasKeys, unclaimedCount, keyForPurchase } = require('../lib/licenseKeys');
@@ -326,7 +326,7 @@ router.post('/', checkoutLimiter, requireAuth, async (req, res) => {
 // One order_id can cover several purchase rows (a cart checkout), so this
 // always deals in a list — a direct single-product buy is just the
 // one-item case of the same shape, not a separate code path.
-router.get('/status/:orderId', async (req, res) => {
+router.get('/status/:orderId', orderLookupLimiter, async (req, res) => {
   const purchases = db.prepare(`
     SELECT pu.*, p.title AS product_title, p.slug AS product_slug, c.handle AS creator_handle
     FROM purchases pu
@@ -371,7 +371,7 @@ router.get('/status/:orderId', async (req, res) => {
 // body's claimed status is never trusted directly — order_id is used to
 // pull fresh, authoritative status straight from Dischub instead, since a
 // POST to a public URL can't be assumed genuine on its own.
-router.post('/dischub/callback', async (req, res) => {
+router.post('/dischub/callback', orderLookupLimiter, async (req, res) => {
   const orderId = req.body?.order_id;
   if (!orderId) return res.status(400).json({ error: 'order_id is required.' });
 

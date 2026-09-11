@@ -225,6 +225,12 @@ router.post('/reset-password', authLimiter, (req, res) => {
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, row.user_id);
   db.prepare("UPDATE password_reset_tokens SET consumed_at = datetime('now') WHERE user_id = ? AND consumed_at IS NULL")
     .run(row.user_id);
+  // A password reset is exactly the moment a session might have been
+  // stolen (that's often *why* someone resets) — leaving old sessions
+  // valid would mean whoever had that cookie just keeps their access
+  // right through the reset. Sign out everywhere, including whichever
+  // device is doing this reset; they'll need to log back in either way.
+  db.prepare('DELETE FROM sessions WHERE user_id = ?').run(row.user_id);
 
   res.json({ ok: true });
 });

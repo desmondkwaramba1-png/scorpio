@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const helmet = require('helmet');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const multer = require('multer');
@@ -54,6 +55,18 @@ const app = express();
 // every rate-limited request (auth, checkout, reports), confirmed live in
 // production logs.
 app.set('trust proxy', 1);
+// contentSecurityPolicy: false — this app is a JSON API; the only HTML it
+// serves itself (share.js's link-preview pages, admin's none) is small
+// and trusted, and helmet's default page CSP would block the inline
+// redirect script /share relies on for a browser that somehow lands
+// there. crossOriginResourcePolicy: cross-origin — the frontend is a
+// different origin (Vercel) fetching this API's JSON directly; the
+// default same-origin policy is meant for a server that also serves its
+// own frontend, which this one doesn't.
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 app.use(cors({
   origin(origin, callback) {
     if (!origin || ALLOWED_ORIGINS.has(origin)) return callback(null, true);

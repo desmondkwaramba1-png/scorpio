@@ -4,8 +4,13 @@ const db = require('../db/schema');
 const { resolveDispute, sweepAutoReleases } = require('../lib/escrow');
 const { balancesFor } = require('../lib/walletBalances');
 const { netOf } = require('../lib/fees');
+const { adminLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
+// Every /api/admin/* route in this router — closes off unlimited guessing
+// against ADMIN_KEY (see requireAdmin below), which timingSafeEqual alone
+// doesn't address.
+router.use(adminLimiter);
 
 // No admin accounts/roles exist in this app yet — disputes are resolved
 // manually by whoever holds ADMIN_KEY (the platform operator), not through

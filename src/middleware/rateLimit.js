@@ -19,6 +19,30 @@ const checkoutLimiter = rateLimit({
   message: { error: 'Too many checkout attempts. Try again in a few minutes.' }
 });
 
+// order_id carries a 32-bit random suffix (see purchases.js), not a full
+// token — enough to make guessing impractical under a rate limit, not
+// enough to leave genuinely unthrottled. Without this, GET .../status/:id
+// and the payment webhook were the one pair of endpoints in the app that
+// took an ID-shaped guess with no cap on attempts at all.
+const orderLookupLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Try again in a few minutes.' }
+});
+
+// ADMIN_KEY is the entire access control for /api/admin/* (see admin.js) —
+// timingSafeEqual already closes the timing side-channel, this closes the
+// brute-force one, so a leaked/weak key can't just be hammered forever.
+const adminLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many admin requests. Try again in a few minutes.' }
+});
+
 // The general issue-report endpoint is deliberately open to logged-out
 // visitors (see routes/reports.js — the whole point is catching "I can't
 // log in"), which means it has no account behind it to rely on for abuse
@@ -31,4 +55,4 @@ const reportLimiter = rateLimit({
   message: { error: 'Too many reports sent. Try again in a few minutes.' }
 });
 
-module.exports = { authLimiter, checkoutLimiter, reportLimiter };
+module.exports = { authLimiter, checkoutLimiter, reportLimiter, orderLookupLimiter, adminLimiter };

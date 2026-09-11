@@ -15,6 +15,7 @@ import Marketplace from './pages/Marketplace.jsx';
 // deferring it, everything reachable from a click loads on demand instead.
 const Discover = lazy(() => import('./pages/Discover.jsx'));
 const Creators = lazy(() => import('./pages/Creators.jsx'));
+const Reels = lazy(() => import('./pages/Reels.jsx'));
 const Login = lazy(() => import('./pages/Login.jsx'));
 const OAuthComplete = lazy(() => import('./pages/OAuthComplete.jsx'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword.jsx'));
@@ -60,6 +61,7 @@ export default function App() {
             <Route path="/" element={<Marketplace />} />
             <Route path="/discover" element={<Discover />} />
             <Route path="/creators" element={<Creators />} />
+            <Route path="/reels" element={<Reels />} />
             <Route path="/login" element={<Login />} />
             <Route path="/oauth-complete" element={<OAuthComplete />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />

@@ -410,9 +410,19 @@ img{max-width:100%;display:block;}
 .product-card__engagement button:hover{color:var(--ink);}
 
 /* ---- skeleton loading ---- */
-.skeleton{background:linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-shine) 37%, var(--skeleton-base) 63%);
-  background-size:400% 100%;animation:skeleton-shine 1.4s ease infinite;border-radius:var(--radius-sm);}
-@keyframes skeleton-shine{0%{background-position:100% 50%;}100%{background-position:0 50%;}}
+/* Used to animate background-position on the gradient itself, which is a
+   paint-triggering property, every skeleton on the page repainted on
+   every frame for as long as data was loading. That's exactly the window
+   Lighthouse's Speed Index measures, and mainthread-work-breakdown
+   confirmed real cost concentrated there (Style & Layout + Other, ~2.6s
+   combined). Swapped to animating transform on a sweeping pseudo-element
+   instead, transform is compositor-only, so the shine now runs on the
+   GPU without touching main-thread style/paint each frame. Same look. */
+.skeleton{position:relative;overflow:hidden;background:var(--skeleton-base);border-radius:var(--radius-sm);}
+.skeleton::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg, transparent, var(--skeleton-shine), transparent);
+  transform:translateX(-100%);animation:skeleton-shine 1.4s ease infinite;will-change:transform;}
+@keyframes skeleton-shine{100%{transform:translateX(100%);}}
 .skeleton-card{border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);background:var(--surface);}
 .skeleton-card .skeleton{border-radius:0;}
 

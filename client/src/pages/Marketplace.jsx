@@ -217,9 +217,17 @@ export default function Marketplace() {
         <div className="wrap">
           {showPitch ? (
             <>
+              {/* Real Lighthouse data traced LCP straight to these two: the
+                  fade-in-up entrance animation (.6s + a staggered delay)
+                  meant the browser doesn't count this text as "painted"
+                  for Core Web Vitals purposes until it's actually visible,
+                  not just in the DOM, over a second of pure animation cost
+                  on exactly the content LCP measures. Left the animation
+                  on the badge and CTA below, small elements, never the
+                  LCP candidate, so the entrance still reads as polished. */}
               <span className="mono shop-hero__badge shop-hero__reveal" style={{ animationDelay: '.05s' }}><FiZap size={12} /> REAL CREATORS, REAL SKILLS</span>
-              <h1 className="shop-hero__title shop-hero__reveal" style={{ animationDelay: '.15s' }}>Turn what you know into income.</h1>
-              <p className="shop-hero__sub shop-hero__reveal" style={{ animationDelay: '.25s' }}>
+              <h1 className="shop-hero__title">Turn what you know into income.</h1>
+              <p className="shop-hero__sub">
                 {EBOOKS_ONLY
                   ? "Guides, templates, and courses from people who've actually done the work, not scraped off the internet. Every file is checked before it goes live."
                   : "Real digital products from people who've actually done the work, not scraped off the internet. Every listing is checked before it goes live."}

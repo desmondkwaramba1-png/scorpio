@@ -66,6 +66,30 @@
     "sameAs": []
   }
   </script>
+  <!-- Sitelinks search box: the one part of Google's "extra links under
+       the main result" family that isn't purely algorithmic — this is
+       what actually lets a search box render inside the result itself.
+       Regular sitelinks (Login, Discover, etc. as separate blue links)
+       can't be requested this way; those are earned through site
+       authority and time indexed, not markup. Points at a URL /discover
+       already really handles (see its `q` search param in Discover.jsx),
+       not a fabricated endpoint. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "SCORPIO",
+    "url": "https://www.scorpio.co.zw/",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://www.scorpio.co.zw/discover?q={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
 </head>
 <body>
   <div id="root"></div>

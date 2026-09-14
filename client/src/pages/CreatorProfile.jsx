@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { FiChevronRight } from 'react-icons/fi';
+import { FiChevronRight, FiX } from 'react-icons/fi';
 import Seal from '../components/Seal.jsx';
 import { Stars } from '../components/ReviewsSection.jsx';
 import ProductCard from '../components/ProductCard.jsx';
@@ -19,17 +19,39 @@ export default function CreatorProfile() {
   const [creator, setCreator] = useState(null);
   const [error, setError] = useState(null);
   const [reels, setReels] = useState(null);
+  const [avatarOpen, setAvatarOpen] = useState(false);
 
   useEffect(() => {
     setCreator(null);
     setError(null);
     setReels(null);
+    setAvatarOpen(false);
     fetch(`/api/creators/${handle}`)
       .then(r => { if (!r.ok) throw new Error(); return r.json(); })
       .then(setCreator)
       .catch(() => setError('This creator could not be found.'));
     fetch(`/api/reels?creator=${handle}`).then(r => r.json()).then(setReels).catch(() => setReels([]));
   }, [handle]);
+
+  // Escape closes the same way clicking the backdrop or the close button
+  // does — only wired up while the lightbox is actually open, so it's not
+  // one more global listener sitting around on every product-browsing
+  // page load.
+  useEffect(() => {
+    if (!avatarOpen) return;
+    const onKey = (e) => { if (e.key === 'Escape') setAvatarOpen(false); };
+    window.addEventListener('keydown', onKey);
+    // Unlike .splash/.reel-viewer (both their own full page, nothing
+    // scrollable behind them), this lightbox sits on top of the normal
+    // scrollable storefront - lock the page underneath while it's open,
+    // same as any real modal, restored on close either way.
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [avatarOpen]);
 
   useSEO({
     title: creator ? `${creator.name} (@${creator.handle}), SCORPIO` : undefined,
@@ -71,12 +93,22 @@ export default function CreatorProfile() {
     <div>
       <header className="creator-header">
         <div className="wrap creator-header__inner">
-          <div
-            className="creator-header__avatar"
-            style={{ background: creator.avatar_path ? `url(${creator.avatar_path}) center/cover` : 'var(--gold)' }}
-          >
-            {!creator.avatar_path && creator.name.charAt(0).toUpperCase()}
-          </div>
+          {/* Only a real photo is worth a full-size look — the
+              letter-fallback tile has nothing bigger to show, so it stays
+              a plain non-interactive div exactly like before. */}
+          {creator.avatar_path ? (
+            <button
+              type="button"
+              className="creator-header__avatar creator-header__avatar--tappable"
+              style={{ background: `url(${creator.avatar_path}) center/cover` }}
+              onClick={() => setAvatarOpen(true)}
+              aria-label={`View ${creator.name}'s full profile picture`}
+            />
+          ) : (
+            <div className="creator-header__avatar" style={{ background: 'var(--gold)' }}>
+              {creator.name.charAt(0).toUpperCase()}
+            </div>
+          )}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <h1 className="creator-header__name">{creator.name}</h1>
@@ -97,6 +129,17 @@ export default function CreatorProfile() {
           </div>
         </div>
       </header>
+
+      {avatarOpen && (
+        <div className="avatar-lightbox" role="dialog" aria-modal="true" aria-label={`${creator.name}'s profile picture`} onClick={() => setAvatarOpen(false)}>
+          <button type="button" className="avatar-lightbox__close" onClick={() => setAvatarOpen(false)} aria-label="Close">
+            <FiX size={20} />
+          </button>
+          {/* stopPropagation so tapping the photo itself doesn't also
+              trigger the backdrop's close-on-click. */}
+          <img src={creator.avatar_path} alt={creator.name} className="avatar-lightbox__img" onClick={e => e.stopPropagation()} />
+        </div>
+      )}
 
       <div className="wrap" style={{ padding: '32px 20px 80px' }}>
         {creator.bio && <p className="muted" style={{ maxWidth: '60ch', lineHeight: 1.6, marginBottom: 40 }}>{creator.bio}</p>}

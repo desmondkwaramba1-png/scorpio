@@ -220,7 +220,7 @@ export default function Product() {
       <span className="mobile-buy-bar__price mono">
         {product.promo_active ? discountedPrice : (product.pay_what_you_want ? `From ${price}` : price)}
       </span>
-      <Link to={checkoutUrl} className="btn btn--gold">{buyLabel}</Link>
+      <Link to={checkoutUrl} className="btn btn--gold btn--sm">{buyLabel}</Link>
     </div>
   );
 

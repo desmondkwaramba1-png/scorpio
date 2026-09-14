@@ -46,12 +46,33 @@ export default defineConfig({
         ]
       },
       workbox: {
+        // generateSW's own default behavior, separate from runtimeCaching
+        // below and not mentioned by the comment that used to be here:
+        // every "navigate"-mode request (a real <a href> click or typed
+        // URL, not a fetch()) gets intercepted by an auto-installed
+        // NavigationRoute and handed the cached index.html shell instead
+        // of ever reaching the network. Necessary for real client-side
+        // routes (so /discover, /@handle/slug work on a direct load or
+        // refresh) — actively wrong for /api/downloads/:token, a plain
+        // <a href> in Account.jsx and Product.jsx that's a real server
+        // redirect to R2, not a route this SPA has any page for. Once the
+        // service worker had time to activate, clicking Download just
+        // reloaded the app shell, no error, nothing to download, silently.
+        // Confirmed live: a fresh signup through a full session (several
+        // page loads, real time for the worker to install) got exactly
+        // this, text/html back instead of a redirect to the file. Excluding
+        // /api/ here is what actually lets a real navigation to /api/downloads/:token
+        // reach the network instead of being treated as a client route.
+        navigateFallbackDenylist: [/^\/api\//],
         // Everything NOT matched by a rule below is a plain network
         // passthrough, never touched by the service worker — this is
         // deliberately an allowlist, not a blocklist, so anything
         // session/payment-sensitive (auth, cart, checkout, downloads) is
         // safe by default just by never being mentioned here, not because
-        // of an exclusion I have to remember to keep correct.
+        // of an exclusion I have to remember to keep correct. (That
+        // reasoning covers runtimeCaching's own handlers — it doesn't
+        // cover the separate NavigationRoute above, which is why the
+        // downloads bug existed despite it.)
         runtimeCaching: [
           {
             // Product/creator listings: try the network first (prices and

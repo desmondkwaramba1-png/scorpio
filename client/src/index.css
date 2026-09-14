@@ -125,6 +125,17 @@ body{
      turning body into a scroller. */
   overflow-x:clip;
 }
+/* Sticky footer: without this, any page shorter than the viewport (an
+   empty-state screen, a short auth form) left the footer sitting right
+   under the content with a dead gray gap below it instead of at the
+   bottom of the screen where it reads as intentional. #root, not body,
+   is the flex container — App.jsx's <SplashScreen/><Nav/><main/><Footer/>
+   are its direct children, and SplashScreen's own position:fixed already
+   takes it out of this flow entirely, so it's unaffected. main growing
+   (flex:1) is what pushes Footer down on a short page while still
+   letting it sit naturally below on a tall one. */
+#root{display:flex;flex-direction:column;min-height:100vh;}
+main{flex:1 0 auto;}
 h1,h2,h3{font-family:'Cabinet Grotesk','Sora',sans-serif;font-weight:700;margin:0;letter-spacing:-0.02em;}
 p{margin:0;}
 a{color:inherit;text-decoration:none;}
@@ -1024,7 +1035,14 @@ img{max-width:100%;display:block;}
    polished auth flow uses (Stripe, Linear, etc.), not decoration for its
    own sake — it's what was actually missing. */
 .auth-page{
-  min-height:calc(100vh - 56px);display:flex;align-items:flex-start;justify-content:center;
+  /* 100%, not calc(100vh - Npx): that fixed nav-height guess never
+     accounted for the footer at all (a separate sibling of main, not
+     something this padding could ever reach), so on a short auth screen
+     it forced the page 100+px taller than one viewport regardless of how
+     little content there was. main now fills the real remaining space
+     itself (see #root/main in the sticky-footer rules above), so this
+     only needs to fill main's own already-correct height. */
+  min-height:100%;display:flex;align-items:flex-start;justify-content:center;
   padding:56px 20px 80px;
   background:
     radial-gradient(700px 420px at 50% -10%, var(--gold-tint) 0%, transparent 65%),

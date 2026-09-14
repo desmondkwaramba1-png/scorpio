@@ -71,7 +71,17 @@ export default function SplashScreen() {
     const toFade = setTimeout(() => setPhase('leaving'), holdMs);
     const toDone = setTimeout(() => setPhase('done'), holdMs + 450);
     return () => { cancelAnimationFrame(raf); clearTimeout(toFade); clearTimeout(toDone); };
-  }, [phase]);
+    // Deliberately [] not [phase]: this effect's own job is to walk
+    // 'showing' -> 'leaving' -> 'done' via its own two timers. Depending
+    // on [phase] made it re-run the moment toFade's callback set phase to
+    // 'leaving' — and re-running fired this same cleanup *first*, which
+    // clearTimeout'd toDone before it ever got to fire. Real, confirmed
+    // bug: phase got stuck at 'leaving' forever (verified via computed
+    // styles - opacity:0, pointer-events:none, so invisible and harmless,
+    // but the node never actually unmounted like `if (phase === 'done')
+    // return null` above intends). Empty deps: run these timers exactly
+    // once per real mount, let them both fire on schedule.
+  }, []);
 
   if (phase === 'done') return null;
 

@@ -44,7 +44,7 @@ export default function DashboardLayout() {
         marginBottom: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         gap: 16, flexWrap: 'wrap'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
           <div style={{
             width: 56, height: 56, borderRadius: '50%', flexShrink: 0,
             background: creator.avatar_path ? `url(${creator.avatar_path}) center/cover` : 'var(--green-dark)',
@@ -53,12 +53,17 @@ export default function DashboardLayout() {
           }}>
             {!creator.avatar_path && creator.name.charAt(0).toUpperCase()}
           </div>
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <p style={{ fontWeight: 700, fontSize: '1.05rem' }}>{creator.name}</p>
               {!!creator.verified && <Seal />}
             </div>
-            <p className="mono muted" style={{ fontSize: '.82rem' }}>{SITE_HOST}/@{creator.handle}</p>
+            {/* A long handle (up to 30 chars, HANDLE_RE's own limit)
+                otherwise just got clipped raw by the card's edge with no
+                ellipsis at all - confirmed live with a 21-char test handle. */}
+            <p className="mono muted" style={{ fontSize: '.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {SITE_HOST}/@{creator.handle}
+            </p>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

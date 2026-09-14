@@ -44,6 +44,7 @@ const DashboardEditProduct = lazy(() => import('./pages/dashboard/EditProduct.js
 const DashboardReels = lazy(() => import('./pages/dashboard/Reels.jsx'));
 const DashboardInsights = lazy(() => import('./pages/dashboard/Insights.jsx'));
 const DashboardWallet = lazy(() => import('./pages/dashboard/Wallet.jsx'));
+const DashboardSubscriptions = lazy(() => import('./pages/dashboard/Subscriptions.jsx'));
 const DashboardSettings = lazy(() => import('./pages/dashboard/Settings.jsx'));
 
 function RouteFallback() {
@@ -90,6 +91,7 @@ export default function App() {
               <Route path="reels" element={<DashboardReels />} />
               <Route path="insights" element={<DashboardInsights />} />
               <Route path="wallet" element={<DashboardWallet />} />
+              <Route path="subscriptions" element={<DashboardSubscriptions />} />
               <Route path="settings" element={<DashboardSettings />} />
             </Route>
             <Route path="/:handle/:slug/checkout" element={<Checkout />} />

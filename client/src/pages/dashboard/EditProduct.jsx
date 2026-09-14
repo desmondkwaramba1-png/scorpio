@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { FiTrash2, FiAlertTriangle, FiExternalLink, FiTag, FiKey, FiImage, FiBriefcase, FiPackage, FiFilePlus, FiX } from 'react-icons/fi';
+import { FiTrash2, FiAlertTriangle, FiExternalLink, FiTag, FiKey, FiImage, FiBriefcase, FiPackage, FiFilePlus, FiX, FiUsers } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
@@ -62,11 +62,13 @@ export default function EditProduct() {
 
   // Issues aren't on /mine (every other product's summary would carry the
   // weight of a list it never uses), fetched separately, only once the
-  // product's slug is known and only for a serial. The owner view of
-  // GET /:slug already comes back fully unlocked, so this is the same data
-  // a buyer who purchased would see, not a separate creator-only shape.
+  // product's slug is known and only for a serial or subscription (a
+  // subscription's content delivers through this exact same mechanism).
+  // The owner view of GET /:slug already comes back fully unlocked, so
+  // this is the same data a buyer who purchased/subscribed would see, not
+  // a separate creator-only shape.
   useEffect(() => {
-    if (!product || product.type !== 'serial') return;
+    if (!product || !['serial', 'subscription'].includes(product.type)) return;
     api.get(`/api/products/${product.slug}`)
       .then(p => setIssues(p.issues || []))
       .catch(() => setIssues([]));
@@ -272,7 +274,9 @@ export default function EditProduct() {
             <div className="field">
               <label>Type</label>
               <p className="muted" style={{ fontSize: '.9rem' }}>
-                {product.type === 'serial' ? 'Serial (recurring)' : product.type === 'service' ? 'Service (escrow)' : 'Single item'}. Can't be changed after creation.
+                {product.type === 'serial' ? 'Serial (pay once, unlocks every issue)'
+                  : product.type === 'subscription' ? 'Subscription (recurring)'
+                  : product.type === 'service' ? 'Service (escrow)' : 'Single item'}. Can't be changed after creation.
               </p>
             </div>
 
@@ -359,9 +363,16 @@ export default function EditProduct() {
                 <small>Revisions, what you need from the buyer, cancellation policy. Set expectations before they pay, not after.</small>
               </div>
             </FormSection>
-          ) : product.type === 'serial' ? (
+          ) : ['serial', 'subscription'].includes(product.type) ? (
             <FormSection icon={FiFilePlus} title="Issues"
-              note="Everyone who's bought this gets every issue you publish here, past and future, no separate unlock step.">
+              note={product.type === 'subscription'
+                ? 'Only currently-subscribed buyers get new issues, someone who lapses stops receiving them until they renew.'
+                : "Everyone who's bought this gets every issue you publish here, past and future, no separate unlock step."}>
+              {product.type === 'subscription' && (
+                <Link to={`/dashboard/subscriptions?product_id=${product.id}`} className="btn btn--ghost btn--sm" style={{ marginBottom: 16 }}>
+                  <FiUsers size={13} /> View subscribers
+                </Link>
+              )}
               <form onSubmit={addIssue} style={{ marginBottom: 20 }}>
                 <div className="field">
                   <label htmlFor="issue_title">New issue title</label>

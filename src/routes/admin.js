@@ -5,6 +5,7 @@ const { resolveDispute, sweepAutoReleases } = require('../lib/escrow');
 const { balancesFor } = require('../lib/walletBalances');
 const { netOf } = require('../lib/fees');
 const { adminLimiter } = require('../middleware/rateLimit');
+const { sendRenewalReminders } = require('../lib/subscriptions');
 
 const router = express.Router();
 // Every /api/admin/* route in this router — closes off unlimited guessing
@@ -313,6 +314,18 @@ router.get('/payouts/history', requireAdmin, (req, res) => {
     LIMIT 100
   `).all();
   res.json(history);
+});
+
+// POST /api/admin/subscriptions/sweep — the one scheduled job this app
+// has. No in-process scheduler exists (see escrow.js's sweepAutoReleases
+// comment) — this is meant to be triggered externally, once a day, by a
+// GitHub Actions workflow (.github/workflows/subscription-sweep.yml)
+// hitting this route with the same ADMIN_KEY every other admin route
+// already uses. Emails only ever go out from here, never from a page
+// load, see subscriptions.js's own reasoning for that split.
+router.post('/subscriptions/sweep', requireAdmin, (req, res) => {
+  const result = sendRenewalReminders();
+  res.json({ ok: true, ...result });
 });
 
 module.exports = router;

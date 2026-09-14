@@ -51,6 +51,8 @@ export default function NewProduct() {
 
   const isService = form.type === 'service';
   const isSerial = form.type === 'serial';
+  const isSubscription = form.type === 'subscription';
+  const hasIssues = isSerial || isSubscription;
   const isSoftware = form.category === 'software';
   const isCourse = form.category === 'courses';
 
@@ -64,10 +66,11 @@ export default function NewProduct() {
       setError('Pick a category. It\'s how buyers find this when browsing.');
       return;
     }
-    // A serial's content is its issues, added after the listing exists
-    // (see EditProduct.jsx), there's nothing to attach at creation time,
-    // same as a service having nothing to hand over until the work's done.
-    if (!isService && !isSerial) {
+    // A serial's (and a subscription's) content is its issues, added
+    // after the listing exists (see EditProduct.jsx), there's nothing to
+    // attach at creation time, same as a service having nothing to hand
+    // over until the work's done.
+    if (!isService && !hasIssues) {
       const hasKeys = form.license_keys.trim().length > 0;
       if (status === 'published' && !file && !hasKeys) {
         setError('Attach a file, or paste license keys, before publishing. Buyers need something to actually receive after paying.');
@@ -147,7 +150,8 @@ export default function NewProduct() {
               <label htmlFor="type">Type</label>
               <select id="type" value={form.type} onChange={update('type')}>
                 <option value="single">{EBOOKS_ONLY ? 'Single item (guide, template, one-off)' : 'Single item (ebook, course, one-off)'}</option>
-                <option value="serial">Serial (recurring, e.g. a weekly publication)</option>
+                <option value="serial">Serial (pay once, unlocks every future issue)</option>
+                <option value="subscription">Subscription (recurring, e.g. monthly access)</option>
                 {!EBOOKS_ONLY && <option value="service">Service (bespoke work, paid via escrow)</option>}
               </select>
               {isService && (
@@ -156,14 +160,22 @@ export default function NewProduct() {
                   and you deliver the actual work per order once they've paid.
                 </small>
               )}
+              {isSubscription && (
+                <small>
+                  Buyers pay every month instead of once, and keep getting new issues only while they stay
+                  subscribed. EcoCash can't auto-charge, so each renewal is one tap from them, we remind them first.
+                </small>
+              )}
             </div>
 
             <div className="field" style={{ display: 'flex', gap: 12 }}>
               <div style={{ flex: 1 }}>
-                <label htmlFor="price">Price</label>
+                <label htmlFor="price">{isSubscription ? 'Monthly price' : 'Price'}</label>
                 <input id="price" type="number" min="0" step="0.01" required
                   value={form.price} onChange={update('price')} placeholder="5.00" />
-                <small>Enter 0 to give it away free, no EcoCash step, buyers get it instantly.</small>
+                <small>{isSubscription
+                  ? 'Charged every 30 days. Enter 0 for a free subscription.'
+                  : 'Enter 0 to give it away free, no EcoCash step, buyers get it instantly.'}</small>
               </div>
               <div style={{ width: 90 }}>
                 <label htmlFor="currency">Currency</label>
@@ -182,7 +194,7 @@ export default function NewProduct() {
             </div>
           </FormSection>
 
-          <FormSection icon={isService ? FiBriefcase : isSerial ? FiFilePlus : FiPackage} title={isService ? 'Service details' : isSerial ? 'Issues' : 'What buyers get'}>
+          <FormSection icon={isService ? FiBriefcase : hasIssues ? FiFilePlus : FiPackage} title={isService ? 'Service details' : hasIssues ? 'Issues' : 'What buyers get'}>
             {isService ? (
               <>
                 <div className="field">
@@ -210,6 +222,13 @@ export default function NewProduct() {
                 Publish the listing first, then add Issue 1 (and every issue after it) from its Edit page.
                 Anyone who buys gets every issue you publish under this product from then on, that's the whole
                 point of a serial: pay once, chapters keep arriving.
+              </p>
+            ) : isSubscription ? (
+              <p className="muted" style={{ fontSize: '.9rem', lineHeight: 1.6 }}>
+                Publish the listing first, then add Issue 1 (and every issue after it) from its Edit page,
+                same as a serial. The real difference is access: a subscriber only gets new issues while
+                they're actually subscribed, someone who lapses stops receiving them until they renew,
+                unlike a serial's one-time "pay once, own it forever."
               </p>
             ) : (
               <>

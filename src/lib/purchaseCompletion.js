@@ -4,6 +4,7 @@ const { createDownloadToken, productHasFile } = require('./downloads');
 const { productHasKeys, claimKeyForPurchase } = require('./licenseKeys');
 const { startEscrow, startDeliveredHold } = require('./escrow');
 const { sendEmail } = require('./notify');
+const { findOrCreateSubscription } = require('./subscriptions');
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
@@ -18,13 +19,51 @@ function markPurchasePaid(purchaseId) {
 
   db.prepare("UPDATE purchases SET payment_status = 'paid' WHERE id = ?").run(purchaseId);
   const product = db.prepare('SELECT * FROM products WHERE id = ?').get(purchase.product_id);
-  db.prepare('UPDATE products SET quantity_sold = quantity_sold + 1 WHERE id = ?').run(product.id);
-  // Only a completed, paid order actually consumes a "first X buyers" promo
-  // slot, a pending or failed checkout attempt never should.
-  if (purchase.discount_applied) {
-    db.prepare('UPDATE products SET discount_claimed = discount_claimed + 1 WHERE id = ?').run(product.id);
+
+  // A subscription renewal is not a new sale the way every other paid
+  // purchase row against a product genuinely is — left uncounted here,
+  // quantity_sold (and isSoldOut()'s quantity_limit check, and the
+  // "bestselling" sort) would count charges instead of subscribers, and
+  // drift upward every renewal. Checked before this purchase's own
+  // subscription row exists/updates below, so "a subscription already
+  // exists" still correctly means "this is a renewal, not the first."
+  const isRenewal = product.type === 'subscription' &&
+    !!db.prepare('SELECT 1 FROM subscriptions WHERE buyer_id = ? AND product_id = ?').get(purchase.buyer_id, product.id);
+  if (!isRenewal) {
+    db.prepare('UPDATE products SET quantity_sold = quantity_sold + 1 WHERE id = ?').run(product.id);
+    // Only a completed, paid order actually consumes a "first X buyers" promo
+    // slot, a pending or failed checkout attempt never should.
+    if (purchase.discount_applied) {
+      db.prepare('UPDATE products SET discount_claimed = discount_claimed + 1 WHERE id = ?').run(product.id);
+    }
   }
   checkAndUpdateVerification(product.creator_id);
+
+  // A subscription's content still delivers through the same `issues`
+  // mechanism a 'serial' product uses, this branch is only about the
+  // BILLING relationship: who's currently paid-through, and until when.
+  // Same buyer-protection window any other digital-goods charge gets —
+  // startDeliveredHold holds the MONEY, unrelated to how content itself
+  // is delivered.
+  if (product.type === 'subscription') {
+    startDeliveredHold(purchaseId);
+
+    const { subscription, isNew } = findOrCreateSubscription({
+      buyerId: purchase.buyer_id, creatorId: product.creator_id, productId: product.id,
+      priceMinor: purchase.amount_minor, currency: purchase.currency
+    });
+    db.prepare('UPDATE purchases SET subscription_id = ? WHERE id = ?').run(subscription.id, purchaseId);
+
+    const buyer = db.prepare('SELECT * FROM buyers WHERE id = ?').get(purchase.buyer_id);
+    sendEmail(
+      buyer.email,
+      isNew ? `You're subscribed: ${product.title}` : `Subscription renewed: ${product.title}`,
+      isNew
+        ? `Thanks for subscribing! You'll get every new issue as it's published, for as long as you stay subscribed. EcoCash can't auto-charge, so we'll remind you a few days before each renewal and you approve it yourself: ${FRONTEND_URL}/account`
+        : `Your subscription renewed. Access continues through ${subscription.current_period_end}: ${FRONTEND_URL}/account`
+    );
+    return db.prepare('SELECT * FROM purchases WHERE id = ?').get(purchaseId);
+  }
 
   // Services are a different transaction entirely: there's nothing to hand
   // over yet, because the work hasn't been done. Money goes to escrow

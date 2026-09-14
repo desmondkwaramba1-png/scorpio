@@ -77,6 +77,7 @@ export default function Checkout() {
 
   const soldOut = (product.quantity_limit !== null && product.quantity_sold >= product.quantity_limit)
     || (product.total_keys > 0 && product.unclaimed_keys <= 0);
+  const alreadySubscribed = product.my_subscription?.status === 'active';
   const isFree = product.price_minor === 0 && !product.pay_what_you_want;
   const price = product.price_minor === 0 ? 'Free' : formatMoney(product.price_minor, product.currency);
   const discountedPrice = product.promo_active ? formatMoney(product.discounted_price_minor, product.currency) : null;
@@ -135,13 +136,26 @@ export default function Checkout() {
               {product.type === 'serial' && (
                 <span className="muted" style={{ fontSize: '.78rem', fontWeight: 500 }}> once, unlocks every issue</span>
               )}
+              {product.type === 'subscription' && (
+                <span className="muted" style={{ fontSize: '.78rem', fontWeight: 500 }}> /month</span>
+              )}
             </p>
           </div>
         </div>
 
         {soldOut && <p className="error-text">Sold out.</p>}
 
-        {!soldOut && (
+        {!soldOut && alreadySubscribed && (
+          <div className="trust-line">
+            <FiShield size={16} />
+            <span>
+              You're already subscribed, renews on {new Date(product.my_subscription.current_period_end.replace(' ', 'T') + 'Z').toLocaleDateString()}.{' '}
+              <Link to="/account" style={{ fontWeight: 600 }}>Manage it from your account</Link>.
+            </span>
+          </div>
+        )}
+
+        {!soldOut && !alreadySubscribed && (
           <form onSubmit={handleBuy}>
             <div className="field input-icon">
               <label htmlFor="buyer_name">Name</label>
@@ -183,12 +197,19 @@ export default function Checkout() {
                 <span>Payment is held safely until the seller delivers. You'll get a chance to confirm or report a problem before it's released to them.</span>
               </div>
             )}
+            {product.type === 'subscription' && (
+              <div className="trust-line">
+                <FiShield size={16} />
+                <span>This renews monthly. EcoCash can't auto-charge you, so we'll remind you a few days before each renewal, and you approve it yourself from your account.</span>
+              </div>
+            )}
 
             {status === 'failed' && <p className="error-text">{checkoutError || "Payment didn't go through. Try again."}</p>}
             <button className="btn btn--gold btn--block" disabled={status === 'submitting'} type="submit">
               {status === 'submitting' ? (isFree ? 'Getting it...' : 'Sending EcoCash prompt...')
                 : isFree ? 'Get it now, free'
                 : product.type === 'service' ? `Order for ${price}`
+                : product.type === 'subscription' ? `Subscribe for ${price}/month`
                 : `Buy for ${product.promo_active ? discountedPrice : price}`}
             </button>
             {isFree && (

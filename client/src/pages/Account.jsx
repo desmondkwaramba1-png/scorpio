@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiDownload, FiRefreshCw, FiUser, FiPackage, FiCompass, FiPlay, FiX, FiCamera, FiKey, FiCopy, FiCheck, FiShield, FiAlertTriangle, FiExternalLink, FiMail, FiMessageCircle, FiClock, FiDollarSign } from 'react-icons/fi';
+import { FiDownload, FiRefreshCw, FiUser, FiPackage, FiCompass, FiPlay, FiX, FiCamera, FiKey, FiCopy, FiCheck, FiShield, FiAlertTriangle, FiExternalLink, FiMail, FiMessageCircle, FiClock, FiDollarSign, FiRepeat, FiPhone } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api';
 import { formatMoney } from '../lib/money';
@@ -187,6 +187,129 @@ function ServiceStatus({ purchaseId, service: initial, sellerName, sellerEmail, 
   );
 }
 
+const SUBSCRIPTION_STATUS_LABEL = {
+  active: { text: 'Active', className: 'badge--green' },
+  lapsed: { text: 'Lapsed', className: 'badge--neutral' },
+  canceled: { text: 'Canceled', className: 'badge--neutral' }
+};
+
+// Renewing follows the exact same "update the real list, not local-only
+// state" discipline as ServiceStatus above, with one deliberate
+// difference: a free ($0) renewal's onRenewed calls back with no patch,
+// asking Account.jsx to refetch the whole list instead of guessing what
+// the new current_period_end is locally. Cancel's onUpdate does pass a
+// real patch, because that response comes straight back from the server
+// with the actual new values, nothing guessed.
+function SubscriptionRow({ subscription, onUpdate, onRenewed }) {
+  const navigate = useNavigate();
+  const [showRenewForm, setShowRenewForm] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [renewing, setRenewing] = useState(false);
+  const [canceling, setCanceling] = useState(false);
+  const [actionError, setActionError] = useState(null);
+
+  const label = SUBSCRIPTION_STATUS_LABEL[subscription.status] || { text: subscription.status, className: 'badge--neutral' };
+  const productUrl = `/@${subscription.creator_handle}/${subscription.product_slug}`;
+  const isFreeSub = subscription.price_minor === 0;
+
+  async function handleRenew(e) {
+    e.preventDefault();
+    setRenewing(true);
+    setActionError(null);
+    try {
+      // 30s, not the usual 15s default, matches Checkout.jsx's identical
+      // note: this waits on Dischub actually triggering the EcoCash
+      // prompt, which can genuinely take longer than a normal call.
+      const data = await api.post(`/api/subscriptions/${subscription.id}/renew`, { phone }, 30000);
+      if (data.free) {
+        onRenewed?.();
+        return;
+      }
+      navigate(`/payment/return?order_id=${data.order_id}`);
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setRenewing(false);
+    }
+  }
+
+  async function handleCancel() {
+    setCanceling(true);
+    setActionError(null);
+    try {
+      const updated = await api.post(`/api/subscriptions/${subscription.id}/cancel`);
+      onUpdate?.(subscription.id, { status: updated.status, canceled_at: updated.canceled_at });
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setCanceling(false);
+    }
+  }
+
+  return (
+    <div className="card card--pad">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center', minWidth: 0 }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: 8, flexShrink: 0,
+            background: subscription.product_cover_path ? `url(${subscription.product_cover_path}) center/cover` : 'var(--green-tint)'
+          }} />
+          <div style={{ minWidth: 0 }}>
+            <Link to={productUrl} style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+              {subscription.product_title}
+            </Link>
+            <p className="muted" style={{ fontSize: '.85rem' }}>{subscription.creator_name}</p>
+          </div>
+        </div>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <p className="mono" style={{ fontWeight: 600 }}>{formatMoney(subscription.price_minor, subscription.currency)}/mo</p>
+          <span className={`badge ${label.className}`}>{label.text}</span>
+        </div>
+      </div>
+
+      <p className="muted" style={{ fontSize: '.82rem', marginTop: 10 }}>
+        {subscription.status === 'active' && !subscription.canceled_at &&
+          `Renews in ${subscription.days_remaining} day${subscription.days_remaining === 1 ? '' : 's'}`}
+        {subscription.status === 'active' && subscription.canceled_at &&
+          `Canceled, access until ${formatDate(subscription.current_period_end)}`}
+        {subscription.status === 'lapsed' && 'New issues are on hold until you renew.'}
+        {subscription.status === 'canceled' && `Access ended ${formatDate(subscription.current_period_end)}`}
+      </p>
+
+      {actionError && <p className="error-text" style={{ marginTop: 8, fontSize: '.85rem' }}>{actionError}</p>}
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+        {subscription.renewable && !showRenewForm && (
+          <button onClick={() => setShowRenewForm(true)} className="btn btn--gold btn--sm">
+            <FiRefreshCw size={13} /> Renew
+          </button>
+        )}
+        {subscription.status === 'active' && !subscription.canceled_at && (
+          <button onClick={handleCancel} disabled={canceling} className="btn btn--ghost btn--sm">
+            {canceling ? 'Canceling...' : 'Cancel'}
+          </button>
+        )}
+      </div>
+
+      {showRenewForm && (
+        <form onSubmit={handleRenew} style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          {!isFreeSub && (
+            <div className="field input-icon" style={{ flex: '1 1 180px', marginBottom: 0 }}>
+              <label htmlFor={`renew-phone-${subscription.id}`}>EcoCash number</label>
+              <FiPhone size={15} />
+              <input id={`renew-phone-${subscription.id}`} required value={phone} placeholder="0780070488"
+                onChange={e => setPhone(e.target.value)} />
+            </div>
+          )}
+          <button className="btn btn--gold btn--sm" disabled={renewing} type="submit">
+            {renewing ? (isFreeSub ? 'Renewing...' : 'Sending EcoCash prompt...') : 'Confirm renewal'}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
 function OrderRow({ purchase, onResend, onServiceUpdate }) {
   const navigate = useNavigate();
   const [resending, setResending] = useState(false);
@@ -320,11 +443,17 @@ export default function Account() {
   const { user, creator, refresh } = useAuth();
   const [purchases, setPurchases] = useState(null);
   const [error, setError] = useState(null);
+  const [subscriptions, setSubscriptions] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState(null);
 
+  function fetchSubscriptions() {
+    return api.get('/api/subscriptions/mine').then(setSubscriptions).catch(() => setSubscriptions([]));
+  }
+
   useEffect(() => {
     api.get('/api/purchases/mine').then(setPurchases).catch(err => setError(err.message));
+    fetchSubscriptions();
   }, []);
 
   async function resend(purchaseId) {
@@ -340,6 +469,13 @@ export default function Account() {
   // heard about it.
   function handleServiceUpdate(purchaseId, patch) {
     setPurchases(ps => ps.map(p => p.id === purchaseId ? { ...p, service: { ...p.service, ...patch } } : p));
+  }
+
+  // Same discipline as handleServiceUpdate: a cancel's real server
+  // response patches state directly, a free renewal (no reliable local
+  // guess for the new current_period_end) just asks for the real list again.
+  function handleSubscriptionUpdate(subscriptionId, patch) {
+    setSubscriptions(ss => ss.map(s => s.id === subscriptionId ? { ...s, ...patch } : s));
   }
 
   async function handleAvatarChange(e) {
@@ -439,6 +575,22 @@ export default function Account() {
           </p>
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
             {needsAttention.map(p => <OrderRow key={p.id} purchase={p} onResend={resend} onServiceUpdate={handleServiceUpdate} />)}
+          </div>
+        </div>
+      )}
+
+      {subscriptions && subscriptions.length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <FiRepeat size={16} /> Your subscriptions
+          </h2>
+          <p className="muted" style={{ fontSize: '.85rem', marginBottom: 16 }}>
+            Ongoing series you're subscribed to. Each renewal shows up in your library too, as its own receipt.
+          </p>
+          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+            {subscriptions.map(s => (
+              <SubscriptionRow key={s.id} subscription={s} onUpdate={handleSubscriptionUpdate} onRenewed={fetchSubscriptions} />
+            ))}
           </div>
         </div>
       )}

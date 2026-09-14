@@ -14,6 +14,7 @@ const { runVerification } = require('../lib/contentVerification');
 const { optimizeImage } = require('../lib/imageProcessing');
 const storage = require('../lib/storage');
 const { sendEmail } = require('../lib/notify');
+const { syncSubscriptionStatuses } = require('../lib/subscriptions');
 
 const router = express.Router();
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -174,7 +175,7 @@ router.get('/', (req, res) => {
   const clauses = ["p.status = 'published'"];
   const params = [req.user ? req.user.id : 0];
 
-  if (type && ['single', 'serial'].includes(type)) {
+  if (type && ['single', 'serial', 'subscription'].includes(type)) {
     clauses.push('p.type = ?');
     params.push(type);
   }
@@ -247,16 +248,34 @@ router.get('/:slug', (req, res) => {
     return res.status(404).json({ error: 'Product not found.' });
   }
 
-  if (product.type === 'serial') {
-    // A buyer who's paid gets every issue this purchase covers, past and
-    // future, but the file/link itself is only in the response once
-    // they've actually paid (or it's the owner previewing). Everyone else
-    // sees the table of contents (title, issue number, date) with no
-    // access, same as the buy-panel already shows for the main file.
-    const unlocked = isOwner || (req.user && db.prepare(`
-      SELECT 1 FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
-      WHERE b.user_id = ? AND pu.product_id = ? AND pu.payment_status = 'paid'
-    `).get(req.user.id, product.id));
+  if (product.type === 'serial' || product.type === 'subscription') {
+    // A serial buyer who's paid once gets every issue forever, "paid" is
+    // the whole and only check. A subscription buyer only gets issues
+    // while a subscription row is genuinely active, staying current is
+    // the deal, not a single payment ever having cleared — these are
+    // deliberately different questions, not the same check reused.
+    let unlocked = isOwner;
+    if (!unlocked && req.user) {
+      if (product.type === 'serial') {
+        unlocked = !!db.prepare(`
+          SELECT 1 FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
+          WHERE b.user_id = ? AND pu.product_id = ? AND pu.payment_status = 'paid'
+        `).get(req.user.id, product.id);
+      } else {
+        // Scoped to exactly this case, not called unconditionally the
+        // way sweepAutoReleases() is on every one of its 7 routes — this
+        // one's hit by every anonymous product-page view on the whole
+        // marketplace, a global UPDATE there would be wasted work far
+        // more often than it'd matter. GET /api/subscriptions/mine and
+        // the daily admin sweep both independently keep status current
+        // regardless.
+        syncSubscriptionStatuses();
+        unlocked = !!db.prepare(`
+          SELECT 1 FROM subscriptions s JOIN buyers b ON b.id = s.buyer_id
+          WHERE b.user_id = ? AND s.product_id = ? AND s.status = 'active'
+        `).get(req.user.id, product.id);
+      }
+    }
 
     const issues = db.prepare(
       'SELECT id, issue_number, title, kind, file_path, external_url, original_filename, published_at FROM issues WHERE product_id = ? ORDER BY issue_number DESC'
@@ -266,6 +285,16 @@ router.get('/:slug', (req, res) => {
       unlocked: !!unlocked,
       external_url: unlocked ? i.external_url : null
     }));
+  }
+
+  // Lets Checkout.jsx/Product.jsx show "already subscribed, renews on
+  // <date>" instead of a buy form, without a second round-trip.
+  if (product.type === 'subscription' && req.user) {
+    product.my_subscription = db.prepare(`
+      SELECT s.status, s.current_period_end, s.canceled_at FROM subscriptions s
+      JOIN buyers b ON b.id = s.buyer_id
+      WHERE b.user_id = ? AND s.product_id = ?
+    `).get(req.user.id, product.id) || null;
   }
   product.files = db.prepare(
     'SELECT id, kind, external_url, original_filename FROM product_files WHERE product_id = ?'
@@ -507,6 +536,7 @@ router.post('/', requireAuth, requireCreator, upload.fields([
   const keyList = parseKeyList(license_keys);
   const isService = type === 'service';
   const isSerial = type === 'serial';
+  const isSubscription = type === 'subscription';
 
   if (!title || !type || !category) {
     return res.status(400).json({ error: 'title, type, and category are required.' });
@@ -514,8 +544,8 @@ router.post('/', requireAuth, requireCreator, upload.fields([
   if (!cover) {
     return res.status(400).json({ error: 'A cover image is required.' });
   }
-  if (!['single', 'serial', 'service'].includes(type)) {
-    return res.status(400).json({ error: "type must be 'single', 'serial', or 'service'." });
+  if (!['single', 'serial', 'service', 'subscription'].includes(type)) {
+    return res.status(400).json({ error: "type must be 'single', 'serial', 'service', or 'subscription'." });
   }
   if (!CATEGORY_VALUES.includes(category)) {
     return res.status(400).json({ error: 'category must be a recognized category.' });
@@ -536,12 +566,13 @@ router.post('/', requireAuth, requireCreator, upload.fields([
   // chapter one doesn't have to exist the moment the listing goes up, only
   // before the first buyer would reasonably expect something. Same
   // "nothing to hand over yet" shape as a service, different reason.
+  // A subscription's content is issues too, same mechanism, same reason.
   const willPublish = status !== 'draft';
-  if (willPublish && !isService && !isSerial && !file && !external_url && keyList.length === 0) {
+  if (willPublish && !isService && !isSerial && !isSubscription && !file && !external_url && keyList.length === 0) {
     return res.status(400).json({ error: 'Attach a file, an external link, or paste license keys before publishing. Buyers need something to actually receive.' });
   }
-  if (isService && pay_what_you_want) {
-    return res.status(400).json({ error: "Services can't be pay-what-you-want. A price the buyer trusts up front is part of what escrow protects." });
+  if ((isService || isSubscription) && pay_what_you_want) {
+    return res.status(400).json({ error: "Services and subscriptions can't be pay-what-you-want. A price the buyer trusts up front is part of what escrow protects, and what makes a subscription's renewal price a fixed, known amount." });
   }
 
   const isPWYW = pay_what_you_want === 'true' || pay_what_you_want === true;
@@ -677,6 +708,7 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
   const file = req.files?.file?.[0];
   const previewVideo = req.files?.preview_video?.[0];
   const isService = product.type === 'service';
+  const isSubscription = product.type === 'subscription';
 
   const deliverableError = checkDeliverableType(file, category !== undefined ? category : product.category);
   if (deliverableError) return res.status(400).json({ error: deliverableError });
@@ -750,7 +782,7 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
   }
 
   const willPublish = status === 'published';
-  if (willPublish && !isService && product.type !== 'serial') {
+  if (willPublish && !isService && product.type !== 'serial' && !isSubscription) {
     const willHaveFile = file || external_url || db.prepare('SELECT 1 FROM product_files WHERE product_id = ?').get(product.id);
     const willHaveKeys = keyStats(product.id).total > 0;
     if (!willHaveFile && !willHaveKeys) {
@@ -899,8 +931,8 @@ router.post('/:id/issues', requireAuth, requireCreator, upload.single('file'), a
   if (product.creator_id !== req.creator.id) {
     return res.status(403).json({ error: "You don't own this product." });
   }
-  if (product.type !== 'serial') {
-    return res.status(400).json({ error: 'Only serial products can have issues.' });
+  if (!['serial', 'subscription'].includes(product.type)) {
+    return res.status(400).json({ error: 'Only serial or subscription products can have issues.' });
   }
 
   const title = (req.body.title || '').trim();
@@ -932,12 +964,21 @@ router.post('/:id/issues', requireAuth, requireCreator, upload.single('file'), a
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(product.id, nextNumber, title, kind, filePath, resolvedExternal, originalFilename);
 
-  // Every past buyer already paid for whatever comes next, not just what
-  // existed the day they bought, that's the deal a serial makes. Tell them.
-  const buyers = db.prepare(`
-    SELECT DISTINCT b.email FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
-    WHERE pu.product_id = ? AND pu.payment_status = 'paid'
-  `).all(product.id);
+  // Every past serial buyer already paid for whatever comes next, not
+  // just what existed the day they bought, that's the deal a serial
+  // makes. A subscription buyer only gets this while actually current —
+  // a lapsed or canceled subscriber must not be told about new content
+  // they no longer have (or would wrongly think they still have) access
+  // to, so this branches on which promise actually applies.
+  const buyers = product.type === 'subscription'
+    ? db.prepare(`
+        SELECT DISTINCT b.email FROM subscriptions s JOIN buyers b ON b.id = s.buyer_id
+        WHERE s.product_id = ? AND s.status = 'active'
+      `).all(product.id)
+    : db.prepare(`
+        SELECT DISTINCT b.email FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
+        WHERE pu.product_id = ? AND pu.payment_status = 'paid'
+      `).all(product.id);
   for (const b of buyers) {
     sendEmail(
       b.email,

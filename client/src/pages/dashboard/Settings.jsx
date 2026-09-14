@@ -162,10 +162,18 @@ export default function Settings() {
             How buyers see you
           </p>
           <div className="card card--pad">
+            {/* Matches the upload control's own no-avatar state just
+                above (FiUser on --green-tint) - this preview used to be a
+                plain blank circle with no fallback content at all when no
+                avatar was set, inconsistent with its own sibling control
+                a few lines up in this same file. */}
             <div style={{
               width: 56, height: 56, borderRadius: '50%', marginBottom: 14,
-              background: avatarUrl ? `url(${avatarUrl}) center/cover` : 'var(--green-dark)'
-            }} />
+              background: avatarUrl ? `url(${avatarUrl}) center/cover` : 'var(--green-tint)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--green-glow)'
+            }}>
+              {!avatarUrl && <FiUser size={22} />}
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
               <p style={{ fontWeight: 700 }}>{form.name || 'Your name'}</p>
               {!!creator.verified && <Seal />}

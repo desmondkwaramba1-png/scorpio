@@ -61,7 +61,15 @@ export default function Login() {
   // "role=buyer" deep links (every "log in to continue" prompt, which all
   // carry `next`) jump straight to login, in both cases the picker below
   // is redundant with what the caller already knows.
-  const [tab, setTab] = useState(presetRole === 'creator' ? 'signup' : 'login');
+  // Both roles land on the signup tab, not just 'creator' — this used to
+  // only check presetRole === 'creator', so a brand-new buyer clicking
+  // any "Buy"/"Log in to buy this" prompt (all of them link here with
+  // ?role=buyer) landed on the *login* form despite having no account
+  // yet, with signupRole quietly pre-set to 'buyer' on a tab they'd
+  // never see unless they noticed and clicked "Create account" first.
+  // Confirmed live before this fix: /login?role=buyer really did render
+  // "Welcome back" with the Log in tab active.
+  const [tab, setTab] = useState(presetRole ? 'signup' : 'login');
   const [signupRole, setSignupRole] = useState(presetRole === 'creator' ? 'creator' : presetRole === 'buyer' ? 'buyer' : null);
   const [form, setForm] = useState({ identifier: '', username: '', email: '', phone: '', password: '', confirm: '', terms: false });
   const [submitting, setSubmitting] = useState(false);

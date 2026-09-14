@@ -941,7 +941,11 @@ img{max-width:100%;display:block;}
   position:fixed;inset:0;z-index:1000;overflow:hidden;
   background:#FAF7F2;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
-  opacity:1;transition:opacity .5s ease;
+  /* .3s, matched exactly to SplashScreen.jsx's holdMs+300 unmount timer -
+     a mismatch here (it used to be .5s against a 450ms timer) means the
+     component gets removed from the DOM slightly before this transition
+     visually finishes, an abrupt snap instead of a clean fade. */
+  opacity:1;transition:opacity .3s ease;
 }
 .splash::before{
   content:'';position:absolute;left:50%;top:44%;width:520px;height:520px;
@@ -964,12 +968,17 @@ img{max-width:100%;display:block;}
   position:relative;z-index:1;
   filter:drop-shadow(0 2px 6px rgba(19,25,33,.1));transition:filter .6s ease;
 }
-.splash__scorpion.is-glowing{filter:drop-shadow(0 4px 14px rgba(19,25,33,.16));animation:splash-pulse 2.6s ease-in-out .9s infinite;}
+.splash__scorpion.is-glowing{filter:drop-shadow(0 4px 14px rgba(19,25,33,.16));animation:splash-pulse 2.6s ease-in-out .5s infinite;}
 .splash__name{
   position:relative;z-index:1;
   font-family:'Alex Brush',cursive;font-weight:400;font-size:3.2rem;line-height:1;color:var(--gold-dark);
   margin:0;
-  opacity:0;transform:translateY(8px);transition:opacity .7s ease .9s, transform .7s ease .9s;
+  /* .5s/.4s, not .9s/.7s - unchanged, this wouldn't fully fade in until
+     1.6s, well past SplashScreen.jsx's new, faster 1100ms hold, so the
+     name would barely be visible before the whole thing starts fading
+     out again. Now finishes at .5s+.4s=.9s, matching the scorpion's own
+     draw-in finishing around the same mark. */
+  opacity:0;transform:translateY(8px);transition:opacity .4s ease .5s, transform .4s ease .5s;
 }
 .splash__name.is-in{opacity:1;transform:translateY(0);}
 @keyframes splash-pulse{

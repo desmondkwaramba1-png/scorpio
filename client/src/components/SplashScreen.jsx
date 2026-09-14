@@ -44,8 +44,8 @@ export default function SplashScreen() {
 
     if (reduceMotion) {
       setReady(true);
-      const toFade = setTimeout(() => setPhase('leaving'), 350);
-      const toDone = setTimeout(() => setPhase('done'), 700);
+      const toFade = setTimeout(() => setPhase('leaving'), 250);
+      const toDone = setTimeout(() => setPhase('done'), 500);
       return () => { clearTimeout(toFade); clearTimeout(toDone); };
     }
 
@@ -60,16 +60,27 @@ export default function SplashScreen() {
       requestAnimationFrame(() => {
         pathRefs.current.forEach((el, i) => {
           if (!el) return;
-          el.style.transition = `stroke-dashoffset 900ms cubic-bezier(.3,.7,.2,1) ${i * 90}ms`;
+          // 500ms/50ms, not 900ms/90ms - the hand-drawn effect is the
+          // point, but a splash screen someone sees on literally every
+          // first visit shouldn't take 1.6s just to finish drawing before
+          // it's even allowed to start fading. Last path (i=8) now
+          // finishes at 8*50+500=900ms instead of 1620ms. The CSS delays
+          // on .splash__name and .splash__scorpion.is-glowing are tuned
+          // to this same ~900ms mark, see index.css.
+          el.style.transition = `stroke-dashoffset 500ms cubic-bezier(.3,.7,.2,1) ${i * 50}ms`;
           el.style.strokeDashoffset = '0';
         });
         setReady(true);
       });
     });
 
-    const holdMs = 2600;
+    // 1150ms hold (just past the ~900ms mark - both the scorpion's draw
+    // and the name/glow fade-in finish right around then, see index.css -
+    // a brief beat to actually register the finished mark) + 300ms fade
+    // = 1.45s total, down from 3.05s.
+    const holdMs = 1150;
     const toFade = setTimeout(() => setPhase('leaving'), holdMs);
-    const toDone = setTimeout(() => setPhase('done'), holdMs + 450);
+    const toDone = setTimeout(() => setPhase('done'), holdMs + 300);
     return () => { cancelAnimationFrame(raf); clearTimeout(toFade); clearTimeout(toDone); };
     // Deliberately [] not [phase]: this effect's own job is to walk
     // 'showing' -> 'leaving' -> 'done' via its own two timers. Depending

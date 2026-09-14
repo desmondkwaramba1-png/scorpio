@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
-export default function ProtectedRoute({ children }) {
+export default function ProtectedRoute({ children, allowUnverified = false }) {
   const { user, loading } = useAuth();
   const location = useLocation();
 
@@ -24,7 +24,17 @@ export default function ProtectedRoute({ children }) {
   // entirely: findOrCreateUser (oauth.js) already sets email_verified_at
   // immediately when the provider itself reports the email as verified,
   // which is the normal case for those, so there's nothing to re-confirm.
-  if (!user.email_verified_at && location.pathname !== '/check-email') {
+  //
+  // allowUnverified is the one deliberate exception, real, reproduced bug:
+  // a brand-new signup buying a free product (checkout requires login, so
+  // signup happens first) lands here seconds later, with obviously zero
+  // time to have checked an inbox yet. This gate sent them to /check-email
+  // instead of their own just-completed purchase, no way back to it short
+  // of leaving the site to verify first. /account is the one place that
+  // has to stay reachable regardless, it's someone reading their own
+  // order history and downloading what they already paid for (or didn't
+  // pay for), not a higher-trust action like running a storefront.
+  if (!allowUnverified && !user.email_verified_at && location.pathname !== '/check-email') {
     return <Navigate to="/check-email" replace />;
   }
   return children;

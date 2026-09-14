@@ -74,7 +74,7 @@ export default function App() {
             <Route path="/report" element={<ReportIssue />} />
             <Route path="/accept-terms" element={<AcceptTerms />} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-            <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
+            <Route path="/account" element={<ProtectedRoute allowUnverified><Account /></ProtectedRoute>} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<CartCheckout />} />
             <Route path="/payment/return" element={<PaymentReturn />} />

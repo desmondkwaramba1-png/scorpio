@@ -1184,9 +1184,21 @@ img{max-width:100%;display:block;}
 .reel-viewer__close{right:10px;}
 .reel-viewer__mute{right:52px;}
 .reel-viewer__video{width:100%;height:100%;object-fit:cover;display:block;}
-.reel-viewer__tap-zone{position:absolute;top:0;bottom:0;width:32%;background:none;border:none;cursor:pointer;z-index:2;}
-.reel-viewer__tap-zone--left{left:0;}
-.reel-viewer__tap-zone--right{right:0;}
+/* The real vertically-scrolling feed — every reel is its own full-bleed,
+   snap-aligned slide, exactly like the format everyone already knows.
+   Scrollbar hidden across browsers, this is a swipeable feed, not a
+   document to scroll with a visible track. scroll-snap-stop:always
+   forces one reel per swipe even on a fast flick, skipping past several
+   at once would defeat the point of a snap feed at all. */
+.reel-viewer__feed{
+  position:absolute;inset:0;overflow-y:auto;scroll-snap-type:y mandatory;
+  scrollbar-width:none;-ms-overflow-style:none;
+}
+.reel-viewer__feed::-webkit-scrollbar{display:none;}
+.reel-viewer__slide{
+  position:relative;width:100%;height:100%;
+  scroll-snap-align:start;scroll-snap-stop:always;
+}
 .reel-viewer__next-up{
   position:absolute;top:32px;left:50%;transform:translateX(-50%);z-index:3;
   padding:7px 14px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;

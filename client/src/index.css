@@ -1286,6 +1286,28 @@ img{max-width:100%;display:block;}
 @media (max-width:840px){
   .product-layout{grid-template-columns:1fr;}
   .buy-panel{position:static;}
+  /* The full buy-panel (price, trust lines, benefits) still sits where
+     it always has, further down the page, once .buy-panel goes static
+     above — but on a phone that's below the description, preview video,
+     service terms and creator bio, a real distance to scroll before
+     reaching a buy button at all. This bar is the actual "buy now": a
+     thin strip pinned to the bottom of the viewport from the moment the
+     page loads, so buying never depends on reading anything first. */
+  .mobile-buy-bar{
+    position:fixed;left:0;right:0;bottom:0;z-index:90;
+    display:flex;align-items:center;gap:12px;padding:10px 16px;
+    padding-bottom:calc(10px + env(safe-area-inset-bottom));
+    background:var(--surface);border-top:1px solid var(--line);
+    box-shadow:0 -8px 20px rgba(19,25,33,.10);
+  }
+  .mobile-buy-bar__price{font-weight:700;font-size:.95rem;flex-shrink:0;}
+  .mobile-buy-bar .btn{flex:1;}
+  /* Room for the bar so it never covers the last real content (reviews,
+     comments) it's floating above. */
+  .product-layout{padding-bottom:76px;}
+}
+@media (min-width:841px){
+  .mobile-buy-bar{display:none;}
 }
 
 @media (max-width:640px){

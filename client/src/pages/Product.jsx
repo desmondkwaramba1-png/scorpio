@@ -185,6 +185,10 @@ export default function Product() {
   const checkoutUrl = `${productUrl}/checkout`;
   const isOwner = creator?.id === product.creator_id;
   const fileFormat = fileFormatLabel(product.files);
+  const buyLabel = product.type === 'service' ? `Order for ${price}`
+    : product.type === 'subscription' ? `Subscribe for ${price}/month`
+    : product.price_minor === 0 ? 'Get for free'
+    : `Buy for ${product.promo_active ? discountedPrice : price}`;
 
   async function handleAddToCart() {
     if (!user) { navigate(`/login?role=buyer&next=${encodeURIComponent(productUrl)}`); return; }
@@ -205,8 +209,24 @@ export default function Product() {
     }
   }
 
+  // CSS-only visibility (@media max-width:840px), so this costs nothing
+  // on desktop where the sticky .buy-panel is already visible without
+  // scrolling. On a phone it's what actually lets someone buy the
+  // instant they land, instead of the real .buy-panel further down the
+  // page, which only appears after scrolling past the description,
+  // preview video, service terms and creator bio.
+  const mobileBuyBar = !isOwner && !soldOut && (
+    <div className="mobile-buy-bar">
+      <span className="mobile-buy-bar__price mono">
+        {product.promo_active ? discountedPrice : (product.pay_what_you_want ? `From ${price}` : price)}
+      </span>
+      <Link to={checkoutUrl} className="btn btn--gold">{buyLabel}</Link>
+    </div>
+  );
+
   return (
     <div className="product-layout wrap">
+      {mobileBuyBar}
       <div>
         <div
           className="product-cover"
@@ -430,9 +450,7 @@ export default function Product() {
               ) : (
                 <>
                   <Link to={checkoutUrl} className="btn btn--gold btn--block">
-                    {product.type === 'service' ? `Order for ${price}`
-                      : product.price_minor === 0 ? 'Get for free'
-                      : `Buy for ${product.promo_active ? discountedPrice : price}`}
+                    {buyLabel}
                   </Link>
                   {!product.pay_what_you_want && product.price_minor !== 0 && product.type !== 'service' && (
                     <button onClick={handleAddToCart} className="btn btn--ghost btn--block" style={{ marginTop: 10 }}>

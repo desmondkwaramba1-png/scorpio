@@ -6,11 +6,19 @@ import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext.jsx';
 import AuthShell from '../components/AuthShell.jsx';
 
-// Flip to true once the Google OAuth app clears Google's verification
-// review and is published out of "Testing" (and Facebook clears Meta App
-// Review). Until then the social buttons are hidden, see the block in the
-// render for the full reasoning.
-const SOCIAL_LOGIN_ENABLED = false;
+// Google's OAuth app cleared verification and is published out of
+// "Testing." Confirmed for real, not just by console status: hit the
+// live /api/auth/google redirect directly, followed it through to
+// Google's own accounts.google.com page, got back a genuine "Sign in -
+// Google Accounts" page (not a redirect_uri_mismatch/invalid_client
+// error, which Google shows immediately, before any login prompt, if
+// either were wrong) — client_id and redirect_uri are both correctly
+// registered. The one thing that can't be verified without an actual
+// human completing a real login is the token-exchange step
+// (GOOGLE_CLIENT_SECRET, only ever used after a real user consents).
+// Facebook has no button wired up below regardless, only Google does —
+// this flag has nothing left to gate for Facebook to flip separately.
+const SOCIAL_LOGIN_ENABLED = true;
 
 // A plain <input type="password"> gives no way to check what you actually
 // typed before submitting, a real source of failed logins/signups on a
@@ -169,16 +177,12 @@ export default function Login() {
             <p className="error-text" style={{ marginBottom: 16 }}>That sign-in didn't go through. Use your email and password below.</p>
           )}
 
-          {/* Social sign-in (Google + Facebook) is intentionally hidden from
-              the UI for now, not removed. Google's OAuth app is still in
-              "Testing" publishing status pending a Trust & Safety review, so
-              it only works for explicitly-listed test accounts, showing a
-              button that fails for the public is worse than not showing it.
-              The backend routes (oauth.js) and OAuthComplete.jsx are all
-              still in place; restore the block below once the app is
-              verified and published (Facebook likewise needs Meta App
-              Review). Everything from `oauthRole`/`googleQuery` up top
-              through here comes back together. */}
+          {/* Google's OAuth app cleared "Testing" — see the note on
+              SOCIAL_LOGIN_ENABLED above for how that was actually
+              confirmed, not just assumed from console status. Facebook
+              still has no button here at all (never did), only its own
+              Meta App Review would change that, a separate step this
+              flag doesn't gate. */}
           {SOCIAL_LOGIN_ENABLED && (
             <>
               <div style={{ display: 'grid', gap: 10, marginBottom: 20 }}>

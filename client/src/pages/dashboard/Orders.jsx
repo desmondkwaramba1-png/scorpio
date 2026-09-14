@@ -76,9 +76,16 @@ function DeliverForm({ purchaseId, onDelivered }) {
   );
 }
 
-function OrderRow({ o, creator }) {
+// fulfillment_status reads straight from o (the parent's real data, kept
+// current via onUpdate below), not a local copy — Account.jsx's
+// ServiceStatus had exactly this bug the other way around: a local
+// useState that updated the row correctly but never told the page's own
+// order list, so an aggregate count elsewhere kept counting an order
+// that had actually just been resolved. onUpdate is what closes that
+// loop here before it repeats.
+function OrderRow({ o, creator, onUpdate }) {
   const [delivering, setDelivering] = useState(false);
-  const [fulfillment, setFulfillment] = useState(o.fulfillment_status);
+  const fulfillment = o.fulfillment_status;
   const wa = whatsappLink(o.buyer_phone);
   const label = fulfillment ? FULFILLMENT_LABEL[fulfillment] : null;
 
@@ -119,7 +126,7 @@ function OrderRow({ o, creator }) {
       )}
 
       {delivering && fulfillment === 'awaiting_delivery' && (
-        <DeliverForm purchaseId={o.id} onDelivered={() => { setFulfillment('delivered'); setDelivering(false); }} />
+        <DeliverForm purchaseId={o.id} onDelivered={() => { onUpdate(o.id, { fulfillment_status: 'delivered' }); setDelivering(false); }} />
       )}
 
       {/* Service orders already surface problems through the dispute flow
@@ -143,6 +150,10 @@ export default function Orders() {
   useEffect(() => {
     api.get('/api/insights/orders').then(setData).catch(err => setError(err.message));
   }, []);
+
+  function handleOrderUpdate(purchaseId, patch) {
+    setData(d => ({ ...d, orders: d.orders.map(o => o.id === purchaseId ? { ...o, ...patch } : o) }));
+  }
 
   if (error) return <p className="error-text">{error}</p>;
 
@@ -201,7 +212,7 @@ export default function Orders() {
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-          {data.orders.map(o => <OrderRow key={o.id} o={o} creator={creator} />)}
+          {data.orders.map(o => <OrderRow key={o.id} o={o} creator={creator} onUpdate={handleOrderUpdate} />)}
         </div>
       )}
     </div>

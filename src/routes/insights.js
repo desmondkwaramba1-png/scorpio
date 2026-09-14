@@ -2,7 +2,7 @@ const express = require('express');
 const db = require('../db/schema');
 const { requireAuth, requireCreator } = require('../middleware/auth');
 const { sweepAutoReleases } = require('../lib/escrow');
-const { netOf } = require('../lib/fees');
+const { balancesFor } = require('../lib/walletBalances');
 
 const router = express.Router();
 
@@ -20,17 +20,17 @@ router.get('/me', requireAuth, requireCreator, (req, res) => {
     WHERE p.creator_id = ? AND pu.payment_status = 'paid'
   `).get(creatorId);
 
-  // Same "held vs actually yours" split as wallet.js — a service order
-  // that's paid but not yet released shouldn't read as spendable revenue
-  // on the very first thing a seller sees when they log in.
-  const escrowed = db.prepare(`
-    SELECT COALESCE(SUM(pu.amount_minor), 0) AS n FROM purchases pu
-    JOIN products p ON p.id = pu.product_id
-    WHERE p.creator_id = ? AND pu.payment_status = 'paid'
-      AND pu.fulfillment_status IS NOT NULL AND pu.fulfillment_status NOT IN ('released', 'refunded')
-  `).get(creatorId).n;
-  const availableGross = totals.revenue_minor - escrowed;
-  const availableMinor = availableGross > 0 ? netOf(availableGross).net_minor : 0;
+  // Same "held vs actually yours" split wallet.js shows, from the same
+  // function — this used to reimplement the math inline, gross minus
+  // escrow minus fee, with no idea payouts.js's payouts table existed.
+  // Silently correct only because nobody had been paid out yet: the
+  // instant a real payout happened, this would have kept showing the
+  // full pre-payout balance as "available" forever, exactly the
+  // "quietly drift apart" walletBalances.js's own comment exists to
+  // prevent, just not being used here to prevent it.
+  const balances = balancesFor(creatorId);
+  const escrowed = balances.escrowed_minor;
+  const availableMinor = balances.available_minor;
 
   const awaitingActionCount = db.prepare(`
     SELECT COUNT(*) AS n FROM purchases pu

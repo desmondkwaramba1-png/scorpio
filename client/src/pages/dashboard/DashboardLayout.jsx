@@ -21,7 +21,7 @@ const TABS = [
 // the database to check. Showing this tab to every creator would send
 // everyone else into a key prompt they have no way to satisfy, so it's
 // gated on the one real account that operates the site.
-const SITE_OWNER_HANDLE = 'desmondkb';
+const SITE_OWNER_HANDLE = 'dezt';
 
 function CopyLinkButton({ handle }) {
   const [copied, setCopied] = useState(false);

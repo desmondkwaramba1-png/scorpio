@@ -35,7 +35,20 @@ const shareRouter = require('./routes/share');
 // same-origin) are still allowed through — that check is what CORS can't
 // and isn't meant to police.
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-const ALLOWED_ORIGINS = new Set([FRONTEND_URL, 'http://localhost:5173', 'http://127.0.0.1:5173']);
+// The admin app (admin/) is a second, separate frontend on its own domain
+// (see admin/vite.config.js) — Vercel's rewrite makes its API calls same-
+// origin from the browser's own point of view, but browsers still attach
+// a real Origin header to state-changing requests (POST/PATCH/DELETE) even
+// then, so without this every admin mutation (the blog editor's publish
+// button, e.g.) failed CORS while every plain GET on the same page quietly
+// worked — GET requests weren't sending an Origin header this server ever
+// checked. Confirmed live: POST /api/blog/admin/posts from admin.scorpio.co.zw
+// came back "Origin not allowed" while GETs from the same page succeeded.
+const ADMIN_URL = 'https://admin.scorpio.co.zw';
+const ALLOWED_ORIGINS = new Set([
+  FRONTEND_URL, 'http://localhost:5173', 'http://127.0.0.1:5173',
+  ADMIN_URL, 'http://localhost:5174', 'http://127.0.0.1:5174'
+]);
 // A domain is reachable at both its apex and its www subdomain (Vercel
 // redirects one to the other), so the browser's actual Origin header can be
 // either depending on which one FRONTEND_URL happens to be set to — allow

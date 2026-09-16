@@ -1334,6 +1334,74 @@ img{max-width:100%;display:block;}
 }
 .reel-manage-card__footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;}
 
+/* ---- blog ---- */
+.blog-grid{display:grid;gap:var(--sp-5);grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));}
+.blog-card{
+  display:flex;flex-direction:column;border-radius:var(--radius);overflow:hidden;
+  background:var(--surface);border:1px solid var(--line);transition:transform .15s ease, box-shadow .15s ease;
+}
+.blog-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-2);}
+.blog-card__cover{
+  aspect-ratio:16/9;background-color:var(--gold-tint);background-size:cover;background-position:center;
+}
+.blog-card__body{padding:18px 20px;}
+.blog-card__meta{color:var(--muted);font-size:.78rem;margin-bottom:8px;}
+.blog-card__title{font-size:1.05rem;line-height:1.35;margin-bottom:8px;}
+.blog-card__excerpt{
+  color:var(--muted);font-size:.88rem;line-height:1.55;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+/* The lead post on /blog reads as a real feature, not just the first grid
+   card — a wide cover with the title/excerpt overlaid, same "this is the
+   one to read" weight a real publication's homepage gives its top story. */
+.blog-card--featured{
+  display:grid;grid-template-columns:1fr;position:relative;border:none;
+}
+.blog-card--featured .blog-card__cover{aspect-ratio:16/8;}
+.blog-card--featured .blog-card__body{
+  position:absolute;left:0;right:0;bottom:0;padding:28px 24px 22px;
+  background:linear-gradient(0deg, rgba(19,25,33,.92) 0%, rgba(19,25,33,.55) 60%, transparent 100%);
+}
+.blog-card--featured .blog-card__meta{color:rgba(255,255,255,.7);}
+.blog-card--featured .blog-card__title{color:#fff;font-size:1.4rem;}
+.blog-card--featured .blog-card__excerpt{color:rgba(255,255,255,.82);-webkit-line-clamp:2;}
+
+.blog-post__back{
+  display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:.88rem;font-weight:600;margin-bottom:20px;
+}
+.blog-post__cover{
+  width:100%;aspect-ratio:16/9;border-radius:var(--radius);background-color:var(--gold-tint);
+  background-size:cover;background-position:center;margin-bottom:28px;
+}
+.blog-post__title{font-size:clamp(1.6rem,3.6vw,2.2rem);line-height:1.2;margin-bottom:10px;}
+.blog-post__meta{color:var(--muted);font-size:.88rem;margin-bottom:28px;}
+/* Real article typography — this is the one place in the app rendering
+   admin-authored long-form prose (see lib/markdown.js), everywhere else
+   is short, tightly-controlled copy. Headings/lists/links/images need
+   their own real rules since dangerouslySetInnerHTML'd markdown output
+   has no className to hook into. */
+.blog-post__body{font-size:1.05rem;line-height:1.75;color:var(--ink-dim);}
+.blog-post__body h1,.blog-post__body h2,.blog-post__body h3{color:var(--ink);margin:1.6em 0 .6em;line-height:1.3;}
+.blog-post__body h1{font-size:1.5rem;}
+.blog-post__body h2{font-size:1.3rem;}
+.blog-post__body h3{font-size:1.1rem;}
+.blog-post__body p{margin:0 0 1.2em;}
+.blog-post__body ul,.blog-post__body ol{margin:0 0 1.2em;padding-left:1.4em;}
+.blog-post__body li{margin-bottom:.4em;}
+.blog-post__body a{color:var(--link-ink);text-decoration:underline;font-weight:600;}
+.blog-post__body img{border-radius:var(--radius-sm);margin:1.2em 0;}
+.blog-post__body blockquote{
+  margin:0 0 1.2em;padding:2px 0 2px 16px;border-left:3px solid var(--gold);color:var(--muted);font-style:italic;
+}
+.blog-post__body code{background:var(--paper);padding:.15em .4em;border-radius:4px;font-size:.9em;}
+.blog-post__body pre{background:var(--ink-800);color:#fff;padding:16px;border-radius:var(--radius-sm);overflow-x:auto;margin:0 0 1.2em;}
+.blog-post__body pre code{background:none;padding:0;}
+.blog-post__more-link{display:flex;align-items:center;gap:12px;}
+.blog-post__more-cover{
+  width:64px;height:64px;border-radius:var(--radius-sm);flex-shrink:0;background-color:var(--gold-tint);
+  background-size:cover;background-position:center;
+}
+
 /* =========================================================
    Responsive
    ========================================================= */

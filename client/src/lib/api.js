@@ -20,12 +20,17 @@ async function fetchWithTimeout(path, options, timeoutMs) {
   }
 }
 
-async function request(path, { method = 'GET', body, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+async function request(path, { method = 'GET', body, timeoutMs = DEFAULT_TIMEOUT_MS, headers } = {}) {
   const isForm = body instanceof FormData;
   const options = {
     method,
     credentials: 'include',
-    headers: isForm ? undefined : { 'Content-Type': 'application/json' },
+    // headers is additive (e.g. the admin API's x-admin-key below) — merged
+    // over the JSON default rather than replacing it, so an admin call
+    // sending a plain object body still gets Content-Type: application/json
+    // for free, and every existing call site (which never passes headers)
+    // is completely unaffected by this.
+    headers: isForm ? headers : { ...(headers), 'Content-Type': 'application/json' },
     body: isForm ? body : body !== undefined ? JSON.stringify(body) : undefined
   };
 
@@ -66,4 +71,18 @@ export const api = {
   post: (path, body, timeoutMs) => request(path, { method: 'POST', body, ...(timeoutMs && { timeoutMs }) }),
   patch: (path, body, timeoutMs) => request(path, { method: 'PATCH', body, ...(timeoutMs && { timeoutMs }) }),
   delete: (path) => request(path, { method: 'DELETE' })
+};
+
+// The blog admin pages' own calls — every /api/blog/admin/* route checks
+// this exact header (see routes/admin.js's requireAdmin, reused by
+// routes/blog.js), not a session cookie, there's no admin login to have
+// one. `key` is passed in by the caller each time (see lib/adminAuth.js
+// for where it actually lives) rather than this module reaching into
+// storage itself, so api.js stays a plain HTTP helper, not something that
+// needs to know admin auth exists.
+export const adminApi = {
+  get: (path, key) => request(path, { headers: { 'x-admin-key': key } }),
+  post: (path, body, key) => request(path, { method: 'POST', body, headers: { 'x-admin-key': key } }),
+  patch: (path, body, key) => request(path, { method: 'PATCH', body, headers: { 'x-admin-key': key } }),
+  delete: (path, key) => request(path, { method: 'DELETE', headers: { 'x-admin-key': key } })
 };

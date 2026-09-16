@@ -16,6 +16,10 @@ import Marketplace from './pages/Marketplace.jsx';
 const Discover = lazy(() => import('./pages/Discover.jsx'));
 const Creators = lazy(() => import('./pages/Creators.jsx'));
 const Reels = lazy(() => import('./pages/Reels.jsx'));
+const Blog = lazy(() => import('./pages/Blog.jsx'));
+const BlogPost = lazy(() => import('./pages/BlogPost.jsx'));
+const AdminBlogList = lazy(() => import('./pages/admin/AdminBlogList.jsx'));
+const AdminBlogEditor = lazy(() => import('./pages/admin/AdminBlogEditor.jsx'));
 const Login = lazy(() => import('./pages/Login.jsx'));
 const OAuthComplete = lazy(() => import('./pages/OAuthComplete.jsx'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword.jsx'));
@@ -64,6 +68,15 @@ export default function App() {
             <Route path="/discover" element={<Discover />} />
             <Route path="/creators" element={<Creators />} />
             <Route path="/reels" element={<Reels />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
+            {/* No login/account guard on these — the real access control is
+                routes/blog.js's own requireAdmin on every /api/blog/admin/*
+                call (see AdminKeyGate.jsx), not this app's buyer/creator
+                auth, which has nothing to do with who holds ADMIN_KEY. */}
+            <Route path="/admin/blog" element={<AdminBlogList />} />
+            <Route path="/admin/blog/new" element={<AdminBlogEditor />} />
+            <Route path="/admin/blog/:id/edit" element={<AdminBlogEditor />} />
             <Route path="/login" element={<Login />} />
             <Route path="/oauth-complete" element={<OAuthComplete />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />

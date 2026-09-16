@@ -329,3 +329,7 @@ router.post('/subscriptions/sweep', requireAdmin, (req, res) => {
 });
 
 module.exports = router;
+// Exported so routes/blog.js can gate its own admin routes with the exact
+// same timing-safe ADMIN_KEY check, rather than a second copy of
+// security-sensitive comparison logic.
+module.exports.requireAdmin = requireAdmin;

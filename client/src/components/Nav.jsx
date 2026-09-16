@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { FiCompass, FiUsers, FiGrid, FiUser, FiLogIn, FiLogOut, FiShoppingBag, FiShoppingCart, FiSearch, FiPackage, FiChevronDown, FiMail, FiPlayCircle } from 'react-icons/fi';
+import { FiCompass, FiUsers, FiGrid, FiUser, FiLogIn, FiLogOut, FiShoppingBag, FiShoppingCart, FiSearch, FiPackage, FiChevronDown, FiMail, FiPlayCircle, FiBookOpen } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 
@@ -124,6 +124,9 @@ export default function Nav() {
           </NavLink>
           <NavLink to="/creators" className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')}>
             <FiUsers /> <span>Creators</span>
+          </NavLink>
+          <NavLink to="/blog" className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')}>
+            <FiBookOpen /> <span>Blog</span>
           </NavLink>
           {!loading && user && (
             <NavLink to="/cart" className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')} style={{ position: 'relative' }}>

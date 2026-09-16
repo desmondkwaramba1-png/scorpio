@@ -36,7 +36,7 @@ export default function ReportIssue() {
 
   if (sent) {
     return (
-      <div className="wrap" style={{ maxWidth: 420, padding: '56px 20px 80px', textAlign: 'center' }}>
+      <div className="wrap center-page" style={{ maxWidth: 420, padding: 20 }}>
         <FiFlag size={32} color="var(--green-glow)" style={{ marginBottom: 14 }} />
         <h1 style={{ fontSize: '1.4rem', marginBottom: 10 }}>Got it, thanks</h1>
         <p className="muted" style={{ lineHeight: 1.6 }}>

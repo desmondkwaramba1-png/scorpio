@@ -32,7 +32,7 @@ export default function Cart() {
 
   if (!user) {
     return (
-      <div className="wrap" style={{ maxWidth: 420, padding: '56px 20px 80px', textAlign: 'center' }}>
+      <div className="wrap center-page" style={{ maxWidth: 420, padding: '20px' }}>
         <FiShoppingCart size={32} color="var(--muted)" style={{ marginBottom: 14 }} />
         <h1 style={{ fontSize: '1.4rem', marginBottom: 10 }}>Log in to see your cart</h1>
         <Link to="/login?role=buyer&next=/cart" className="btn btn--gold">Log in or create an account</Link>
@@ -41,7 +41,7 @@ export default function Cart() {
   }
 
   if (error) {
-    return <div className="wrap" style={{ padding: '80px 20px', textAlign: 'center' }}><p className="error-text">{error}</p></div>;
+    return <div className="wrap center-page" style={{ padding: 20 }}><p className="error-text">{error}</p></div>;
   }
 
   if (!items) {

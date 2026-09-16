@@ -39,7 +39,7 @@ export default function CreatorReels() {
 
   if (reels.length === 0) {
     return (
-      <div className="wrap" style={{ padding: '60px 20px 80px', textAlign: 'center' }}>
+      <div className="wrap center-page" style={{ padding: 20 }}>
         <p className="muted">This creator hasn't posted any reels yet.</p>
       </div>
     );

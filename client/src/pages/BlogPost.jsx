@@ -62,7 +62,7 @@ export default function BlogPost() {
 
   if (error) {
     return (
-      <div className="wrap" style={{ padding: '80px 20px', textAlign: 'center' }}>
+      <div className="wrap center-page" style={{ padding: 20 }}>
         <p className="error-text">{error}</p>
         <Link to="/blog" style={{ display: 'inline-block', marginTop: 16 }}>&larr; Back to the blog</Link>
       </div>

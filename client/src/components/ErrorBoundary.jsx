@@ -41,13 +41,13 @@ export default class ErrorBoundary extends Component {
     if (this.state.error) {
       if (isChunkLoadError(this.state.error)) {
         return (
-          <div className="wrap" style={{ padding: '80px 20px', textAlign: 'center' }}>
+          <div className="wrap center-page" style={{ padding: 20 }}>
             <p style={{ color: 'var(--muted)' }}>Getting the latest version&hellip;</p>
           </div>
         );
       }
       return (
-        <div className="wrap" style={{ padding: '80px 20px', textAlign: 'center' }}>
+        <div className="wrap center-page" style={{ padding: 20 }}>
           <p style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 8 }}>Something went wrong.</p>
           <p className="muted" style={{ marginBottom: 20 }}>Reloading usually fixes it.</p>
           <button className="btn btn--primary" onClick={() => window.location.reload()}>Reload page</button>

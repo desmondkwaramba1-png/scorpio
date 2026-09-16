@@ -34,7 +34,7 @@ function fileFormatLabel(files) {
 export default function Product() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { user, creator, loading: authLoading } = useAuth();
+  const { user, creator } = useAuth();
   const { addToCart } = useCart();
   const [product, setProduct] = useState(null);
   const [error, setError] = useState(null);
@@ -156,9 +156,17 @@ export default function Product() {
   });
 
   if (error) {
-    return <div className="wrap" style={{ padding: '80px 20px', textAlign: 'center' }}><p className="error-text">{error}</p></div>;
+    return <div className="wrap center-page" style={{ padding: 20 }}><p className="error-text">{error}</p></div>;
   }
-  if (!product || authLoading) {
+  // Just !product, not authLoading too — the auth check has nothing to do
+  // with whether THIS page's own content is ready, and isOwner/user below
+  // already handle a not-yet-resolved creator/user as a plain falsy
+  // default (the correct assumption while it's still loading). Gating the
+  // whole page on it added a real, needless delay: on a slower connection
+  // the auth check and the product fetch race in parallel, and this used
+  // to wait for whichever was slower even though the product content was
+  // already sitting there ready.
+  if (!product) {
     return (
       <div className="product-layout wrap">
         <div>
@@ -228,10 +236,18 @@ export default function Product() {
     <div className="product-layout wrap">
       {mobileBuyBar}
       <div>
-        <div
-          className="product-cover"
-          style={product.cover_path ? { backgroundImage: `url(${product.cover_path})` } : undefined}
-        >
+        <div className="product-cover">
+          {product.cover_path && (
+            <>
+              {/* Blurred fill behind the real, sharp, uncropped cover — most
+                  covers are book/course-style portrait or square art, not
+                  literally 16/9, so without this they'd sit centered on
+                  flat empty color bars instead of a frame that actually
+                  feels designed around the artwork. */}
+              <div className="product-cover__backdrop" style={{ backgroundImage: `url(${product.cover_path})` }} />
+              <div className="product-cover__image" style={{ backgroundImage: `url(${product.cover_path})` }} />
+            </>
+          )}
           {product.creator_avatar && (
             <div className="product-cover__watermark" style={{ backgroundImage: `url(${product.creator_avatar})` }} />
           )}

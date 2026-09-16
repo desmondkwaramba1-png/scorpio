@@ -47,7 +47,7 @@ export default function Blog() {
     url: `${SITE_ORIGIN}/blog`
   });
 
-  if (error) return <div className="wrap" style={{ padding: '80px 20px', textAlign: 'center' }}><p className="error-text">{error}</p></div>;
+  if (error) return <div className="wrap center-page" style={{ padding: 20 }}><p className="error-text">{error}</p></div>;
 
   return (
     <div className="wrap" style={{ padding: '48px 20px 80px' }}>

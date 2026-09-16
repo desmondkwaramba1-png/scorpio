@@ -118,7 +118,7 @@ export default function PaymentReturn() {
 
   if (error) {
     return (
-      <div className="wrap" style={{ maxWidth: 480, padding: '80px 20px', textAlign: 'center' }}>
+      <div className="wrap center-page" style={{ maxWidth: 480, padding: 20 }}>
         <FiXCircle size={40} color="var(--red)" style={{ marginBottom: 14 }} />
         <h1 style={{ fontSize: '1.4rem', marginBottom: 10 }}>Something went wrong</h1>
         <p className="muted">{error}</p>
@@ -128,7 +128,7 @@ export default function PaymentReturn() {
 
   if (!data) {
     return (
-      <div className="wrap" style={{ maxWidth: 480, padding: '80px 20px', textAlign: 'center' }}>
+      <div className="wrap center-page" style={{ maxWidth: 480, padding: 20 }}>
         <FiLoader size={32} color="var(--muted)" style={{ marginBottom: 14 }} />
         <p className="muted">Checking your payment...</p>
       </div>
@@ -141,7 +141,7 @@ export default function PaymentReturn() {
 
   if (data.status === 'paid') {
     return (
-      <div className="wrap" style={{ maxWidth: 480, padding: '80px 20px', textAlign: 'center' }}>
+      <div className="wrap center-page" style={{ maxWidth: 480, padding: 20 }}>
         <FiCheckCircle size={40} color="var(--green)" style={{ marginBottom: 14 }} />
         <h1 style={{ fontSize: '1.4rem', marginBottom: 8 }}>Payment confirmed</h1>
         <p className="muted" style={{ marginBottom: 24 }}>{summary} &middot; {totalPrice}</p>
@@ -159,7 +159,7 @@ export default function PaymentReturn() {
 
   if (data.status === 'failed') {
     return (
-      <div className="wrap" style={{ maxWidth: 480, padding: '80px 20px', textAlign: 'center' }}>
+      <div className="wrap center-page" style={{ maxWidth: 480, padding: 20 }}>
         <FiXCircle size={40} color="var(--red)" style={{ marginBottom: 14 }} />
         <h1 style={{ fontSize: '1.4rem', marginBottom: 8 }}>Payment didn't go through</h1>
         <p className="muted" style={{ marginBottom: 24 }}>{summary} &middot; {totalPrice}</p>
@@ -175,7 +175,7 @@ export default function PaymentReturn() {
   // pending, still polling (or gave up after MAX_POLLS)
   const gaveUp = pollCount.current >= MAX_POLLS;
   return (
-    <div className="wrap" style={{ maxWidth: 480, padding: '80px 20px', textAlign: 'center' }}>
+    <div className="wrap center-page" style={{ maxWidth: 480, padding: 20 }}>
       <FiLoader size={32} color="var(--muted)" style={{ marginBottom: 14 }} />
       <h1 style={{ fontSize: '1.4rem', marginBottom: 8 }}>
         {gaveUp ? "Still waiting on Dischub" : 'Confirming your payment'}

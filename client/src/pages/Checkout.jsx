@@ -64,7 +64,7 @@ export default function Checkout() {
   }
 
   if (error) {
-    return <div className="wrap" style={{ padding: '80px 20px', textAlign: 'center' }}><p className="error-text">{error}</p></div>;
+    return <div className="wrap center-page" style={{ padding: 20 }}><p className="error-text">{error}</p></div>;
   }
   if (!product || authLoading) {
     return (
@@ -88,7 +88,7 @@ export default function Checkout() {
   // "your purchases are always here" actually true.
   if (!user) {
     return (
-      <div className="wrap" style={{ maxWidth: 420, padding: '56px 20px 80px', textAlign: 'center' }}>
+      <div className="wrap center-page" style={{ maxWidth: 420, padding: '20px' }}>
         <FiLogIn size={32} color="var(--muted)" style={{ marginBottom: 14 }} />
         <h1 style={{ fontSize: '1.4rem', marginBottom: 10 }}>Log in to buy this</h1>
         <p className="muted" style={{ marginBottom: 24 }}>

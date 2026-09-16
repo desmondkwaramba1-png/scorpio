@@ -53,7 +53,12 @@ async function request(path, { method = 'GET', body, timeoutMs = DEFAULT_TIMEOUT
       // is never retried — retrying won't change a wrong password or a
       // sold-out product.
       if (attempt < maxAttempts - 1) { await sleep(RETRY_DELAYS_MS[attempt]); continue; }
-      throw new Error('Could not reach the server. Check your connection and try again.');
+      // Real feedback, from earlier this session: "cant reach the server,
+      // users dont even know what a server is." Whatever actually failed
+      // (a dropped connection, a timeout, DNS), the one thing every user
+      // can act on is "check your own connection" — that's the message,
+      // not the technical cause.
+      throw new Error("You're offline, or your connection is too weak right now. Check it and try again.");
     }
     const data = await res.json().catch(() => null);
     if (!res.ok) throw new Error(data?.error || 'Something went wrong.');

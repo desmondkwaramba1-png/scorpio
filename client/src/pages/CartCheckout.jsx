@@ -46,7 +46,7 @@ export default function CartCheckout() {
 
   if (!user) {
     return (
-      <div className="wrap" style={{ maxWidth: 420, padding: '56px 20px 80px', textAlign: 'center' }}>
+      <div className="wrap center-page" style={{ maxWidth: 420, padding: '20px' }}>
         <FiLogIn size={32} color="var(--muted)" style={{ marginBottom: 14 }} />
         <h1 style={{ fontSize: '1.4rem', marginBottom: 10 }}>Log in to check out</h1>
         <Link to={`/login?role=buyer&next=${encodeURIComponent(location.pathname)}`} className="btn btn--gold">
@@ -57,7 +57,7 @@ export default function CartCheckout() {
   }
 
   if (error) {
-    return <div className="wrap" style={{ padding: '80px 20px', textAlign: 'center' }}><p className="error-text">{error}</p></div>;
+    return <div className="wrap center-page" style={{ padding: 20 }}><p className="error-text">{error}</p></div>;
   }
 
   if (!items) {
@@ -71,7 +71,7 @@ export default function CartCheckout() {
 
   if (items.length === 0) {
     return (
-      <div className="wrap" style={{ maxWidth: 420, padding: '56px 20px 80px', textAlign: 'center' }}>
+      <div className="wrap center-page" style={{ maxWidth: 420, padding: '20px' }}>
         <h1 style={{ fontSize: '1.4rem', marginBottom: 10 }}>Your cart is empty</h1>
         <Link to="/discover" className="btn btn--primary">Browse the marketplace</Link>
       </div>

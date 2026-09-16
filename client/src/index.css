@@ -136,6 +136,18 @@ body{
    letting it sit naturally below on a tall one. */
 #root{display:flex;flex-direction:column;min-height:100vh;}
 main{flex:1 0 auto;}
+/* The sticky-footer fix above solved the footer floating with dead space
+   below it — it did nothing for a *different* version of the same "big
+   for nothing" complaint: a short message screen (log in to buy this,
+   an empty cart, log in to check out — five real instances across
+   Checkout/Cart/CartCheckout) that renders a handful of lines at the
+   TOP of a now-tall main, leaving a real gap of empty gray page between
+   the content and the footer instead of at the bottom of the screen.
+   Centering it in the available space (not just top-anchoring it) is
+   what makes it read as an intentional, designed screen rather than a
+   half-empty one. min-height, not height, real long content elsewhere
+   already reusing this class still grows the page normally. */
+.center-page{min-height:56vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
 h1,h2,h3{font-family:'Cabinet Grotesk','Sora',sans-serif;font-weight:700;margin:0;letter-spacing:-0.02em;}
 p{margin:0;}
 a{color:inherit;text-decoration:none;}
@@ -894,8 +906,21 @@ img{max-width:100%;display:block;}
 .product-cover{
   aspect-ratio:16/9;max-height:280px;border-radius:var(--radius);overflow:hidden;
   background-color:var(--green-tint);border:1px solid var(--line);
-  background-size:contain;background-repeat:no-repeat;background-position:center;
   position:relative;
+}
+/* A cover that isn't a 16/9 photo (the common case - most covers are
+   book/course-style portrait or square art) used to just sit centered
+   on a flat tinted rectangle, real empty color bars either side of it.
+   Same fix Spotify/Apple Music/YouTube all use for art that doesn't match
+   its frame: a softly blurred, filled version of the SAME image behind
+   the sharp centered one, so there's no dead flat space, just the
+   artwork's own colors bleeding out to the edges. */
+.product-cover__backdrop{
+  position:absolute;inset:-14px;background-size:cover;background-position:center;background-repeat:no-repeat;
+  filter:blur(26px) brightness(.82) saturate(1.15);transform:scale(1.1);
+}
+.product-cover__image{
+  position:absolute;inset:0;background-size:contain;background-position:center;background-repeat:no-repeat;
 }
 .product-cover__watermark{
   position:absolute;left:14px;bottom:14px;width:40px;height:40px;border-radius:50%;

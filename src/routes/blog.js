@@ -28,6 +28,19 @@ function objectKey(prefix, originalname) {
   return `${prefix}/${randomUUID()}${path.extname(originalname)}`;
 }
 
+// SQLite's own datetime('now') format (e.g. "2026-09-16 06:54:36") -
+// every other timestamp column in this table (created_at, updated_at)
+// already uses it via a column default. published_at didn't, and used
+// JS's new Date().toISOString() instead (e.g. "2026-09-16T06:54:36.764Z")
+// - a real bug, not a style choice: the GET /:slug and GET / routes below
+// compare published_at <= datetime('now') as plain TEXT, and 'T' (0x54)
+// sorts after a space (0x20), so an ISO-format published_at always
+// compared as "later" than datetime('now') and a published post 404'd
+// forever. Confirmed live before this fix.
+function nowSql() {
+  return db.prepare("SELECT datetime('now') AS now").get().now;
+}
+
 // Unlike products.js's slugify() (always appends a random suffix — many
 // different creators can title a product identically), a blog has one
 // editorial owner: try the clean slug first, only fall back to a numeric
@@ -98,7 +111,7 @@ router.post('/admin/posts', requireAdmin, upload.single('cover'), async (req, re
 
   const slug = requestedSlug && requestedSlug.trim() ? uniqueSlug(requestedSlug) : uniqueSlug(title);
   const postStatus = status === 'published' ? 'published' : 'draft';
-  const publishedAt = postStatus === 'published' ? new Date().toISOString() : null;
+  const publishedAt = postStatus === 'published' ? nowSql() : null;
 
   let coverPath = null;
   if (req.file) {
@@ -135,7 +148,7 @@ router.patch('/admin/posts/:id', requireAdmin, upload.single('cover'), async (re
   const postStatus = status === 'published' ? 'published' : status === 'draft' ? 'draft' : existing.status;
   // Set exactly once, on the actual draft -> published transition — never
   // overwritten by a later edit to an already-published post.
-  const publishedAt = postStatus === 'published' && !existing.published_at ? new Date().toISOString() : existing.published_at;
+  const publishedAt = postStatus === 'published' && !existing.published_at ? nowSql() : existing.published_at;
 
   let coverPath = existing.cover_path;
   if (req.file) {

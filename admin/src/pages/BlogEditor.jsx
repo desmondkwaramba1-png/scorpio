@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext.jsx';
 import { renderMarkdown } from '../lib/markdown';
+import { SITE_ORIGIN } from '../lib/site';
 
 const EMPTY_FORM = { title: '', slug: '', excerpt: '', author_name: 'SCORPIO Team', body_markdown: '' };
 
@@ -9,6 +10,7 @@ export default function BlogEditor() {
   const { id } = useParams();
   const isEdit = !!id;
   const navigate = useNavigate();
+  const location = useLocation();
   const { adminFetch, adminUpload } = useAdmin();
 
   const [form, setForm] = useState(EMPTY_FORM);
@@ -19,6 +21,19 @@ export default function BlogEditor() {
   const [loading, setLoading] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null);
+
+  // navigate() after a save always carries a fresh state object (even when
+  // landing on the same URL a second save already sits on), so this fires
+  // every time, not just on the first mount - without it, hitting Publish
+  // just silently swapped "New post" for "Edit post" with nothing else
+  // changing, easy to miss and read as "did that even do anything."
+  useEffect(() => {
+    if (!location.state?.justSaved) return;
+    setNotice(location.state);
+    const t = setTimeout(() => setNotice(null), 6000);
+    return () => clearTimeout(t);
+  }, [location.state]);
 
   useEffect(() => {
     if (!isEdit) return;
@@ -68,7 +83,7 @@ export default function BlogEditor() {
       const post = isEdit
         ? await adminUpload(`/api/blog/admin/posts/${id}`, 'PATCH', body)
         : await adminUpload('/api/blog/admin/posts', 'POST', body);
-      navigate(`/blog/${post.id}/edit`);
+      navigate(`/blog/${post.id}/edit`, { state: { justSaved: status, slug: post.slug, at: Date.now() } });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -84,6 +99,23 @@ export default function BlogEditor() {
     <div style={{ maxWidth: 720 }}>
       <Link to="/blog" className="muted" style={{ fontSize: '.85rem', fontWeight: 600 }}>&larr; All posts</Link>
       <h2 style={{ margin: '12px 0 24px' }}>{isEdit ? 'Edit post' : 'New post'}</h2>
+
+      {notice && (
+        <div className="card card--pad" style={{
+          marginBottom: 20, borderColor: 'var(--green-glow)', display: 'flex',
+          justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap'
+        }}>
+          <span style={{ color: 'var(--green-glow)', fontWeight: 600 }}>
+            {notice.justSaved === 'published' ? 'Published — it\'s live now.' : 'Saved as a draft. Not visible on the blog yet.'}
+          </span>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {notice.justSaved === 'published' && (
+              <a href={`${SITE_ORIGIN}/blog/${notice.slug}`} target="_blank" rel="noopener noreferrer" className="btn btn--ghost btn--sm">View live</a>
+            )}
+            <Link to="/blog" className="btn btn--ghost btn--sm">All posts</Link>
+          </div>
+        </div>
+      )}
 
       <div className="field">
         <label htmlFor="title">Title</label>

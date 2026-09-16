@@ -90,7 +90,7 @@ router.get('/:slug', (req, res) => {
 // GET /api/blog/admin/posts — every post, draft and published.
 router.get('/admin/posts', requireAdmin, (req, res) => {
   const posts = db.prepare(`
-    SELECT id, slug, title, status, author_name, published_at, created_at, updated_at
+    SELECT id, slug, title, cover_path, status, author_name, published_at, created_at, updated_at
     FROM blog_posts ORDER BY created_at DESC
   `).all();
   res.json(posts);

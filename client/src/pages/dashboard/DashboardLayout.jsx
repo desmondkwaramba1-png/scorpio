@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, Link, Navigate } from 'react-router-dom';
-import { FiGrid, FiBox, FiFilm, FiShoppingBag, FiBarChart2, FiCreditCard, FiRepeat, FiSettings, FiCopy, FiCheck, FiExternalLink } from 'react-icons/fi';
+import { FiGrid, FiBox, FiFilm, FiShoppingBag, FiBarChart2, FiCreditCard, FiRepeat, FiSettings, FiCopy, FiCheck, FiExternalLink, FiBookOpen } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import Seal from '../../components/Seal.jsx';
 import { SITE_HOST, SITE_ORIGIN } from '../../lib/site.js';
@@ -15,6 +15,13 @@ const TABS = [
   ['/dashboard/wallet', 'Wallet', FiCreditCard],
   ['/dashboard/settings', 'Settings', FiSettings]
 ];
+
+// The blog is run off the same single ADMIN_KEY every /api/admin/* route
+// has always used, not a real per-account role - there's no admin flag in
+// the database to check. Showing this tab to every creator would send
+// everyone else into a key prompt they have no way to satisfy, so it's
+// gated on the one real account that operates the site.
+const SITE_OWNER_HANDLE = 'desmondkb';
 
 function CopyLinkButton({ handle }) {
   const [copied, setCopied] = useState(false);
@@ -37,6 +44,10 @@ export default function DashboardLayout() {
   // dashboard shell (tabs, products, wallet) at all, not even a broken/
   // empty version of it. Only the index route used to guard on this.
   if (!creator) return <Navigate to="/onboarding" replace />;
+
+  const tabs = creator.handle === SITE_OWNER_HANDLE
+    ? [...TABS, ['/admin/blog', 'Blog', FiBookOpen]]
+    : TABS;
 
   return (
     <div className="wrap" style={{ padding: '32px 20px 80px' }}>
@@ -75,7 +86,7 @@ export default function DashboardLayout() {
       </div>
 
       <nav className="tabs">
-        {TABS.map(([to, label, Icon]) => (
+        {tabs.map(([to, label, Icon]) => (
           <NavLink key={to} to={to} end={to === '/dashboard'} className={({ isActive }) =>
             'tab' + (isActive ? ' tab--active' : '')}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>

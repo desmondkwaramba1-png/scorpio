@@ -45,6 +45,7 @@ const DashboardProducts = lazy(() => import('./pages/dashboard/Products.jsx'));
 const DashboardOrders = lazy(() => import('./pages/dashboard/Orders.jsx'));
 const DashboardNewProduct = lazy(() => import('./pages/dashboard/NewProduct.jsx'));
 const DashboardEditProduct = lazy(() => import('./pages/dashboard/EditProduct.jsx'));
+const DashboardProductIssues = lazy(() => import('./pages/dashboard/ProductIssues.jsx'));
 const DashboardReels = lazy(() => import('./pages/dashboard/Reels.jsx'));
 const DashboardInsights = lazy(() => import('./pages/dashboard/Insights.jsx'));
 const DashboardWallet = lazy(() => import('./pages/dashboard/Wallet.jsx'));
@@ -101,6 +102,7 @@ export default function App() {
               <Route path="orders" element={<DashboardOrders />} />
               <Route path="products/new" element={<DashboardNewProduct />} />
               <Route path="products/:id/edit" element={<DashboardEditProduct />} />
+              <Route path="products/:id/issues" element={<DashboardProductIssues />} />
               <Route path="reels" element={<DashboardReels />} />
               <Route path="insights" element={<DashboardInsights />} />
               <Route path="wallet" element={<DashboardWallet />} />

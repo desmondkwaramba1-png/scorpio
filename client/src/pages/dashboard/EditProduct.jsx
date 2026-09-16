@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { FiTrash2, FiAlertTriangle, FiExternalLink, FiTag, FiKey, FiImage, FiBriefcase, FiPackage, FiFilePlus, FiX, FiUsers } from 'react-icons/fi';
+import { FiTrash2, FiAlertTriangle, FiExternalLink, FiTag, FiKey, FiImage, FiBriefcase, FiPackage, FiFilePlus, FiArrowRight } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
@@ -33,11 +33,6 @@ export default function EditProduct() {
   const [newKeys, setNewKeys] = useState('');
   const [addingKeys, setAddingKeys] = useState(false);
   const [keysError, setKeysError] = useState(null);
-  const [issues, setIssues] = useState(null);
-  const [newIssue, setNewIssue] = useState({ title: '', external_url: '' });
-  const [newIssueFile, setNewIssueFile] = useState(null);
-  const [addingIssue, setAddingIssue] = useState(false);
-  const [issueError, setIssueError] = useState(null);
 
   useEffect(() => {
     api.get('/api/products/mine')
@@ -60,54 +55,6 @@ export default function EditProduct() {
       })
       .catch(err => setLoadError(err.message));
   }, [id]);
-
-  // Issues aren't on /mine (every other product's summary would carry the
-  // weight of a list it never uses), fetched separately, only once the
-  // product's slug is known and only for a serial or subscription (a
-  // subscription's content delivers through this exact same mechanism).
-  // The owner view of GET /:slug already comes back fully unlocked, so
-  // this is the same data a buyer who purchased/subscribed would see, not
-  // a separate creator-only shape.
-  useEffect(() => {
-    if (!product || !['serial', 'subscription'].includes(product.type)) return;
-    api.get(`/api/products/${product.slug}`)
-      .then(p => setIssues(p.issues || []))
-      .catch(() => setIssues([]));
-  }, [product]);
-
-  async function addIssue(e) {
-    e.preventDefault();
-    setIssueError(null);
-    if (!newIssue.title.trim()) { setIssueError('Give this issue a title.'); return; }
-    if (!newIssueFile && !newIssue.external_url.trim()) {
-      setIssueError('Attach a file or paste a link, buyers need something to actually get.');
-      return;
-    }
-    setAddingIssue(true);
-    const body = new FormData();
-    body.append('title', newIssue.title);
-    if (newIssue.external_url.trim()) body.append('external_url', newIssue.external_url.trim());
-    if (newIssueFile) body.append('file', newIssueFile);
-    try {
-      const created = await api.post(`/api/products/${product.id}/issues`, body);
-      setIssues(list => [{ ...created, unlocked: true }, ...list]);
-      setNewIssue({ title: '', external_url: '' });
-      setNewIssueFile(null);
-    } catch (err) {
-      setIssueError(err.message);
-    } finally {
-      setAddingIssue(false);
-    }
-  }
-
-  async function removeIssue(issueId) {
-    try {
-      await api.delete(`/api/products/${product.id}/issues/${issueId}`);
-      setIssues(list => list.filter(i => i.id !== issueId));
-    } catch (err) {
-      setIssueError(err.message);
-    }
-  }
 
   const update = (key) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -370,62 +317,15 @@ export default function EditProduct() {
               </div>
             </FormSection>
           ) : ['serial', 'subscription'].includes(product.type) ? (
-            <FormSection icon={FiFilePlus} title="Issues"
-              note={product.type === 'subscription'
-                ? 'Only currently-subscribed buyers get new issues, someone who lapses stops receiving them until they renew.'
-                : "Everyone who's bought this gets every issue you publish here, past and future, no separate unlock step."}>
-              {product.type === 'subscription' && (
-                <Link to={`/dashboard/subscriptions?product_id=${product.id}`} className="btn btn--ghost btn--sm" style={{ marginBottom: 16 }}>
-                  <FiUsers size={13} /> View subscribers
-                </Link>
-              )}
-              <form onSubmit={addIssue} style={{ marginBottom: 20 }}>
-                <div className="field">
-                  <label htmlFor="issue_title">New issue title</label>
-                  <input id="issue_title" value={newIssue.title}
-                    onChange={e => setNewIssue(i => ({ ...i, title: e.target.value }))}
-                    placeholder={`Issue ${(issues?.length || 0) + 1}`} />
-                </div>
-                <div className="field">
-                  <label htmlFor="issue_file">File</label>
-                  <FileUpload id="issue_file" onChange={e => setNewIssueFile(e.target.files[0])}
-                    label={newIssueFile ? newIssueFile.name : 'Choose a file'} />
-                </div>
-                <div className="field" style={{ marginBottom: 10 }}>
-                  <label htmlFor="issue_url">Or a link instead</label>
-                  <input id="issue_url" value={newIssue.external_url}
-                    onChange={e => setNewIssue(i => ({ ...i, external_url: e.target.value }))}
-                    placeholder="https://..." />
-                  <small>Use one or the other, a file you upload here, or a link to where it already lives.</small>
-                </div>
-                {issueError && <p className="error-text" style={{ marginBottom: 10 }}>{issueError}</p>}
-                <button type="submit" className="btn btn--ghost btn--sm" disabled={addingIssue}>
-                  {addingIssue ? 'Adding...' : 'Publish issue'}
-                </button>
-              </form>
-
-              {issues === null ? (
-                <p className="muted" style={{ fontSize: '.85rem' }}>Loading issues...</p>
-              ) : issues.length === 0 ? (
-                <p className="muted" style={{ fontSize: '.85rem' }}>No issues yet, publish the first one above.</p>
-              ) : (
-                <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-                  {issues.map(iss => (
-                    <div key={iss.id} style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-                      padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)'
-                    }}>
-                      <div style={{ minWidth: 0 }}>
-                        <p style={{ fontWeight: 600, fontSize: '.9rem' }}>Issue {iss.issue_number}: {iss.title}</p>
-                        <p className="muted" style={{ fontSize: '.78rem' }}>{new Date(iss.published_at).toLocaleDateString()}</p>
-                      </div>
-                      <button type="button" onClick={() => removeIssue(iss.id)} className="btn btn--ghost btn--sm" title="Remove issue">
-                        <FiX size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <FormSection icon={FiFilePlus} title="Issues">
+              <p className="muted" style={{ fontSize: '.9rem', marginBottom: 14 }}>
+                {product.type === 'subscription'
+                  ? "Publishing a new issue is a separate step from these settings, since it goes straight out to everyone who's currently subscribed."
+                  : "Publishing a new issue is a separate step from these settings, since it goes straight out to everyone who's bought this."}
+              </p>
+              <Link to={`/dashboard/products/${id}/issues`} className="btn btn--primary btn--sm">
+                Publish an issue <FiArrowRight size={14} />
+              </Link>
             </FormSection>
           ) : (
             <>

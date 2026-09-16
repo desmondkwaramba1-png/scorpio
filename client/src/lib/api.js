@@ -119,10 +119,3 @@ function uploadWithProgress(path, method, formData, onProgress, timeoutMs = 1200
     xhr.send(formData);
   });
 }
-
-export const adminApi = {
-  get: (path, key) => request(path, { headers: { 'x-admin-key': key } }),
-  post: (path, body, key) => request(path, { method: 'POST', body, headers: { 'x-admin-key': key } }),
-  patch: (path, body, key) => request(path, { method: 'PATCH', body, headers: { 'x-admin-key': key } }),
-  delete: (path, key) => request(path, { method: 'DELETE', headers: { 'x-admin-key': key } })
-};

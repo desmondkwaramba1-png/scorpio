@@ -1,17 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { FiArrowLeft } from 'react-icons/fi';
-import { adminApi } from '../../lib/api';
-import AdminKeyGate from '../../components/AdminKeyGate.jsx';
-import FileUpload from '../../components/FileUpload.jsx';
-import { renderMarkdown } from '../../lib/markdown';
+import { useAdmin } from '../context/AdminContext.jsx';
+import { renderMarkdown } from '../lib/markdown';
 
 const EMPTY_FORM = { title: '', slug: '', excerpt: '', author_name: 'SCORPIO Team', body_markdown: '' };
 
-function Editor({ adminKey, onInvalidKey }) {
+export default function BlogEditor() {
   const { id } = useParams();
   const isEdit = !!id;
   const navigate = useNavigate();
+  const { adminFetch, adminUpload } = useAdmin();
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [slugTouched, setSlugTouched] = useState(false);
@@ -24,36 +22,29 @@ function Editor({ adminKey, onInvalidKey }) {
 
   useEffect(() => {
     if (!isEdit) return;
-    adminApi.get(`/api/blog/admin/posts/${id}`, adminKey)
+    adminFetch(`/api/blog/admin/posts/${id}`)
       .then(post => {
         setForm({
           title: post.title, slug: post.slug, excerpt: post.excerpt || '',
           author_name: post.author_name, body_markdown: post.body_markdown
         });
         setExistingCoverPath(post.cover_path);
-        setSlugTouched(true); // an existing slug is never auto-overwritten by title edits
+        setSlugTouched(true);
         setLoading(false);
       })
-      .catch(err => {
-        if (err.message === 'Invalid admin key.') onInvalidKey();
-        else setError(err.message);
-      });
-  }, [id, isEdit, adminKey]);
-
-  function update(key) {
-    return e => setForm(f => ({ ...f, [key]: e.target.value }));
-  }
+      .catch(err => setError(err.message));
+  }, [id, isEdit, adminFetch]);
 
   function updateTitle(e) {
     const title = e.target.value;
     setForm(f => ({
       ...f, title,
-      // Only auto-fills the slug on create, before the admin has touched
-      // it themselves — never on edit (would silently break a link
-      // that's already been shared), and never once they've typed into
-      // the slug field directly.
       slug: !isEdit && !slugTouched ? title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : f.slug
     }));
+  }
+
+  function update(key) {
+    return e => setForm(f => ({ ...f, [key]: e.target.value }));
   }
 
   function handleCover(e) {
@@ -75,32 +66,24 @@ function Editor({ adminKey, onInvalidKey }) {
 
     try {
       const post = isEdit
-        ? await adminApi.patch(`/api/blog/admin/posts/${id}`, body, adminKey)
-        : await adminApi.post('/api/blog/admin/posts', body, adminKey);
-      navigate(`/admin/blog/${post.id}/edit`);
+        ? await adminUpload(`/api/blog/admin/posts/${id}`, 'PATCH', body)
+        : await adminUpload('/api/blog/admin/posts', 'POST', body);
+      navigate(`/blog/${post.id}/edit`);
     } catch (err) {
-      if (err.message === 'Invalid admin key.') onInvalidKey();
-      else setError(err.message);
+      setError(err.message);
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (loading) {
-    return (
-      <div className="wrap" style={{ padding: '40px 20px 80px', maxWidth: 720 }}>
-        <div className="skeleton" style={{ height: 40, width: '50%', marginBottom: 20 }} />
-        <div className="skeleton" style={{ height: 300 }} />
-      </div>
-    );
-  }
+  if (loading) return <p className="muted">Loading...</p>;
 
   const shownCover = coverPreview || existingCoverPath;
 
   return (
-    <div className="wrap" style={{ padding: '32px 20px 80px', maxWidth: 720 }}>
-      <Link to="/admin/blog" className="blog-post__back"><FiArrowLeft size={14} /> All posts</Link>
-      <h1 style={{ fontSize: '1.5rem', margin: '12px 0 24px' }}>{isEdit ? 'Edit post' : 'New post'}</h1>
+    <div style={{ maxWidth: 720 }}>
+      <Link to="/blog" className="muted" style={{ fontSize: '.85rem', fontWeight: 600 }}>&larr; All posts</Link>
+      <h2 style={{ margin: '12px 0 24px' }}>{isEdit ? 'Edit post' : 'New post'}</h2>
 
       <div className="field">
         <label htmlFor="title">Title</label>
@@ -115,10 +98,11 @@ function Editor({ adminKey, onInvalidKey }) {
 
       <div className="field">
         <label htmlFor="cover">Cover image</label>
-        <FileUpload id="cover" accept="image/*" onChange={handleCover}
-          label={shownCover ? 'Cover ready' : 'Choose a cover image'}
-          hint="Shown on the blog list and at the top of the post."
-          preview={shownCover} previewKind="image" crop={{ aspect: 16 / 9 }} />
+        <input id="cover" type="file" accept="image/*" onChange={handleCover} />
+        {shownCover && (
+          <div style={{ marginTop: 10, width: 200, aspectRatio: '16/9', borderRadius: 8, overflow: 'hidden', background: `url(${shownCover}) center/cover` }} />
+        )}
+        <small>Shown on the blog list and at the top of the post.</small>
       </div>
 
       <div className="field">
@@ -141,7 +125,8 @@ function Editor({ adminKey, onInvalidKey }) {
 
       <div className="field">
         <label>Live preview</label>
-        <div className="blog-post__body card card--pad" dangerouslySetInnerHTML={{ __html: renderMarkdown(form.body_markdown) || '<p class="muted">Nothing to preview yet.</p>' }} />
+        <div className="card card--pad" style={{ lineHeight: 1.6 }}
+          dangerouslySetInnerHTML={{ __html: renderMarkdown(form.body_markdown) || '<p class="muted">Nothing to preview yet.</p>' }} />
       </div>
 
       {error && <p className="error-text" style={{ marginBottom: 12 }}>{error}</p>}
@@ -156,8 +141,4 @@ function Editor({ adminKey, onInvalidKey }) {
       </div>
     </div>
   );
-}
-
-export default function AdminBlogEditor() {
-  return <AdminKeyGate>{(key, onInvalidKey) => <Editor adminKey={key} onInvalidKey={onInvalidKey} />}</AdminKeyGate>;
 }

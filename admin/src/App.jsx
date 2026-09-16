@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Routes, Route, NavLink } from 'react-router-dom';
-import { FiLock, FiGrid, FiUsers, FiShoppingBag, FiCreditCard, FiAlertTriangle, FiFlag, FiMessageSquare, FiLogOut } from 'react-icons/fi';
+import { FiLock, FiGrid, FiUsers, FiShoppingBag, FiCreditCard, FiAlertTriangle, FiFlag, FiMessageSquare, FiLogOut, FiBookOpen } from 'react-icons/fi';
 import { AdminProvider, useAdmin } from './context/AdminContext.jsx';
 import Overview from './pages/Overview.jsx';
 import Sellers from './pages/Sellers.jsx';
@@ -9,6 +9,8 @@ import Payouts from './pages/Payouts.jsx';
 import Disputes from './pages/Disputes.jsx';
 import Reports from './pages/Reports.jsx';
 import Flagged from './pages/Flagged.jsx';
+import Blog from './pages/Blog.jsx';
+import BlogEditor from './pages/BlogEditor.jsx';
 
 const TABS = [
   ['/', 'Overview', FiGrid],
@@ -17,7 +19,8 @@ const TABS = [
   ['/payouts', 'Payouts', FiCreditCard],
   ['/disputes', 'Disputes', FiAlertTriangle],
   ['/reports', 'Reports', FiMessageSquare],
-  ['/flagged', 'Flagged', FiFlag]
+  ['/flagged', 'Flagged', FiFlag],
+  ['/blog', 'Blog', FiBookOpen]
 ];
 
 function KeyGate() {
@@ -102,6 +105,9 @@ function AdminShell() {
         <Route path="/disputes" element={<Disputes />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/flagged" element={<Flagged />} />
+        <Route path="/blog" element={<Blog />} />
+        <Route path="/blog/new" element={<BlogEditor />} />
+        <Route path="/blog/:id/edit" element={<BlogEditor />} />
       </Routes>
     </div>
   );

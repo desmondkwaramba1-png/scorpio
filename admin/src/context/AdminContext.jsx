@@ -49,8 +49,34 @@ export function AdminProvider({ children }) {
     return data;
   }, [adminKey, clearKey]);
 
+  // For the blog editor's cover upload — a FormData body needs the browser
+  // to set its own multipart Content-Type (with the boundary), which
+  // adminPost's fixed 'application/json' header would break, and it needs
+  // PATCH as well as POST. No admin page needed either of those before.
+  const adminUpload = useCallback(async (path, method, formData) => {
+    const res = await fetch(path, { method, headers: { 'X-Admin-Key': adminKey || '' }, body: formData });
+    if (res.status === 403 || res.status === 501) {
+      clearKey();
+      throw new Error(res.status === 501 ? 'ADMIN_KEY is not set on the server.' : 'Invalid admin key.');
+    }
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(data?.error || 'Request failed.');
+    return data;
+  }, [adminKey, clearKey]);
+
+  const adminDelete = useCallback(async (path) => {
+    const res = await fetch(path, { method: 'DELETE', headers: { 'X-Admin-Key': adminKey || '' } });
+    if (res.status === 403 || res.status === 501) {
+      clearKey();
+      throw new Error(res.status === 501 ? 'ADMIN_KEY is not set on the server.' : 'Invalid admin key.');
+    }
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(data?.error || 'Request failed.');
+    return data;
+  }, [adminKey, clearKey]);
+
   return (
-    <AdminContext.Provider value={{ adminKey, setKey, clearKey, adminFetch, adminPost }}>
+    <AdminContext.Provider value={{ adminKey, setKey, clearKey, adminFetch, adminPost, adminUpload, adminDelete }}>
       {children}
     </AdminContext.Provider>
   );

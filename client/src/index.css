@@ -147,7 +147,17 @@ main{flex:1 0 auto;}
    what makes it read as an intentional, designed screen rather than a
    half-empty one. min-height, not height, real long content elsewhere
    already reusing this class still grows the page normally. */
-.center-page{min-height:56vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+/* :has(), scoped narrowly to only the pages using it - a min-height alone
+   left a real, visible gap below the centered block and above the
+   footer, confirmed live: min-height doesn't make a block fill a taller
+   flex parent, it only sets a floor, and main's own sticky-footer height
+   (flex:1 0 auto, see above) is usually taller than 56vh. Making main
+   itself a flex column ONLY when it directly wraps a .center-page
+   (nowhere else, so no other page's layout is touched) is what lets
+   .center-page's own flex:1 genuinely fill the real remaining height and
+   center within all of it, not just its own fallback minimum. */
+main:has(> .center-page){display:flex;flex-direction:column;}
+.center-page{flex:1;min-height:56vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
 h1,h2,h3{font-family:'Cabinet Grotesk','Sora',sans-serif;font-weight:700;margin:0;letter-spacing:-0.02em;}
 p{margin:0;}
 a{color:inherit;text-decoration:none;}

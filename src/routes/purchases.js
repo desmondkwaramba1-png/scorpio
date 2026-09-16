@@ -107,7 +107,7 @@ router.get('/mine', requireAuth, (req, res) => {
 
   const purchases = db.prepare(`
     SELECT pu.*, p.title AS product_title, p.slug AS product_slug, p.cover_path AS product_cover_path,
-           p.delivery_days AS delivery_days,
+           p.delivery_days AS delivery_days, p.type AS product_type,
            c.name AS creator_name, c.handle AS creator_handle, u.email AS creator_email, u.phone AS creator_phone,
            EXISTS(SELECT 1 FROM reports r WHERE r.purchase_id = pu.id AND r.status = 'open') AS has_open_report
     FROM purchases pu
@@ -119,9 +119,19 @@ router.get('/mine', requireAuth, (req, res) => {
     ORDER BY pu.created_at DESC
   `).all(req.user.id);
 
+  const latestIssueStmt = db.prepare(
+    'SELECT issue_number, title, published_at FROM issues WHERE product_id = ? ORDER BY issue_number DESC LIMIT 1'
+  );
   for (const p of purchases) {
     Object.assign(p, fileAccessFor(p));
     p.service = serviceStatusFor(p);
+    // A serial is "buy once, issues keep arriving" — the buyer's own
+    // library is exactly where "has anything new actually shown up"
+    // needs answering, not just the product page they bought it from
+    // once and may never revisit.
+    if (p.product_type === 'serial' && p.payment_status === 'paid') {
+      p.latest_issue = latestIssueStmt.get(p.product_id) || null;
+    }
   }
   res.json(purchases);
 });

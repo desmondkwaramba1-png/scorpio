@@ -32,10 +32,14 @@ router.get('/mine', requireAuth, (req, res) => {
     ORDER BY s.created_at DESC
   `).all(req.user.id);
 
+  const latestIssueStmt = db.prepare(
+    'SELECT issue_number, title, published_at FROM issues WHERE product_id = ? ORDER BY issue_number DESC LIMIT 1'
+  );
   const subscriptions = rows.map(s => {
     const days_remaining = daysRemaining(s.current_period_end);
     const renewable = s.status === 'lapsed' || (s.status === 'active' && !s.canceled_at && days_remaining <= 3);
-    return { ...s, days_remaining, renewable };
+    const latest_issue = latestIssueStmt.get(s.product_id) || null;
+    return { ...s, days_remaining, renewable, latest_issue };
   });
 
   res.json(subscriptions);

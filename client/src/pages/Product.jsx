@@ -15,6 +15,7 @@ import { CATEGORY_LABELS } from '../lib/categories.js';
 import { shareOrCopy } from '../lib/share';
 import { useSEO } from '../lib/seo';
 import { SITE_ORIGIN } from '../lib/site';
+import { timeAgo } from '../lib/time';
 
 // A short extension read off the actual uploaded file, not a guess, real
 // specificity ("Delivered as PDF") reads as more trustworthy on a page
@@ -340,13 +341,30 @@ export default function Product() {
           <span className="badge badge--gold" style={{ marginTop: 18, display: 'inline-flex' }}>DRAFT (only visible to you)</span>
         )}
 
-        {product.type === 'serial' && (
+        {/* Was gated to 'serial' only — a subscription's content arrives
+            through this exact same issues mechanism (see products.js),
+            so a subscriber had nowhere on this page to actually see what
+            they were getting, or that anything had been published at all. */}
+        {['serial', 'subscription'].includes(product.type) && (
           <div className="card card--pad" style={{ marginTop: 28 }}>
             <p style={{ fontWeight: 600, marginBottom: 4 }}>Issues</p>
-            <p className="muted" style={{ fontSize: '.85rem', marginBottom: 14 }}>
-              {product.issues?.some(i => i.unlocked)
-                ? "You've got every issue below, and every one still to come."
-                : 'Buy once, get every issue published here from then on, no separate charge per chapter.'}
+            <p className="muted" style={{ fontSize: '.85rem', marginBottom: 4 }}>
+              {product.type === 'subscription'
+                ? (product.issues?.some(i => i.unlocked)
+                  ? "You've got every issue below while your subscription stays active."
+                  : 'Every issue published here is included while your subscription is active.')
+                : (product.issues?.some(i => i.unlocked)
+                  ? "You've got every issue below, and every one still to come."
+                  : 'Buy once, get every issue published here from then on, no separate charge per chapter.')}
+            </p>
+            {/* A buyer deciding whether to pay for an ongoing series has no
+                way to judge if it's actually still active — this is the
+                same information a seller sees on their own dashboard,
+                surfaced here so it's an informed decision, not a guess. */}
+            <p className="muted" style={{ fontSize: '.8rem', marginBottom: 14 }}>
+              {product.issues && product.issues.length > 0
+                ? `Latest: issue ${product.issues[0].issue_number}, ${timeAgo(product.issues[0].published_at)}`
+                : `Listed ${timeAgo(product.created_at)}, no issues published yet`}
             </p>
             {!product.issues || product.issues.length === 0 ? (
               <p className="muted" style={{ fontSize: '.88rem' }}>Nothing published yet, check back soon.</p>

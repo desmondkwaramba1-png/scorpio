@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiDownload, FiRefreshCw, FiUser, FiPackage, FiCompass, FiPlay, FiX, FiCamera, FiKey, FiCopy, FiCheck, FiShield, FiAlertTriangle, FiExternalLink, FiMail, FiMessageCircle, FiClock, FiDollarSign, FiRepeat, FiPhone } from 'react-icons/fi';
+import { FiDownload, FiRefreshCw, FiUser, FiPackage, FiCompass, FiPlay, FiX, FiCamera, FiKey, FiCopy, FiCheck, FiShield, FiAlertTriangle, FiExternalLink, FiMail, FiMessageCircle, FiClock, FiDollarSign, FiRepeat, FiPhone, FiBookOpen } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api';
 import { formatMoney } from '../lib/money';
+import { timeAgo } from '../lib/time';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 import ReportProblem from '../components/ReportProblem.jsx';
 
@@ -275,6 +276,15 @@ function SubscriptionRow({ subscription, onUpdate, onRenewed }) {
         {subscription.status === 'lapsed' && 'New issues are on hold until you renew.'}
         {subscription.status === 'canceled' && `Access ended ${formatDate(subscription.current_period_end)}`}
       </p>
+      {/* Status/billing alone doesn't say whether the seller's actually
+          still publishing anything — this is the same freshness signal
+          shown on the product page itself, here so it's visible without
+          having to go look. */}
+      <p className="muted" style={{ fontSize: '.8rem', marginTop: 2 }}>
+        {subscription.latest_issue
+          ? `Latest: issue ${subscription.latest_issue.issue_number}, ${timeAgo(subscription.latest_issue.published_at)}`
+          : 'No issues published yet'}
+      </p>
 
       {actionError && <p className="error-text" style={{ marginTop: 8, fontSize: '.85rem' }}>{actionError}</p>}
 
@@ -306,6 +316,50 @@ function SubscriptionRow({ subscription, onUpdate, onRenewed }) {
           </button>
         </form>
       )}
+    </div>
+  );
+}
+
+// A serial is pay-once with no subscriptions-table row behind it, so it
+// never showed up anywhere but buried as a generic line in "Your
+// library" — no issue count, no sense of whether anything's still
+// coming. This is the same "is it alive" freshness signal
+// SubscriptionRow shows, plus the one real path a buyer has today if a
+// seller stops publishing after taking payment: reporting it, which
+// reaches the platform operator for manual review (there's no
+// automated refund/escrow for a pay-once purchase, same honesty as the
+// rest of this app's money handling).
+function SeriesRow({ purchase }) {
+  const productUrl = `/@${purchase.creator_handle}/${purchase.product_slug}`;
+  return (
+    <div className="card card--pad">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center', minWidth: 0 }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: 8, flexShrink: 0,
+            background: purchase.product_cover_path ? `url(${purchase.product_cover_path}) center/cover` : 'var(--green-tint)'
+          }} />
+          <div style={{ minWidth: 0 }}>
+            <Link to={productUrl} style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+              {purchase.product_title}
+            </Link>
+            <p className="muted" style={{ fontSize: '.85rem' }}>{purchase.creator_name}</p>
+          </div>
+        </div>
+        <Link to={productUrl} className="btn btn--ghost btn--sm" style={{ flexShrink: 0 }}>
+          <FiBookOpen size={13} /> {purchase.latest_issue ? `${purchase.latest_issue.issue_number} issue${purchase.latest_issue.issue_number === 1 ? '' : 's'}` : 'View'}
+        </Link>
+      </div>
+
+      <p className="muted" style={{ fontSize: '.82rem', marginTop: 10 }}>
+        {purchase.latest_issue
+          ? `Latest: issue ${purchase.latest_issue.issue_number}, "${purchase.latest_issue.title}", ${timeAgo(purchase.latest_issue.published_at)}`
+          : 'No issues published yet, check back soon.'}
+      </p>
+
+      <div style={{ marginTop: 10 }}>
+        <ReportProblem purchaseId={purchase.id} hasOpenReport={purchase.has_open_report} label="Report a problem" />
+      </div>
     </div>
   );
 }
@@ -497,6 +551,7 @@ export default function Account() {
 
   const paidPurchases = purchases?.filter(p => p.payment_status === 'paid') || [];
   const totalSpent = paidPurchases.reduce((sum, p) => sum + p.amount_minor, 0);
+  const seriesPurchases = paidPurchases.filter(p => p.product_type === 'serial');
   const inProgress = paidPurchases.filter(p => p.service && !['released', 'refunded'].includes(p.service.fulfillment_status));
   const needsAttention = inProgress.filter(p =>
     p.service.fulfillment_status === 'delivered' ||
@@ -591,6 +646,20 @@ export default function Account() {
             {subscriptions.map(s => (
               <SubscriptionRow key={s.id} subscription={s} onUpdate={handleSubscriptionUpdate} onRenewed={fetchSubscriptions} />
             ))}
+          </div>
+        </div>
+      )}
+
+      {seriesPurchases.length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: '1.1rem', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <FiBookOpen size={16} /> Your series
+          </h2>
+          <p className="muted" style={{ fontSize: '.85rem', marginBottom: 16 }}>
+            Pay-once series you've bought into. New issues arrive here automatically, no repurchase needed.
+          </p>
+          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+            {seriesPurchases.map(p => <SeriesRow key={p.id} purchase={p} />)}
           </div>
         </div>
       )}

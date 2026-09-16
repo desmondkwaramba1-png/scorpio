@@ -175,6 +175,19 @@ router.get('/', (req, res) => {
   const clauses = ["p.status = 'published'"];
   const params = [req.user ? req.user.id : 0];
 
+  // A creator browsing the marketplace is shopping, same as anyone else -
+  // their own listing showing up in that feed isn't useful to them (they
+  // already know what they sell) and reads as self-promotion cluttering
+  // a browse experience that's supposed to be about everyone else. Real
+  // feedback, not a guess. req.creator is already attached to every
+  // request (see middleware/auth.js's attachUser) - null for a buyer or
+  // a logged-out visitor, so this only ever excludes anything for an
+  // actual creator viewing their own feed.
+  if (req.creator) {
+    clauses.push('p.creator_id != ?');
+    params.push(req.creator.id);
+  }
+
   if (type && ['single', 'serial', 'subscription'].includes(type)) {
     clauses.push('p.type = ?');
     params.push(type);

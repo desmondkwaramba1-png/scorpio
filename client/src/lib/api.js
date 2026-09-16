@@ -75,7 +75,8 @@ export const api = {
   // was actually still working.
   post: (path, body, timeoutMs) => request(path, { method: 'POST', body, ...(timeoutMs && { timeoutMs }) }),
   patch: (path, body, timeoutMs) => request(path, { method: 'PATCH', body, ...(timeoutMs && { timeoutMs }) }),
-  delete: (path) => request(path, { method: 'DELETE' })
+  delete: (path) => request(path, { method: 'DELETE' }),
+  uploadWithProgress
 };
 
 // The blog admin pages' own calls — every /api/blog/admin/* route checks
@@ -85,6 +86,40 @@ export const api = {
 // for where it actually lives) rather than this module reaching into
 // storage itself, so api.js stays a plain HTTP helper, not something that
 // needs to know admin auth exists.
+// Real upload progress (0-100), for a real reason: a product's cover is
+// already compressed client-side before this ever runs (see
+// ImageCropper.jsx, capped to 1600px), but the actual deliverable
+// (a PDF, or for a course a real video file, up to 500MB — see
+// routes/products.js's upload limits) isn't, and genuinely can take real
+// time to leave a slow connection. fetch() has no broadly-reliable way to
+// report upload progress; XMLHttpRequest does. A static "Publishing…"
+// with zero feedback for that whole stretch reads as broken even when
+// it's working — this is what actually fixes that, not a faster server
+// (the server side of a product publish is already fast, confirmed
+// directly: single-digit milliseconds internally).
+function uploadWithProgress(path, method, formData, onProgress, timeoutMs = 120000) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, path);
+    xhr.withCredentials = true;
+    xhr.timeout = timeoutMs;
+    if (onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+    }
+    xhr.onload = () => {
+      let data = null;
+      try { data = JSON.parse(xhr.responseText); } catch { /* non-JSON error page, data stays null */ }
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+      else reject(new Error(data?.error || 'Something went wrong.'));
+    };
+    xhr.onerror = () => reject(new Error("You're offline, or your connection is too weak right now. Check it and try again."));
+    xhr.ontimeout = () => reject(new Error("That's taking too long. Check your connection and try again."));
+    xhr.send(formData);
+  });
+}
+
 export const adminApi = {
   get: (path, key) => request(path, { headers: { 'x-admin-key': key } }),
   post: (path, body, key) => request(path, { method: 'POST', body, headers: { 'x-admin-key': key } }),

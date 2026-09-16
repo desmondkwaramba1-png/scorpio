@@ -217,25 +217,14 @@ export default function Product() {
     }
   }
 
-  // CSS-only visibility (@media max-width:840px), so this costs nothing
-  // on desktop where the sticky .buy-panel is already visible without
-  // scrolling. On a phone it's what actually lets someone buy the
-  // instant they land, instead of the real .buy-panel further down the
-  // page, which only appears after scrolling past the description,
-  // preview video, service terms and creator bio.
-  const mobileBuyBar = !isOwner && !soldOut && (
-    <div className="mobile-buy-bar">
-      <span className="mobile-buy-bar__price mono">
-        {product.promo_active ? discountedPrice : (product.pay_what_you_want ? `From ${price}` : price)}
-      </span>
-      <Link to={checkoutUrl} className="btn btn--gold btn--sm">{buyLabel}</Link>
-    </div>
-  );
-
   return (
     <div className="product-layout wrap">
-      {mobileBuyBar}
-      <div>
+      {/* Its own grid area now (see .product-layout's grid-template-areas),
+          not the top of the "main content" column — on mobile that's what
+          actually lets the buy panel land right after it, real page space
+          instead of the floating bar this used to need to fake quick
+          access to buying. */}
+      <div className="product-layout__cover-col">
         <div className="product-cover">
           {product.cover_path && (
             <>
@@ -252,8 +241,10 @@ export default function Product() {
             <div className="product-cover__watermark" style={{ backgroundImage: `url(${product.creator_avatar})` }} />
           )}
         </div>
+      </div>
 
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 22 }}>
+      <div className="product-layout__content">
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {product.category && CATEGORY_LABELS[product.category] && (
             <span className="badge badge--category" style={{ marginBottom: 0 }}>{CATEGORY_LABELS[product.category]}</span>
           )}

@@ -223,6 +223,12 @@ img{max-width:100%;display:block;}
 .field__password-toggle:hover{color:var(--ink);background:var(--paper);}
 .error-text{color:var(--red);font-size:.85rem;margin-top:10px;}
 .btn-row{display:flex;gap:10px;}
+/* Real upload progress (see lib/api.js's uploadWithProgress), not a bare
+   spinner — a big deliverable (a course video, a real PDF) can take
+   genuine time to leave a slow connection, and a static "Publishing…"
+   for that whole stretch reads as broken even when it's working. */
+.upload-progress{height:6px;border-radius:999px;background:var(--line);overflow:hidden;}
+.upload-progress__bar{height:100%;background:var(--gold);border-radius:999px;transition:width .2s ease;}
 
 /* Chrome/Edge autofill forces its own light background otherwise, which
    would flash a jarring white box into an otherwise dark form. */
@@ -897,10 +903,21 @@ img{max-width:100%;display:block;}
 .admin-table tbody tr:hover{background:var(--paper);}
 
 /* ---- product page ---- */
+/* Three real grid items now (cover / buy / content), not two — named
+   areas instead of relying on DOM order is what actually lets the buy
+   panel sit right under the cover on mobile (real real estate, not a
+   floating bar patched on top of the page) while still sitting beside
+   the cover in its usual sticky sidebar spot on desktop. A previous
+   version of this page used a floating .mobile-buy-bar to fake "buy
+   without scrolling" instead of actually giving the buy panel real,
+   prominent space near the top — removed once this made it unnecessary. */
 .product-layout{
   display:grid;gap:var(--sp-7);grid-template-columns:1.15fr .85fr;align-items:start;
+  grid-template-areas:"cover buy" "content buy";
   padding:var(--sp-6) 20px var(--sp-8);
 }
+.product-layout__cover-col{grid-area:cover;}
+.product-layout__content{grid-area:content;}
 /* Grid items default to min-width:auto — sized to fit their content's
    natural minimum, not the track. The "More from creator" carousel's
    row of fixed-width cards normally scrolls within itself (overflow-x:
@@ -1446,30 +1463,12 @@ img{max-width:100%;display:block;}
 }
 
 @media (max-width:840px){
-  .product-layout{grid-template-columns:1fr;}
+  /* Real space for the buy panel right under the cover, not a floating
+     bar faking quick access to it — "cover" then "buy" then "content"
+     (title, description, reviews, everything else), each its own full-
+     width row in that order. */
+  .product-layout{grid-template-columns:1fr;grid-template-areas:"cover" "buy" "content";}
   .buy-panel{position:static;}
-  /* The full buy-panel (price, trust lines, benefits) still sits where
-     it always has, further down the page, once .buy-panel goes static
-     above — but on a phone that's below the description, preview video,
-     service terms and creator bio, a real distance to scroll before
-     reaching a buy button at all. This bar is the actual "buy now": a
-     thin strip pinned to the bottom of the viewport from the moment the
-     page loads, so buying never depends on reading anything first. */
-  .mobile-buy-bar{
-    position:fixed;left:0;right:0;bottom:0;z-index:90;
-    display:flex;align-items:center;gap:10px;padding:8px 14px;
-    padding-bottom:calc(8px + env(safe-area-inset-bottom));
-    background:var(--surface);border-top:1px solid var(--line);
-    box-shadow:0 -4px 12px rgba(19,25,33,.08);
-  }
-  .mobile-buy-bar__price{font-weight:700;font-size:.85rem;flex-shrink:0;}
-  .mobile-buy-bar .btn{flex:1;}
-  /* Room for the bar so it never covers the last real content (reviews,
-     comments) it's floating above. */
-  .product-layout{padding-bottom:64px;}
-}
-@media (min-width:841px){
-  .mobile-buy-bar{display:none;}
 }
 
 @media (max-width:640px){

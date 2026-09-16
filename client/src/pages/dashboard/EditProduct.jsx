@@ -25,6 +25,7 @@ export default function EditProduct() {
   const [previewVideo, setPreviewVideo] = useState(null);
   const [previewVideoName, setPreviewVideoName] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -153,6 +154,7 @@ export default function EditProduct() {
       }
     }
     setSubmitting(true);
+    setUploadProgress(0);
     const payload = { ...form };
     if (!payload.discount_enabled) {
       payload.discount_percent = '';
@@ -168,12 +170,16 @@ export default function EditProduct() {
     if (previewVideo) body.append('preview_video', previewVideo);
 
     try {
-      await api.patch(`/api/products/${id}`, body);
+      // Same reasoning as NewProduct.jsx: a replaced deliverable (a course
+      // video especially) can be a genuinely large upload, real progress
+      // is what keeps that from reading as broken.
+      await api.uploadWithProgress(`/api/products/${id}`, 'PATCH', body, setUploadProgress, 180000);
       navigate('/dashboard/products');
     } catch (err) {
       setError(err.message);
     } finally {
       setSubmitting(false);
+      setUploadProgress(0);
     }
   }
 
@@ -467,6 +473,15 @@ export default function EditProduct() {
           )}
 
           {error && <p className="error-text" style={{ marginTop: 20 }}>{error}</p>}
+
+          {submitting && (
+            <div style={{ marginTop: 20 }}>
+              <div className="upload-progress"><div className="upload-progress__bar" style={{ width: `${uploadProgress}%` }} /></div>
+              <p className="muted" style={{ fontSize: '.8rem', marginTop: 6, textAlign: 'center' }}>
+                {uploadProgress < 100 ? `Uploading ${uploadProgress}%${uploadProgress < 20 ? ', this can take a moment for a bigger file' : ''}` : 'Almost done...'}
+              </p>
+            </div>
+          )}
 
           <div className="btn-row" style={{ marginTop: 20 }}>
             <button

@@ -5,16 +5,19 @@ import CompactProductCard from '../components/CompactProductCard.jsx';
 import Seal from '../components/Seal.jsx';
 import ReelViewer from '../components/ReelViewer.jsx';
 import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../lib/launchScope.js';
+import { formatMoney } from '../lib/money';
 
 // Same three promises Product.jsx's own trust-line/buy-benefits already
 // make on every listing page, one level up: a stranger deciding whether
 // to trust this marketplace at all shouldn't have to click into a
 // product first to find out review-before-publish, instant delivery, and
 // buyer protection are real, standing policies, not per-listing copy.
+// Short labels only, no sentence each — see the CSS comment on
+// .trust-band for why (a phone-height problem, not a taste one).
 const TRUST_ITEMS = [
-  { icon: FiCheckCircle, title: 'Checked before it goes live', desc: 'Every listing is reviewed, not just uploaded and left to sell itself.' },
-  { icon: FiZap, title: 'Instant delivery', desc: 'Get your file, course, or access the moment payment clears, no waiting.' },
-  { icon: FiShield, title: '5-day buyer protection', desc: "Not what you expected? Report it and get a refund, no questions dragged out." }
+  { icon: FiCheckCircle, title: 'Checked before it goes live' },
+  { icon: FiZap, title: 'Instant delivery' },
+  { icon: FiShield, title: '5-day buyer protection' }
 ];
 
 function TrustBand() {
@@ -24,16 +27,75 @@ function TrustBand() {
         <div className="trust-grid">
           {TRUST_ITEMS.map(item => (
             <div key={item.title} className="trust-item">
-              <span className="trust-item__icon"><item.icon size={19} /></span>
-              <div>
-                <p className="trust-item__title">{item.title}</p>
-                <p className="trust-item__desc">{item.desc}</p>
-              </div>
+              <span className="trust-item__icon"><item.icon size={16} /></span>
+              <p className="trust-item__title">{item.title}</p>
             </div>
           ))}
         </div>
       </div>
     </section>
+  );
+}
+
+// A text-only hero, however short, still makes a first-time visitor
+// scroll past it before seeing one real product — direct feedback was
+// that people expect to see products right away, especially on a phone
+// where the hero already eats most of the first screen. This puts a
+// real one (image, title, price) inside the hero itself, and rotates
+// through a handful of trending products on a timer so more than just
+// whichever one happens to be first gets a chance to be seen.
+function HeroSpotlight({ products }) {
+  const navigate = useNavigate();
+  const [index, setIndex] = useState(0);
+  const items = (products || []).slice(0, 5);
+
+  useEffect(() => {
+    if (items.length < 2) return;
+    const timer = setInterval(() => setIndex(i => (i + 1) % items.length), 4000);
+    return () => clearInterval(timer);
+  }, [items.length]);
+
+  if (items.length === 0) return null;
+  const p = items[index % items.length];
+  const url = `/@${p.creator_handle}/${p.slug}`;
+  const price = p.price_minor === 0
+    ? 'Free'
+    : formatMoney(p.promo_active ? p.discounted_price_minor : p.price_minor, p.currency);
+
+  return (
+    <div className="hero-spotlight">
+      <div
+        key={p.id}
+        className="hero-spotlight__card"
+        role="link" tabIndex={0}
+        onClick={() => navigate(url)}
+        onKeyDown={e => { if (e.key === 'Enter') navigate(url); }}
+      >
+        <span
+          className="hero-spotlight__cover"
+          style={p.cover_path ? { backgroundImage: `url(${p.cover_path})` } : undefined}
+        >
+          {!p.cover_path && p.title.charAt(0).toUpperCase()}
+        </span>
+        <div className="hero-spotlight__info">
+          <p className="hero-spotlight__eyebrow mono">TRENDING NOW</p>
+          <p className="hero-spotlight__title">{p.title}</p>
+          <p className="hero-spotlight__price">{price}</p>
+        </div>
+      </div>
+      {items.length > 1 && (
+        <div className="hero-spotlight__dots">
+          {items.map((it, i) => (
+            <button
+              key={it.id} type="button"
+              className={`hero-spotlight__dot${i === index ? ' is-active' : ''}`}
+              onClick={() => setIndex(i)}
+              aria-label={`Show product ${i + 1} of ${items.length}`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -366,6 +428,8 @@ export default function Marketplace() {
                   Have something to sell? <FiChevronRight size={14} />
                 </Link>
               </div>
+
+              <HeroSpotlight products={trending} />
             </>
           ) : (
             <form onSubmit={submitSearch} className="shop-hero__search">

@@ -563,17 +563,22 @@ img{max-width:100%;display:block;}
    scale: every one of them is already a real, enforced rule elsewhere in
    the app (review-before-publish, instant download, 5-day buyer
    protection), just never surfaced on the page that's supposed to make a
-   stranger want to buy in the first place. */
+   stranger want to buy in the first place.
+   Started as 3 stacked icon+title+sentence rows (~600px tall on a phone)
+   — real feedback was that on a phone, that alone pushed every actual
+   product below the first couple of screens of scrolling. A single
+   compact row (icon + short label only, no sentence) carries the same
+   three promises in a fraction of the height, so there's real room left
+   for products to show up fast. */
 .trust-band{background:var(--green-tint);}
-.trust-band .section{padding:36px 0;}
-.trust-grid{display:grid;gap:var(--sp-5);grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));}
-.trust-item{display:flex;align-items:flex-start;gap:14px;}
+.trust-band .section{padding:16px 0;}
+.trust-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:var(--sp-3);}
+.trust-item{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;}
 .trust-item__icon{
-  width:44px;height:44px;border-radius:12px;background:var(--surface);color:var(--green-glow);
+  width:32px;height:32px;border-radius:10px;background:var(--surface);color:var(--green-glow);
   display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:var(--shadow-1);
 }
-.trust-item__title{font-size:.94rem;font-weight:700;color:var(--ink);margin-bottom:3px;}
-.trust-item__desc{font-size:.82rem;color:var(--muted);line-height:1.4;}
+.trust-item__title{font-size:.74rem;font-weight:700;color:var(--ink);line-height:1.25;}
 
 /* ---- homepage: blog band ---- */
 /* Its own tinted band, not the same flat paper background every product
@@ -736,6 +741,40 @@ img{max-width:100%;display:block;}
   display:block;color:rgba(255,255,255,.6);font-size:.8rem;font-weight:600;
   margin-bottom:10px;letter-spacing:.01em;
 }
+
+/* ---- hero product spotlight ---- */
+/* A text-only hero, however short, still means a first-time visitor's
+   first real look at an actual product only comes after they've scrolled
+   past it — real feedback was that people expect to see products
+   immediately, not just be told some exist. This puts a real one, image
+   and price included, inside the hero itself, and rotates through a
+   handful of trending ones on a timer so more than just whichever
+   happens to be first gets a chance to be seen, without needing the
+   vertical space a static multi-item grid would take on a phone. */
+.hero-spotlight{margin-top:20px;}
+.hero-spotlight__card{
+  display:flex;align-items:center;gap:14px;background:var(--surface);
+  border-radius:var(--radius);padding:10px;box-shadow:var(--shadow-3);cursor:pointer;
+  animation:fade-in-up .4s cubic-bezier(.22,.7,.3,1) both;
+}
+.hero-spotlight__cover{
+  flex-shrink:0;width:76px;height:76px;border-radius:var(--radius-sm);
+  background:var(--gold-tint) center/cover;display:flex;align-items:center;justify-content:center;
+  font-size:1.6rem;font-weight:700;color:var(--gold-ink);
+}
+.hero-spotlight__info{min-width:0;}
+.hero-spotlight__eyebrow{color:var(--green-glow);font-size:.68rem;font-weight:700;letter-spacing:.06em;margin-bottom:3px;}
+.hero-spotlight__title{
+  color:var(--ink);font-size:.92rem;font-weight:700;margin-bottom:4px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.hero-spotlight__price{color:var(--green-glow);font-size:.88rem;font-weight:700;}
+.hero-spotlight__dots{display:flex;gap:6px;margin-top:12px;padding-left:2px;}
+.hero-spotlight__dot{
+  width:16px;height:4px;border-radius:2px;border:none;background:rgba(255,255,255,.28);
+  cursor:pointer;padding:0;transition:background .15s ease,width .15s ease;
+}
+.hero-spotlight__dot.is-active{background:var(--gold);width:22px;}
 
 /* ---- nav search ---- */
 .nav__search{
@@ -1573,8 +1612,10 @@ img{max-width:100%;display:block;}
   }
   .shop-hero__badge{font-size:.66rem;padding:5px 11px 5px 10px;}
   .shop-hero__title{font-size:1.4rem;}
-  .shop-hero__sub{font-size:.92rem;}
+  .shop-hero__sub{font-size:.92rem;margin-bottom:18px;}
   .shop-hero__actions{gap:12px;}
+  .hero-spotlight{margin-top:16px;}
+  .hero-spotlight__cover{width:64px;height:64px;}
 
   /* Homepage rails (Meet the creators, Trending, category rows) — tighter
      gap and a smaller row title so a horizontal scroll row doesn't feel

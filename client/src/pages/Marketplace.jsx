@@ -6,6 +6,7 @@ import Seal from '../components/Seal.jsx';
 import ReelViewer from '../components/ReelViewer.jsx';
 import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../lib/launchScope.js';
 import { formatMoney } from '../lib/money';
+import { useAuth } from '../context/AuthContext.jsx';
 
 // Same three promises Product.jsx's own trust-line/buy-benefits already
 // make on every listing page, one level up: a stranger deciding whether
@@ -309,6 +310,7 @@ function Rail({ title, subtitle, icon: Icon, link, products }) {
 
 export default function Marketplace() {
   const navigate = useNavigate();
+  const { user, creator, loading: authLoading } = useAuth();
   const [q, setQ] = useState('');
   // No setter used, in fact: the pitch used to have its own "Just
   // browsing" dismiss button that collapsed it in place mid-session, but
@@ -456,6 +458,27 @@ export default function Marketplace() {
                 </button>
               </div>
             </form>
+          )}
+          {/* A returning visit means the search bar is here, but nothing
+              else - no sign of whether this device even remembers you're
+              logged in, and nothing pointing a logged-out visitor (or a
+              logged-in buyer who never got around to it) toward the other
+              real reason to be here. Auth-aware, not one-size-fits-all:
+              a logged-in creator already has the nav's own Account menu
+              for this, so gets nothing extra here. */}
+          {!showPitch && !authLoading && (
+            <div className="shop-hero__quicklinks">
+              <Link to="/discover">Browse everything</Link>
+              {!user && (
+                <>
+                  <Link to="/login">Sign in</Link>
+                  <Link to="/login?role=creator">Sell your own</Link>
+                </>
+              )}
+              {user && !creator && (
+                <Link to="/onboarding">Also selling something? Start a storefront</Link>
+              )}
+            </div>
           )}
         </div>
       </header>

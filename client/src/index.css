@@ -741,6 +741,14 @@ img{max-width:100%;display:block;}
   display:block;color:rgba(255,255,255,.6);font-size:.8rem;font-weight:600;
   margin-bottom:10px;letter-spacing:.01em;
 }
+.shop-hero__quicklinks{
+  display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:14px;
+}
+.shop-hero__quicklinks a{
+  color:rgba(255,255,255,.75);font-size:.82rem;font-weight:600;
+  text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(255,255,255,.35);
+}
+.shop-hero__quicklinks a:hover{color:#fff;}
 
 /* ---- hero product spotlight ---- */
 /* A text-only hero, however short, still means a first-time visitor's

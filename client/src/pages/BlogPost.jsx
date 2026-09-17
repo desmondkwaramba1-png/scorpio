@@ -89,7 +89,10 @@ export default function BlogPost() {
       <Link to="/blog" className="blog-post__back"><FiArrowLeft size={14} /> Back to the blog</Link>
 
       {post.cover_path && (
-        <div className="blog-post__cover" style={{ backgroundImage: `url(${post.cover_path})` }} />
+        <div className="blog-post__cover">
+          <div className="blog-post__cover-backdrop" style={{ backgroundImage: `url(${post.cover_path})` }} />
+          <div className="blog-post__cover-image" style={{ backgroundImage: `url(${post.cover_path})` }} />
+        </div>
       )}
 
       <h1 className="blog-post__title">{post.title}</h1>

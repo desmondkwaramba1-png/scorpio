@@ -18,10 +18,14 @@ function formatDate(sqliteDatetimeOrIso) {
 function BlogCard({ post, featured }) {
   return (
     <Link to={`/blog/${post.slug}`} className={`blog-card${featured ? ' blog-card--featured' : ''}`}>
-      <div
-        className="blog-card__cover"
-        style={post.cover_path ? { backgroundImage: `url(${post.cover_path})` } : undefined}
-      />
+      <div className="blog-card__cover">
+        {post.cover_path && (
+          <>
+            <div className="blog-card__cover-backdrop" style={{ backgroundImage: `url(${post.cover_path})` }} />
+            <div className="blog-card__cover-image" style={{ backgroundImage: `url(${post.cover_path})` }} />
+          </>
+        )}
+      </div>
       <div className="blog-card__body">
         <p className="blog-card__meta">
           {formatDate(post.published_at)} &middot; {post.author_name}

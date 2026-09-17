@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { FiShield, FiCompass, FiShare2, FiCheck, FiEdit2, FiShoppingCart, FiLock, FiZap, FiFileText, FiPlay, FiDownload } from 'react-icons/fi';
+import { FiShield, FiCompass, FiShare2, FiCheck, FiEdit2, FiShoppingCart, FiLock, FiZap, FiFileText, FiPlay, FiDownload, FiPackage } from 'react-icons/fi';
 import Seal from '../components/Seal.jsx';
 import EngagementBar from '../components/EngagementBar.jsx';
 import CommentsSection from '../components/CommentsSection.jsx';
@@ -437,7 +437,7 @@ export default function Product() {
             </div>
           )}
 
-          {product.type !== 'service' && !isOwner && (
+          {product.type !== 'service' && !isOwner && !product.already_purchased && (
             <div className="trust-line">
               <FiShield size={16} />
               <span>5-day buyer protection: not what you expected? Report it from your account within 5 days for a refund.</span>
@@ -451,7 +451,7 @@ export default function Product() {
             </div>
           )}
 
-          {!isOwner && product.type !== 'service' && (
+          {!isOwner && product.type !== 'service' && !product.already_purchased && (
             <ul className="buy-benefits">
               <li><FiZap size={14} /> Instant download the moment payment clears</li>
               {fileFormat && <li><FiFileText size={14} /> Delivered as {fileFormat}</li>}
@@ -459,7 +459,26 @@ export default function Product() {
             </ul>
           )}
 
-          {isOwner ? (
+          {/* Serial/subscription already show their own "you have this"
+              state (the issues list, "already subscribed"). Every other
+              type had nothing - a buyer revisiting something they'd
+              already bought (their own library, a shared link, anywhere)
+              saw the exact same buy CTA a stranger would, no sign they
+              already owned it, which read as "buy this again." The real
+              download/access still lives on their own purchases, not
+              here - this just stops selling to them and points them
+              there instead. */}
+          {!isOwner && product.already_purchased ? (
+            <>
+              <div className="trust-line" style={{ color: 'var(--green-glow)', fontWeight: 600 }}>
+                <FiCheck size={16} />
+                <span>You already own this. Find it in your library to download or view it.</span>
+              </div>
+              <Link to="/account" className="btn btn--gold btn--block">
+                <FiPackage size={15} /> Go to your library
+              </Link>
+            </>
+          ) : isOwner ? (
             <>
               <button onClick={shareProduct} className="btn btn--gold btn--block">
                 {copied ? <><FiCheck size={15} /> Link copied</> : <><FiShare2 size={15} /> Share this product</>}

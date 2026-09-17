@@ -300,6 +300,22 @@ router.get('/:slug', (req, res) => {
     }));
   }
 
+  // Serial/subscription already have their own "you have this" signal
+  // (product.issues[].unlocked, product.my_subscription below) - every
+  // other type (single, service) had nothing at all, so a buyer revisiting
+  // something they'd already bought (from their library, a shared link,
+  // anywhere) saw the exact same "Buy"/"Get for free" CTA a stranger would,
+  // with no sign they already own it. The actual download/access itself
+  // still lives on the buyer's own purchases (purchases.js's fileAccessFor,
+  // license keys, etc.) - this only tells the product page whether to point
+  // them there instead of selling to them again.
+  if (!['serial', 'subscription'].includes(product.type) && req.user && !isOwner) {
+    product.already_purchased = !!db.prepare(`
+      SELECT 1 FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
+      WHERE b.user_id = ? AND pu.product_id = ? AND pu.payment_status = 'paid'
+    `).get(req.user.id, product.id);
+  }
+
   // Lets Checkout.jsx/Product.jsx show "already subscribed, renews on
   // <date>" instead of a buy form, without a second round-trip.
   if (product.type === 'subscription' && req.user) {

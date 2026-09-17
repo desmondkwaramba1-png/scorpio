@@ -1387,14 +1387,34 @@ img{max-width:100%;display:block;}
 .reel-manage-card__footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;}
 
 /* ---- blog ---- */
-.blog-grid{display:grid;gap:var(--sp-5);grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));}
+/* auto-fill (like .product-grid uses) computes column tracks off the
+   container width regardless of how many posts actually exist - fine for
+   a feed that's usually full, but a blog with only one or two posts left
+   several phantom empty columns sitting next to the real card, a big dead
+   gap on desktop. auto-fit collapses those unused trailing tracks instead,
+   and the minmax cap keeps a lone card from stretching to fill the row. */
+.blog-grid{display:grid;gap:var(--sp-5);grid-template-columns:repeat(auto-fit, minmax(260px, 340px));}
 .blog-card{
   display:flex;flex-direction:column;border-radius:var(--radius);overflow:hidden;
   background:var(--surface);border:1px solid var(--line);transition:transform .15s ease, box-shadow .15s ease;
 }
 .blog-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-2);}
 .blog-card__cover{
-  aspect-ratio:16/9;background-color:var(--gold-tint);background-size:cover;background-position:center;
+  aspect-ratio:16/9;background-color:var(--gold-tint);position:relative;overflow:hidden;
+}
+/* Same blurred-backdrop-plus-contained-image treatment .product-cover
+   uses — a cover that isn't a wide photo (a square logo/badge image,
+   the common case for a quick admin-authored post) got cropped down to
+   mostly the image's own plain background by a flat background-size:cover,
+   real on the first post actually published: a circular Scorpio zodiac
+   badge on white came out as barely-visible sliver of blue in a sea of
+   white instead of something recognizable. */
+.blog-card__cover-backdrop{
+  position:absolute;inset:-14px;background-size:cover;background-position:center;background-repeat:no-repeat;
+  filter:blur(26px) brightness(.82) saturate(1.15);transform:scale(1.1);
+}
+.blog-card__cover-image{
+  position:absolute;inset:0;background-size:contain;background-position:center;background-repeat:no-repeat;
 }
 .blog-card__body{padding:18px 20px;}
 .blog-card__meta{color:var(--muted);font-size:.78rem;margin-bottom:8px;}
@@ -1409,7 +1429,10 @@ img{max-width:100%;display:block;}
 .blog-card--featured{
   display:grid;grid-template-columns:1fr;position:relative;border:none;
 }
-.blog-card--featured .blog-card__cover{aspect-ratio:16/8;}
+/* Uncapped, a 2:1 cover at the page's full ~1200px content width became
+   a ~600px wall of mostly empty placeholder color on desktop, real for
+   any post without its own cover image uploaded yet. */
+.blog-card--featured .blog-card__cover{aspect-ratio:16/8;max-height:420px;}
 .blog-card--featured .blog-card__body{
   position:absolute;left:0;right:0;bottom:0;padding:28px 24px 22px;
   background:linear-gradient(0deg, rgba(19,25,33,.92) 0%, rgba(19,25,33,.55) 60%, transparent 100%);
@@ -1422,8 +1445,15 @@ img{max-width:100%;display:block;}
   display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:.88rem;font-weight:600;margin-bottom:20px;
 }
 .blog-post__cover{
-  width:100%;aspect-ratio:16/9;border-radius:var(--radius);background-color:var(--gold-tint);
-  background-size:cover;background-position:center;margin-bottom:28px;
+  width:100%;aspect-ratio:16/9;max-height:420px;border-radius:var(--radius);background-color:var(--gold-tint);
+  margin-bottom:28px;position:relative;overflow:hidden;
+}
+.blog-post__cover-backdrop{
+  position:absolute;inset:-14px;background-size:cover;background-position:center;background-repeat:no-repeat;
+  filter:blur(26px) brightness(.82) saturate(1.15);transform:scale(1.1);
+}
+.blog-post__cover-image{
+  position:absolute;inset:0;background-size:contain;background-position:center;background-repeat:no-repeat;
 }
 .blog-post__title{font-size:clamp(1.6rem,3.6vw,2.2rem);line-height:1.2;margin-bottom:10px;}
 .blog-post__meta{color:var(--muted);font-size:.88rem;margin-bottom:28px;}

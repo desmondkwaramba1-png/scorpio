@@ -116,4 +116,34 @@ router.get('/issue/:issueId', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/downloads/issue/:issueId/view — inline streaming for a serial
+// issue (video playback, a PDF rendered in the browser instead of
+// downloaded), same ownership check as the plain download route above,
+// same "no attachment content-disposition" trick /:token/view already
+// uses so R2 serves it inline and a <video> element can still seek via
+// Range requests on the redirected URL.
+router.get('/issue/:issueId/view', requireAuth, async (req, res) => {
+  const issue = db.prepare('SELECT * FROM issues WHERE id = ?').get(req.params.issueId);
+  if (!issue) return res.status(404).send('This issue could not be found.');
+
+  const owns = db.prepare(`
+    SELECT 1 FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
+    WHERE b.user_id = ? AND pu.product_id = ? AND pu.payment_status = 'paid'
+  `).get(req.user.id, issue.product_id);
+  if (!owns) return res.status(403).send("You don't have access to this issue.");
+
+  if (issue.kind === 'external_link') {
+    return res.redirect(issue.external_url);
+  }
+  if (!issue.file_path) return res.status(404).send('No file is attached to this issue.');
+
+  try {
+    const url = await storage.getPresignedUrl(issue.file_path);
+    res.redirect(url);
+  } catch (err) {
+    console.error('[downloads]', err.message);
+    res.status(404).send('That file could not be found.');
+  }
+});
+
 module.exports = router;

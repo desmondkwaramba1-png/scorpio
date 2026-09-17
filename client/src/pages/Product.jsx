@@ -29,6 +29,78 @@ function fileFormatLabel(files) {
   return ext && ext.length <= 5 ? ext.toUpperCase() : null;
 }
 
+// A raw "Get it" link forced a save-to-disk prompt no matter what the
+// issue actually was — a video issue couldn't just be watched, a PDF
+// couldn't just be read, both had to be downloaded first and opened in
+// a separate app. Same fix as Account.jsx's OrderRow already applies to
+// regular purchases: watch/listen inline for media, and for anything
+// else, an embedded viewer instead of forcing a download to see it at all.
+function IssueRow({ iss }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (!iss.unlocked) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+        padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)'
+      }}>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ fontWeight: 600, fontSize: '.9rem' }}>Issue {iss.issue_number}: {iss.title}</p>
+          <p className="muted" style={{ fontSize: '.78rem' }}>{new Date(iss.published_at).toLocaleDateString()}</p>
+        </div>
+        <span className="muted" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '.82rem', flexShrink: 0 }}>
+          <FiLock size={12} /> Locked
+        </span>
+      </div>
+    );
+  }
+
+  // An uploaded file lives on R2, a domain this app controls, so an
+  // <iframe> embed of it is reliable. An external link (a creator's own
+  // Google Drive/YouTube/whatever) is not — plenty of sites refuse to be
+  // framed at all (X-Frame-Options/CSP), so that one opens in a real new
+  // tab instead of risking a blank embedded box.
+  const isExternal = iss.kind === 'external_link';
+  const label = iss.is_video ? 'Watch' : iss.is_audio ? 'Listen' : isExternal ? 'Open' : 'Read';
+
+  return (
+    <div style={{ padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ fontWeight: 600, fontSize: '.9rem' }}>Issue {iss.issue_number}: {iss.title}</p>
+          <p className="muted" style={{ fontSize: '.78rem' }}>{new Date(iss.published_at).toLocaleDateString()}</p>
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+          {isExternal ? (
+            <a href={iss.view_url} target="_blank" rel="noopener noreferrer" className="btn btn--gold btn--sm">
+              <FiPlay size={13} /> {label}
+            </a>
+          ) : (
+            <>
+              <button type="button" onClick={() => setExpanded(e => !e)} className="btn btn--gold btn--sm">
+                {expanded ? <FiCheck size={13} /> : <FiPlay size={13} />} {expanded ? 'Close' : label}
+              </button>
+              <a href={`/api/downloads/issue/${iss.id}`} className="btn btn--ghost btn--sm" title="Download instead">
+                <FiDownload size={13} />
+              </a>
+            </>
+          )}
+        </div>
+      </div>
+
+      {expanded && !isExternal && iss.is_video && (
+        <video src={iss.view_url} controls playsInline style={{ width: '100%', borderRadius: 'var(--radius-sm)', marginTop: 12, background: '#000' }} />
+      )}
+      {expanded && !isExternal && iss.is_audio && (
+        <audio src={iss.view_url} controls style={{ width: '100%', marginTop: 12 }} />
+      )}
+      {expanded && !isExternal && !iss.is_video && !iss.is_audio && (
+        <iframe src={iss.view_url} title={iss.title} style={{ width: '100%', height: 500, border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', marginTop: 12 }} />
+      )}
+    </div>
+  );
+}
+
 // A view page, not a checkout form, clicking a product to see what it is
 // shouldn't force a payment form in front of you. Buying is an explicit
 // next step (its own page, its own URL) for people who've decided they want it.
@@ -370,26 +442,7 @@ export default function Product() {
               <p className="muted" style={{ fontSize: '.88rem' }}>Nothing published yet, check back soon.</p>
             ) : (
               <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-                {product.issues.map(iss => (
-                  <div key={iss.id} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-                    padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)'
-                  }}>
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ fontWeight: 600, fontSize: '.9rem' }}>Issue {iss.issue_number}: {iss.title}</p>
-                      <p className="muted" style={{ fontSize: '.78rem' }}>{new Date(iss.published_at).toLocaleDateString()}</p>
-                    </div>
-                    {iss.unlocked ? (
-                      <a href={`/api/downloads/issue/${iss.id}`} className="btn btn--ghost btn--sm" style={{ flexShrink: 0 }}>
-                        <FiDownload size={13} /> Get it
-                      </a>
-                    ) : (
-                      <span className="muted" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '.82rem', flexShrink: 0 }}>
-                        <FiLock size={12} /> Locked
-                      </span>
-                    )}
-                  </div>
-                ))}
+                {product.issues.map(iss => <IssueRow key={iss.id} iss={iss} />)}
               </div>
             )}
           </div>

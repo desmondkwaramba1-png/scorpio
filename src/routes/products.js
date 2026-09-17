@@ -15,6 +15,7 @@ const { optimizeImage } = require('../lib/imageProcessing');
 const storage = require('../lib/storage');
 const { sendEmail } = require('../lib/notify');
 const { syncSubscriptionStatuses } = require('../lib/subscriptions');
+const { isVideoFilename, isAudioFilename } = require('../lib/downloads');
 
 const router = express.Router();
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -293,10 +294,21 @@ router.get('/:slug', (req, res) => {
     const issues = db.prepare(
       'SELECT id, issue_number, title, kind, file_path, external_url, original_filename, published_at FROM issues WHERE product_id = ? ORDER BY issue_number DESC'
     ).all(product.id);
-    product.issues = issues.map(({ file_path, ...i }) => ({
+    // A raw "Get it" download link was the only option regardless of what
+    // the issue actually was — a video issue forced a save-to-disk prompt
+    // instead of just playing, the same gap fileAccessFor() already closed
+    // for regular product purchases. Same shape here: is_video/is_audio so
+    // the frontend can embed a real player, view_url for inline viewing
+    // (no attachment content-disposition, so a PDF opens/renders instead
+    // of downloading) — only populated once actually unlocked, same as
+    // external_url already was.
+    product.issues = issues.map(({ file_path, original_filename, ...i }) => ({
       ...i,
       unlocked: !!unlocked,
-      external_url: unlocked ? i.external_url : null
+      external_url: unlocked ? i.external_url : null,
+      is_video: i.kind === 'upload' && isVideoFilename(original_filename),
+      is_audio: i.kind === 'upload' && isAudioFilename(original_filename),
+      view_url: !unlocked ? null : (i.kind === 'external_link' ? i.external_url : `/api/downloads/issue/${i.id}/view`)
     }));
     // `unlocked` only ever changed what the issues LIST looked like
     // (unlock icons, download links) - it never touched the buy panel's

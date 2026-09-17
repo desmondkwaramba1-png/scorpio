@@ -444,7 +444,12 @@ export default function Product() {
             </div>
           )}
 
-          {!!product.creator_verified && (
+          {/* Trust signals exist to help a prospective buyer decide -
+              once they already own it (or it's their own listing), "is
+              this seller trustworthy" isn't a live question anymore,
+              just noise between them and actually getting to their
+              content. */}
+          {!!product.creator_verified && !isOwner && !product.already_purchased && (
             <div className="trust-line">
               <FiShield size={16} />
               <span>Verified creator: a confirmed email, a payout number on file, and a track record of published products and completed orders.</span>

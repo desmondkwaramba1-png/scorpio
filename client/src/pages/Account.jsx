@@ -664,7 +664,14 @@ export default function Account() {
         </div>
       )}
 
-      {purchases && purchases.length > 0 && (
+      {/* purchases.length alone isn't enough — a buyer whose only order
+          sat in "Needs your attention" (still awaiting their OK) had
+          every one of their purchases pulled out of `rest`, so this
+          rendered a real heading and description over a genuinely empty
+          grid: "Your library" with nothing under it. Confirmed live via
+          a real purchase. rest.length is what actually decides whether
+          there's anything left to show here. */}
+      {rest.length > 0 && (
         <>
           <h2 style={{ fontSize: '1.1rem', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
             <FiPackage size={17} /> Your library

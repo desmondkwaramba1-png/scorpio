@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiSearch, FiTrendingUp, FiClock, FiZap, FiUsers, FiChevronRight, FiPlay, FiBookOpen, FiCheckCircle, FiShield } from 'react-icons/fi';
+import { FiSearch, FiTrendingUp, FiClock, FiZap, FiUsers, FiChevronRight, FiPlay, FiBookOpen, FiCheckCircle, FiShield, FiCompass, FiLogIn, FiShoppingBag } from 'react-icons/fi';
 import CompactProductCard from '../components/CompactProductCard.jsx';
 import Seal from '../components/Seal.jsx';
 import ReelViewer from '../components/ReelViewer.jsx';
@@ -468,15 +468,23 @@ export default function Marketplace() {
               for this, so gets nothing extra here. */}
           {!showPitch && !authLoading && (
             <div className="shop-hero__quicklinks">
-              <Link to="/discover">Browse everything</Link>
+              <Link to="/discover" className="shop-hero__quicklink shop-hero__quicklink--primary">
+                <FiCompass size={14} /> Browse everything
+              </Link>
               {!user && (
                 <>
-                  <Link to="/login">Sign in</Link>
-                  <Link to="/login?role=creator">Sell your own</Link>
+                  <Link to="/login" className="shop-hero__quicklink">
+                    <FiLogIn size={14} /> Sign in
+                  </Link>
+                  <Link to="/login?role=creator" className="shop-hero__quicklink">
+                    <FiShoppingBag size={14} /> Sell your own
+                  </Link>
                 </>
               )}
               {user && !creator && (
-                <Link to="/onboarding">Also selling something? Start a storefront</Link>
+                <Link to="/onboarding" className="shop-hero__quicklink">
+                  <FiShoppingBag size={14} /> Start a storefront
+                </Link>
               )}
             </div>
           )}

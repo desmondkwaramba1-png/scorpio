@@ -741,14 +741,20 @@ img{max-width:100%;display:block;}
   display:block;color:rgba(255,255,255,.6);font-size:.8rem;font-weight:600;
   margin-bottom:10px;letter-spacing:.01em;
 }
-.shop-hero__quicklinks{
-  display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:14px;
+.shop-hero__quicklinks{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+.shop-hero__quicklink{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22);color:rgba(255,255,255,.9);
+  font-size:.8rem;font-weight:600;padding:.5rem .85rem;border-radius:999px;
+  transition:background .15s ease,border-color .15s ease,transform .15s ease;
 }
-.shop-hero__quicklinks a{
-  color:rgba(255,255,255,.75);font-size:.82rem;font-weight:600;
-  text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(255,255,255,.35);
-}
-.shop-hero__quicklinks a:hover{color:#fff;}
+.shop-hero__quicklink:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.4);transform:translateY(-1px);}
+.shop-hero__quicklink svg{flex-shrink:0;}
+/* The one action that's always useful regardless of who's looking (and
+   the only one shown to every visitor, logged in or not) gets a little
+   more visual weight than the situational ones next to it. */
+.shop-hero__quicklink--primary{background:var(--gold);border-color:var(--gold);color:var(--green-dark);}
+.shop-hero__quicklink--primary:hover{background:var(--gold-dark);border-color:var(--gold-dark);}
 
 /* ---- hero product spotlight ---- */
 /* A text-only hero, however short, still means a first-time visitor's

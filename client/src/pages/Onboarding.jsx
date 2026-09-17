@@ -89,7 +89,7 @@ export default function Onboarding() {
           <div key={label} style={{ display: 'contents' }}>
             <div className={`wizard-step${i === step ? ' wizard-step--active' : ''}${i < step ? ' wizard-step--done' : ''}`}>
               <span className="wizard-step__circle">{i < step ? <FiCheck size={13} /> : i + 1}</span>
-              <span>{label}</span>
+              <span className="wizard-step__label">{label}</span>
             </div>
             {i < STEPS.length - 1 && <div className="wizard-connector" />}
           </div>

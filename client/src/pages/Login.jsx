@@ -229,12 +229,12 @@ export default function Login() {
             <div className="wizard-steps" style={{ marginBottom: 24 }}>
               <div className={`wizard-step${signupStep === 0 ? ' wizard-step--active' : ' wizard-step--done'}`}>
                 <span className="wizard-step__circle">{signupStep > 0 ? <FiCheck size={13} /> : 1}</span>
-                <span>Account</span>
+                <span className="wizard-step__label">Account</span>
               </div>
               <div className="wizard-connector" />
               <div className={`wizard-step${signupStep === 1 ? ' wizard-step--active' : ''}`}>
                 <span className="wizard-step__circle">2</span>
-                <span>Security</span>
+                <span className="wizard-step__label">Security</span>
               </div>
             </div>
           )}

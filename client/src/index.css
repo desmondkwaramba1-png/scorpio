@@ -1191,8 +1191,16 @@ img{max-width:100%;display:block;}
 .wizard-step--active .wizard-step__circle{border-color:var(--ink);background:var(--ink);color:var(--ink-contrast);}
 .wizard-step--done .wizard-step__circle{border-color:var(--green-glow);background:var(--green-glow);color:#fff;}
 .wizard-connector{flex:1;height:1.5px;background:var(--line);margin:0 10px;min-width:16px;}
-.wizard-step span{display:none;}
-@media (min-width:640px){ .wizard-step span{display:inline;} }
+/* Was a bare `.wizard-step span` selector meant to hide the step's text
+   LABEL on narrow screens, numbered circle only - but .wizard-step__circle
+   is also a <span>, so it matched and hid that too, collapsing every step
+   to nothing but the connector line between them. Confirmed live: on a
+   real phone-width Login page, the new signup wizard's step indicator
+   rendered as a flat 1.5px-tall line, no circles, no numbers, nothing.
+   Scoped to the label specifically now, the actual step circle is never
+   touched by this rule at any width. */
+.wizard-step__label{display:none;}
+@media (min-width:640px){ .wizard-step__label{display:inline;} }
 
 /* ---- form + live preview (desktop) ---- */
 /* Shared section block for the creator-dashboard forms (see FormSection.jsx). */

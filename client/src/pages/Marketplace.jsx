@@ -248,7 +248,12 @@ function Rail({ title, subtitle, icon: Icon, link, products }) {
 export default function Marketplace() {
   const navigate = useNavigate();
   const [q, setQ] = useState('');
-  const [showPitch, setShowPitch] = useState(() => !hasSeenPitch());
+  // No setter used, in fact: the pitch used to have its own "Just
+  // browsing" dismiss button that collapsed it in place mid-session, but
+  // with a real "Browse products" CTA now linking straight to Discover
+  // and everything below the hero fully visible by just scrolling, that
+  // extra dismiss control was redundant rather than genuinely useful.
+  const [showPitch] = useState(() => !hasSeenPitch());
   const [trending, setTrending] = useState(null);
   const [fresh, setFresh] = useState(null);
   const [blogPosts, setBlogPosts] = useState(null);
@@ -324,10 +329,6 @@ export default function Marketplace() {
 
   return (
     <div>
-      <div className="blog-band">
-        <BlogRail posts={blogPosts} />
-      </div>
-
       <header className={`shop-hero${showPitch ? '' : ' shop-hero--compact'}`}>
         <div className="wrap">
           {showPitch ? (
@@ -340,18 +341,30 @@ export default function Marketplace() {
                   on exactly the content LCP measures. Left the animation
                   on the badge and CTA below, small elements, never the
                   LCP candidate, so the entrance still reads as polished. */}
-              <span className="mono shop-hero__badge shop-hero__reveal" style={{ animationDelay: '.05s' }}><FiZap size={12} /> REAL CREATORS, REAL SKILLS</span>
-              <h1 className="shop-hero__title">Turn what you know into income.</h1>
+              {/* This used to open with "Turn what you know into income" -
+                  a seller pitch, first thing a brand-new visitor read, on
+                  what's supposed to be a marketplace's front door. Direct
+                  feedback: the page read as a blog/creator platform, not
+                  somewhere to buy something, and this line (plus having no
+                  actual "browse" CTA at all below it) was a real part of
+                  why. Leads with what a buyer actually gets now; the
+                  seller pitch still gets its own real moment, just further
+                  down (see the CTA band near the bottom), not the very
+                  first thing anyone sees. */}
+              <span className="mono shop-hero__badge shop-hero__reveal" style={{ animationDelay: '.05s' }}><FiZap size={12} /> ZIMBABWE'S MARKETPLACE FOR DIGITAL PRODUCTS</span>
+              <h1 className="shop-hero__title">
+                {EBOOKS_ONLY ? 'Ebooks, guides, and courses worth paying for.' : 'Real digital products worth paying for.'}
+              </h1>
               <p className="shop-hero__sub">
                 {EBOOKS_ONLY
-                  ? "Guides, templates, and courses from people who've actually done the work, not scraped off the internet. Every file is checked before it goes live."
-                  : "Real digital products from people who've actually done the work, not scraped off the internet. Every listing is checked before it goes live."}
+                  ? "From people who've actually done the work, not scraped off the internet. Every file is checked before it goes live."
+                  : "From people who've actually done the work, not scraped off the internet. Every listing is checked before it goes live."}
               </p>
               <div className="shop-hero__actions shop-hero__reveal" style={{ animationDelay: '.35s' }}>
-                <Link to="/login" className="btn btn--gold shop-hero__cta">Get started</Link>
-                <button type="button" className="shop-hero__browse-btn" onClick={() => setShowPitch(false)}>
-                  Just browsing <FiChevronRight size={14} />
-                </button>
+                <Link to="/discover" className="btn btn--gold shop-hero__cta">Browse products</Link>
+                <Link to="/login?role=creator" className="shop-hero__browse-btn">
+                  Have something to sell? <FiChevronRight size={14} />
+                </Link>
               </div>
             </>
           ) : (
@@ -385,7 +398,18 @@ export default function Marketplace() {
 
       <TrustBand />
 
-      <CreatorSpotlight creators={spotlightCreators} reelsByCreator={reelsByCreator} onPlay={setViewingReels} />
+      {/* Real proof comes before anything else below the hero and trust
+          band — a first-time visitor deciding whether this is worth their
+          time needs to see actual products fast, not scroll past
+          categories, creator avatars, and a blog before hitting one. */}
+      <Rail
+        title="Trending now" subtitle="What buyers are grabbing right now."
+        icon={FiTrendingUp} link="/discover?sort=popular" products={trending}
+      />
+      <Rail
+        title="New arrivals" subtitle="Just listed, be the first to grab these."
+        icon={FiClock} link="/discover" products={fresh}
+      />
 
       {ACTIVE_CATEGORIES.length > 1 && (
         <section className="category-band">
@@ -409,15 +433,6 @@ export default function Marketplace() {
         </section>
       )}
 
-      <Rail
-        title="Trending now" subtitle="What buyers are grabbing right now."
-        icon={FiTrendingUp} link="/discover?sort=popular" products={trending}
-      />
-      <Rail
-        title="New arrivals" subtitle="Just listed, be the first to grab these."
-        icon={FiClock} link="/discover" products={fresh}
-      />
-
       {ACTIVE_CATEGORIES.length > 1 && ACTIVE_CATEGORIES.map(c => (
         <Rail
           key={c.value}
@@ -427,6 +442,19 @@ export default function Marketplace() {
           products={byCategory[c.value]}
         />
       ))}
+
+      <CreatorSpotlight creators={spotlightCreators} reelsByCreator={reelsByCreator} onPlay={setViewingReels} />
+
+      {/* The blog earns a real, prominent spot on the page — just not the
+          very first thing a first-time visitor hits before they've even
+          seen this is a marketplace. Direct feedback: leading with it made
+          the whole page read as a blog/content site first, marketplace
+          second. Real proof (products), then category/creator context,
+          THEN "here's more if you want to read" - a supporting act, not
+          the headline. */}
+      <div className="blog-band">
+        <BlogRail posts={blogPosts} />
+      </div>
 
       {/* Same rule as the hero pitch above: this is a first-encounter pitch
           ("here's the other path you could've picked"), not a standing

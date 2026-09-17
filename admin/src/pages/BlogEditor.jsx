@@ -117,6 +117,13 @@ export default function BlogEditor() {
       const post = isEdit
         ? await adminUpload(`/api/blog/admin/posts/${id}`, 'PATCH', body)
         : await adminUpload('/api/blog/admin/posts', 'POST', body);
+      // Editing an already-saved post navigates to the same URL it's
+      // already on, so the id-keyed fetch effect that originally set
+      // `meta` never re-runs on its own — without this, the button row
+      // (which reads meta.status to decide its own label) kept reading
+      // stale pre-save state, "Publish" sitting there after a post had
+      // already gone live.
+      setMeta(m => ({ ...(m || {}), status: post.status }));
       navigate(`/blog/${post.id}/edit`, { state: { justSaved: status, slug: post.slug, at: Date.now() } });
     } catch (err) {
       setError(err.message);
@@ -222,10 +229,10 @@ export default function BlogEditor() {
 
       <div className="btn-row">
         <button className="btn btn--ghost" disabled={submitting} onClick={() => submit('draft')}>
-          {submitting ? 'Saving...' : 'Save as draft'}
+          {submitting ? 'Saving...' : meta?.status === 'published' ? 'Unpublish (save as draft)' : 'Save as draft'}
         </button>
         <button className="btn btn--gold" style={{ flex: 1 }} disabled={submitting} onClick={() => submit('published')}>
-          {submitting ? 'Saving...' : 'Publish'}
+          {submitting ? 'Saving...' : meta?.status === 'published' ? 'Save changes' : 'Publish'}
         </button>
       </div>
     </div>

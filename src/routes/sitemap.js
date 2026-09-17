@@ -15,7 +15,7 @@ function xmlEscape(s) {
 }
 
 router.get('/sitemap.xml', (req, res) => {
-  const staticUrls = ['/', '/discover', '/creators', '/terms'];
+  const staticUrls = ['/', '/discover', '/creators', '/blog', '/terms'];
 
   // Demo/seed listings (handle "demo-%", see scripts/seed-marketplace.js)
   // are real, browsable pages on the site — they're excluded here, not
@@ -36,6 +36,15 @@ router.get('/sitemap.xml', (req, res) => {
     WHERE p.status = 'published' AND c.handle NOT LIKE 'demo-%'
   `).all();
 
+  // This is the actual point of writing a blog at all (see routes/blog.js
+  // and the creator-submission flow) — a post nobody's sitemap ever
+  // mentions leans entirely on Google finding it by crawling the homepage
+  // rail/internal links, slower and less reliable than just listing it.
+  const posts = db.prepare(`
+    SELECT slug, published_at, updated_at FROM blog_posts
+    WHERE status = 'published' AND published_at <= datetime('now')
+  `).all();
+
   const urls = [
     ...staticUrls.map(path => ({ loc: `${SITE_ORIGIN}${path}`, priority: path === '/' ? '1.0' : '0.7' })),
     ...creators.map(c => ({ loc: `${SITE_ORIGIN}/@${c.handle}`, priority: '0.6' })),
@@ -43,6 +52,11 @@ router.get('/sitemap.xml', (req, res) => {
       loc: `${SITE_ORIGIN}/@${p.handle}/${p.slug}`,
       lastmod: p.created_at ? p.created_at.replace(' ', 'T') + 'Z' : undefined,
       priority: '0.8'
+    })),
+    ...posts.map(p => ({
+      loc: `${SITE_ORIGIN}/blog/${p.slug}`,
+      lastmod: (p.updated_at || p.published_at).replace(' ', 'T') + 'Z',
+      priority: '0.7'
     }))
   ];
 

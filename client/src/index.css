@@ -1271,12 +1271,19 @@ img{max-width:100%;display:block;}
 .settings-card{
   background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
 }
+/* flex-wrap + min-width:0 on the value - a long email+badge combo (or
+   just a long username/phone) has no reason to stay on one line and
+   force the row wider than the card, confirmed live: that's exactly
+   what happened on a phone before this, the row pushed past the
+   card's own edge instead of wrapping the value onto its own line. */
 .settings-row{
-  display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 16px;padding:14px 18px;
 }
 .settings-row + .settings-row{border-top:1px solid var(--line);}
-.settings-row__label{font-weight:600;font-size:.9rem;color:var(--ink);}
-.settings-row__value{color:var(--muted);font-size:.88rem;text-align:right;}
+.settings-row__label{font-weight:600;font-size:.9rem;color:var(--ink);flex-shrink:0;}
+.settings-row__value{
+  color:var(--muted);font-size:.88rem;text-align:right;min-width:0;overflow-wrap:anywhere;
+}
 /* A field that needs real room (a textarea, a longer input with its
    own helper text) instead of a compact label-left/value-right row -
    same card, same divider rhythm, just stacked top-to-bottom like the

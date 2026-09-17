@@ -106,6 +106,17 @@ export default function Login() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [presetRole]);
 
+  // Real feedback: clicking Continue landed on "half of it", not the
+  // top of the next step - because it genuinely did. Swapping which
+  // fields render doesn't move the page at all, so whatever scroll
+  // position filling in the previous step's fields left you at (often
+  // scrolled well down, especially on a phone keyboard) is exactly
+  // where the next step's fields first appear too, cut off mid-form
+  // instead of starting clean like a real "next page" should.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [tab, signupRole, signupStep]);
+
   function pickRole(role) {
     setSignupRole(role);
     setSignupStep(0);

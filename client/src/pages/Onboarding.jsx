@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { FiCheck } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -31,6 +31,15 @@ export default function Onboarding() {
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+
+  // Clicking Continue swaps which fields render but never moves the
+  // page - whatever scroll position the previous step left you at
+  // (often well down, especially filling a long step on a phone
+  // keyboard) is exactly where the next step's fields first appear
+  // too, instead of starting at the top like a real next step should.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [step]);
 
   if (creator) return <Navigate to="/dashboard" replace />;
 

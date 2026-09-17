@@ -17,6 +17,7 @@ function formatDate(sqliteDatetimeOrIso) {
 // reading time here is a rough estimate off that instead — real per-post
 // reading time is correct once you're actually on the post itself.
 function BlogCard({ post }) {
+  const byline = post.creator_handle ? `@${post.creator_handle}` : post.author_name;
   return (
     <Link to={`/blog/${post.slug}`} className="blog-card">
       <div className="blog-card__cover">
@@ -29,13 +30,33 @@ function BlogCard({ post }) {
         <span className="blog-card__read-badge"><FiBookOpen size={11} /> Read</span>
       </div>
       <div className="blog-card__body">
-        <p className="blog-card__meta">
-          {formatDate(post.published_at)} &middot; {post.creator_handle ? `@${post.creator_handle}` : post.author_name}
-        </p>
+        <div className="blog-card__byline">
+          <span
+            className="blog-card__avatar"
+            style={post.creator_avatar ? { backgroundImage: `url(${post.creator_avatar})` } : undefined}
+          >
+            {!post.creator_avatar && byline.replace('@', '').charAt(0).toUpperCase()}
+          </span>
+          <span className="blog-card__byline-text">{byline} &middot; {formatDate(post.published_at)}</span>
+        </div>
         <h2 className="blog-card__title">{post.title}</h2>
         {post.excerpt && <p className="blog-card__excerpt">{post.excerpt}</p>}
       </div>
     </Link>
+  );
+}
+
+// Real content right now is thin (a brand-new section, a handful of
+// posts) — a two-card grid with a wide dead gap next to it reads as
+// unfinished. This fills the row out with an honest "more is coming"
+// instead, never shown mid-search (a "coming soon" tile makes no sense
+// as a search result someone actually asked for).
+function ComingSoonCard() {
+  return (
+    <div className="blog-card blog-card--placeholder">
+      <FiBookOpen size={26} />
+      <p>More guides on the way</p>
+    </div>
   );
 }
 
@@ -72,11 +93,13 @@ export default function Blog() {
 
   return (
     <div className="wrap" style={{ padding: '40px 20px 80px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <FiBookOpen size={22} color="var(--green)" />
-        <h1 style={{ fontSize: '1.8rem' }}>The SCORPIO Blog</h1>
-      </div>
-      <p className="muted" style={{ marginBottom: 24 }}>
+      <p className="section__eyebrow mono">
+        <FiBookOpen size={13} style={{ verticalAlign: -2, marginRight: 6 }} /> REAL GUIDES, NO FLUFF
+      </p>
+      <h1 style={{ fontSize: 'clamp(1.6rem, 3.6vw, 2.2rem)', marginBottom: 10, maxWidth: '20ch' }}>
+        Guides for building something real.
+      </h1>
+      <p className="muted" style={{ marginBottom: 24, fontSize: '1.02rem', maxWidth: '58ch' }}>
         How to start, price, and grow a digital business in Zimbabwe, no fluff, written by the people building SCORPIO.
       </p>
 
@@ -120,6 +143,7 @@ export default function Blog() {
       {posts && posts.length > 0 && (
         <div className="blog-grid">
           {posts.map(post => <BlogCard key={post.id} post={post} />)}
+          {!q && posts.length < 3 && <ComingSoonCard />}
         </div>
       )}
     </div>

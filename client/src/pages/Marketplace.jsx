@@ -1,10 +1,41 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiSearch, FiTrendingUp, FiClock, FiZap, FiUsers, FiChevronRight, FiPlay, FiBookOpen } from 'react-icons/fi';
+import { FiSearch, FiTrendingUp, FiClock, FiZap, FiUsers, FiChevronRight, FiPlay, FiBookOpen, FiCheckCircle, FiShield } from 'react-icons/fi';
 import CompactProductCard from '../components/CompactProductCard.jsx';
 import Seal from '../components/Seal.jsx';
 import ReelViewer from '../components/ReelViewer.jsx';
 import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../lib/launchScope.js';
+
+// Same three promises Product.jsx's own trust-line/buy-benefits already
+// make on every listing page, one level up: a stranger deciding whether
+// to trust this marketplace at all shouldn't have to click into a
+// product first to find out review-before-publish, instant delivery, and
+// buyer protection are real, standing policies, not per-listing copy.
+const TRUST_ITEMS = [
+  { icon: FiCheckCircle, title: 'Checked before it goes live', desc: 'Every listing is reviewed, not just uploaded and left to sell itself.' },
+  { icon: FiZap, title: 'Instant delivery', desc: 'Get your file, course, or access the moment payment clears, no waiting.' },
+  { icon: FiShield, title: '5-day buyer protection', desc: "Not what you expected? Report it and get a refund, no questions dragged out." }
+];
+
+function TrustBand() {
+  return (
+    <section className="trust-band">
+      <div className="section wrap">
+        <div className="trust-grid">
+          {TRUST_ITEMS.map(item => (
+            <div key={item.title} className="trust-item">
+              <span className="trust-item__icon"><item.icon size={19} /></span>
+              <div>
+                <p className="trust-item__title">{item.title}</p>
+                <p className="trust-item__desc">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 // The first-encounter moment (badge + pitch + Get Started) is a one-time
 // thing, real the very first time someone lands here, dead weight on
@@ -187,7 +218,12 @@ function BlogRail({ posts }) {
 }
 
 function Rail({ title, subtitle, icon: Icon, link, products }) {
-  if (!products || products.length === 0) return null;
+  // A single card in a row built for a horizontal scroll of many reads
+  // as broken, not curated — a lonely card floating in a full-width
+  // carousel track with nothing to scroll to. Below 2, that category/row
+  // just isn't ready to stand on its own on the homepage yet; the product
+  // itself is still fully reachable from Discover.
+  if (!products || products.length < 2) return null;
   return (
     <section className="section section--row wrap">
       <div className="rail-head">
@@ -288,7 +324,9 @@ export default function Marketplace() {
 
   return (
     <div>
-      <BlogRail posts={blogPosts} />
+      <div className="blog-band">
+        <BlogRail posts={blogPosts} />
+      </div>
 
       <header className={`shop-hero${showPitch ? '' : ' shop-hero--compact'}`}>
         <div className="wrap">
@@ -345,6 +383,8 @@ export default function Marketplace() {
         </div>
       </header>
 
+      <TrustBand />
+
       <CreatorSpotlight creators={spotlightCreators} reelsByCreator={reelsByCreator} onPlay={setViewingReels} />
 
       {ACTIVE_CATEGORIES.length > 1 && (
@@ -354,11 +394,14 @@ export default function Marketplace() {
               <p className="section__eyebrow mono">SHOP BY CATEGORY</p>
               <h2 className="section__title">Find what you're looking for.</h2>
             </div>
-            <div className="category-grid">
+            <div className="category-feature-grid">
               {ACTIVE_CATEGORIES.map(c => (
-                <Link key={c.value} to={`/discover?category=${c.value}`} className="category-tile">
-                  <span className="category-tile__icon"><c.icon /></span>
-                  <span className="category-tile__label">{c.label}</span>
+                <Link key={c.value} to={`/discover?category=${c.value}`} className="category-feature-card">
+                  <span className="category-feature-card__icon"><c.icon size={22} /></span>
+                  <span>
+                    <span className="category-feature-card__label">{c.label}</span>
+                    <span className="category-feature-card__tagline">{CATEGORY_TAGLINES[c.value] || 'Browse this category'}</span>
+                  </span>
                 </Link>
               ))}
             </div>

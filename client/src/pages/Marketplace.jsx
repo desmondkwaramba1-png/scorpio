@@ -278,6 +278,8 @@ export default function Marketplace() {
 
   return (
     <div>
+      <BlogRail posts={blogPosts} />
+
       <header className={`shop-hero${showPitch ? '' : ' shop-hero--compact'}`}>
         <div className="wrap">
           {showPitch ? (
@@ -324,8 +326,6 @@ export default function Marketplace() {
           )}
         </div>
       </header>
-
-      <BlogRail posts={blogPosts} />
 
       <CreatorSpotlight creators={spotlightCreators} reelsByCreator={reelsByCreator} onPlay={setViewingReels} />
 

@@ -161,6 +161,22 @@ export default function BlogEditor() {
         </div>
       )}
 
+      {/* The actual review, as an actual reader would see it — cover,
+          title, real rendered body — right up front. The raw editable
+          form below still exists for fixing a typo before approving, but
+          deciding whether a post is worth publishing off a raw markdown
+          textarea buried under five other fields isn't a real review. */}
+      {meta?.status === 'pending_review' && (
+        <div className="card card--pad" style={{ marginBottom: 24 }}>
+          {shownCover && (
+            <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: 8, overflow: 'hidden', marginBottom: 16, background: `url(${shownCover}) center/cover` }} />
+          )}
+          <h1 style={{ fontSize: '1.4rem', marginBottom: 12 }}>{form.title || '(untitled)'}</h1>
+          <div style={{ lineHeight: 1.6 }}
+            dangerouslySetInnerHTML={{ __html: renderMarkdown(form.body_markdown) || '<p class="muted">Nothing written yet.</p>' }} />
+        </div>
+      )}
+
       {notice && (
         <div className="card card--pad" style={{
           marginBottom: 20, borderColor: 'var(--green-glow)', display: 'flex',

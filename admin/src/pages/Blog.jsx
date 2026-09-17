@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { FiEye } from 'react-icons/fi';
 import { useAdmin } from '../context/AdminContext.jsx';
 import { SITE_ORIGIN } from '../lib/site';
 
@@ -15,10 +16,9 @@ function formatDate(sqliteDatetime) {
 }
 
 export default function Blog() {
-  const { adminFetch, adminPost, adminDelete } = useAdmin();
+  const { adminFetch, adminDelete } = useAdmin();
   const [posts, setPosts] = useState(null);
   const [error, setError] = useState(null);
-  const [busyId, setBusyId] = useState(null);
 
   useEffect(() => {
     adminFetch('/api/blog/admin/posts').then(setPosts).catch(err => setError(err.message));
@@ -31,34 +31,6 @@ export default function Blog() {
       setPosts(list => list.filter(p => p.id !== post.id));
     } catch (err) {
       setError(err.message);
-    }
-  }
-
-  async function handleApprove(post) {
-    setBusyId(post.id);
-    setError(null);
-    try {
-      const updated = await adminPost(`/api/blog/admin/posts/${post.id}/approve`);
-      setPosts(list => list.map(p => p.id === post.id ? { ...p, ...updated } : p));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function handleReject(post) {
-    const note = window.prompt(`What needs to change in "${post.title}"? This goes straight to the creator.`);
-    if (!note || !note.trim()) return;
-    setBusyId(post.id);
-    setError(null);
-    try {
-      const updated = await adminPost(`/api/blog/admin/posts/${post.id}/reject`, { note: note.trim() });
-      setPosts(list => list.map(p => p.id === post.id ? { ...p, ...updated } : p));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusyId(null);
     }
   }
 
@@ -106,16 +78,20 @@ export default function Blog() {
                       {post.published_at ? formatDate(post.published_at) : formatDate(post.created_at)}
                     </td>
                     <td data-label="" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {post.status === 'pending_review' && (
-                        <>
-                          <button onClick={() => handleApprove(post)} disabled={busyId === post.id} className="btn btn--gold btn--sm">Approve</button>
-                          <button onClick={() => handleReject(post)} disabled={busyId === post.id} className="btn btn--ghost btn--sm">Reject</button>
-                        </>
+                      {/* Approve/Reject deliberately don't live here anymore
+                          — a button sitting right in the list let a pending
+                          post get approved without anyone actually reading
+                          it first. Reviewing now always means opening the
+                          real post (title, rendered body, the product it
+                          links) and deciding from there. */}
+                      {post.status === 'pending_review' ? (
+                        <Link to={`/blog/${post.id}/edit`} className="btn btn--gold btn--sm"><FiEye size={13} /> Review</Link>
+                      ) : (
+                        <Link to={`/blog/${post.id}/edit`} className="btn btn--ghost btn--sm">Edit</Link>
                       )}
                       {post.status === 'published' && (
                         <a href={`${SITE_ORIGIN}/blog/${post.slug}`} target="_blank" rel="noopener noreferrer" className="btn btn--ghost btn--sm">View</a>
                       )}
-                      <Link to={`/blog/${post.id}/edit`} className="btn btn--ghost btn--sm">Edit</Link>
                       <button onClick={() => handleDelete(post)} className="btn btn--ghost btn--sm">Delete</button>
                     </td>
                   </tr>

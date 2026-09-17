@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FiArrowLeft, FiAlertTriangle } from 'react-icons/fi';
 import { api } from '../../lib/api';
 import { renderMarkdown } from '../../lib/markdown';
@@ -16,7 +16,6 @@ export default function DashboardBlogEditor() {
   const { id } = useParams();
   const isEdit = !!id;
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [cover, setCover] = useState(null);
@@ -28,18 +27,10 @@ export default function DashboardBlogEditor() {
   const [loading, setLoading] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  // Only shown for a draft save, which stays on this same form (see
+  // submit() below) — a submit/resubmit navigates away to the list
+  // instead, where its own notice lives.
   const [notice, setNotice] = useState(null);
-
-  // navigate() after a save always carries a fresh state object, even
-  // landing on the same URL a second save already sits on — without this,
-  // hitting Submit just silently sat on the same form with nothing telling
-  // you it actually went anywhere, easy to read as "did that even work."
-  useEffect(() => {
-    if (!location.state?.justSaved) return;
-    setNotice(location.state.justSaved);
-    const t = setTimeout(() => setNotice(null), 6000);
-    return () => clearTimeout(t);
-  }, [location.state]);
 
   // Only published products make sense to feature — a draft has no public
   // page yet for the callout link to point to.
@@ -93,19 +84,23 @@ export default function DashboardBlogEditor() {
       const post = isEdit
         ? await api.patch(`/api/blog/mine/${id}`, body)
         : await api.post('/api/blog/mine', body);
-      // Editing an already-saved post navigates to the same URL it's
-      // already on — the :id param doesn't change, so the effect that
-      // fetches the post and sets `status` never re-runs on its own.
-      // Setting it directly here is what actually keeps the button row
-      // (which reads `status` to decide what to show) in sync with what
-      // the server just did, not what it showed when the page first loaded.
-      setStatus(post.status);
-      setRejectionNote(post.rejection_note);
-      // The server decides the real resulting status (a save on an
-      // already-published/rejected post always lands as pending_review
-      // regardless of which button was clicked — see routes/blog.js) —
-      // the banner reflects what actually happened, not what was asked for.
-      navigate(`/dashboard/blog/${post.id}/edit`, { state: { justSaved: post.status, at: Date.now() } });
+      if (post.status === 'draft') {
+        // Still actively drafting — staying on the form is the point,
+        // that's what "save as draft" (as opposed to submitting) means.
+        setStatus(post.status);
+        setRejectionNote(post.rejection_note);
+        setNotice(post.status);
+        setTimeout(() => setNotice(null), 6000);
+      } else {
+        // Submitted for review (or already-published/rejected, which
+        // this same save just re-submitted regardless of which button was
+        // clicked — see routes/blog.js). Nothing left to fill in here
+        // until SCORPIO reviews it, so there's no reason to still be
+        // looking at an editable title/cover/body form — back to the
+        // list, where its real status (and any rejection note) actually
+        // lives, same as clicking away and back would show anyway.
+        navigate('/dashboard/blog', { state: { justSaved: post.status, at: Date.now() } });
+      }
     } catch (err) {
       setError(err.message);
     } finally {

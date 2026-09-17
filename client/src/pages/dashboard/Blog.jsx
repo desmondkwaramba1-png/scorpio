@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { FiPlus, FiEdit2, FiTrash2, FiAlertTriangle } from 'react-icons/fi';
 import { api } from '../../lib/api';
 
@@ -10,6 +10,11 @@ const STATUS_LABEL = {
   rejected: { text: 'Changes requested', className: 'badge--neutral' }
 };
 
+const NOTICE_TEXT = {
+  draft: 'Saved as a draft. Only you can see it.',
+  pending_review: 'Submitted — SCORPIO will review it shortly. You\'ll see it here once it\'s approved or if changes are needed.'
+};
+
 function formatDate(sqliteDatetime) {
   return new Date(sqliteDatetime.replace(' ', 'T') + 'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
@@ -17,10 +22,19 @@ function formatDate(sqliteDatetime) {
 export default function DashboardBlog() {
   const [posts, setPosts] = useState(null);
   const [error, setError] = useState(null);
+  const location = useLocation();
+  const [notice, setNotice] = useState(null);
 
   useEffect(() => {
     api.get('/api/blog/mine').then(setPosts).catch(err => setError(err.message));
   }, []);
+
+  useEffect(() => {
+    if (!location.state?.justSaved) return;
+    setNotice(location.state.justSaved);
+    const t = setTimeout(() => setNotice(null), 6000);
+    return () => clearTimeout(t);
+  }, [location.state]);
 
   async function handleDelete(post) {
     if (!window.confirm(`Delete "${post.title}"? This can't be undone.`)) return;
@@ -42,6 +56,12 @@ export default function DashboardBlog() {
         Write about what you know, link one of your own products at the end, and reach people searching for the problem it solves.
         Every post goes to SCORPIO for a quick review before it's visible to anyone else.
       </p>
+
+      {notice && (
+        <div className="card card--pad" style={{ marginBottom: 20, borderColor: 'var(--green-glow)' }}>
+          <span style={{ color: 'var(--green-glow)', fontWeight: 600 }}>{NOTICE_TEXT[notice] || 'Saved.'}</span>
+        </div>
+      )}
 
       {error && <p className="error-text">{error}</p>}
 

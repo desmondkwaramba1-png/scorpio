@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiSearch, FiTrendingUp, FiClock, FiZap, FiUsers, FiChevronRight, FiPlay } from 'react-icons/fi';
+import { FiSearch, FiTrendingUp, FiClock, FiZap, FiUsers, FiChevronRight, FiPlay, FiBookOpen } from 'react-icons/fi';
 import CompactProductCard from '../components/CompactProductCard.jsx';
 import Seal from '../components/Seal.jsx';
 import ReelViewer from '../components/ReelViewer.jsx';
@@ -133,6 +133,52 @@ function CreatorSpotlight({ creators, reelsByCreator, onPlay }) {
   );
 }
 
+function formatBlogDate(sqliteDatetime) {
+  return new Date(sqliteDatetime.replace(' ', 'T') + 'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// Same card shape as CompactProductCard, meta line swapped for a date
+// instead of a price — the entry point the whole content->product loop
+// depends on (see the "Want this?" callout on the post page itself)
+// starts with someone actually noticing the blog exists, which a nav
+// link alone doesn't do for a visitor who lands straight on the shop.
+function BlogPostCard({ post }) {
+  return (
+    <Link to={`/blog/${post.slug}`} className="compact-card">
+      <div
+        className={`compact-card__cover${post.cover_path ? '' : ' compact-card__cover--empty'}`}
+        style={post.cover_path ? { backgroundImage: `url(${post.cover_path})` } : undefined}
+      >
+        {!post.cover_path && post.title.charAt(0).toUpperCase()}
+      </div>
+      <div className="compact-card__body">
+        <p className="compact-card__title">{post.title}</p>
+        <p className="muted" style={{ fontSize: '.78rem' }}>{formatBlogDate(post.published_at)}</p>
+      </div>
+    </Link>
+  );
+}
+
+function BlogRail({ posts }) {
+  if (!posts || posts.length === 0) return null;
+  return (
+    <section className="section section--row wrap">
+      <div className="rail-head">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <FiBookOpen size={16} color="var(--green-glow)" />
+          <h2 className="rail-head__title">From the blog</h2>
+        </div>
+        <Link to="/blog" className="rail-head__link">See all <FiChevronRight size={13} /></Link>
+      </div>
+      <div className="rail-wrap">
+        <div className="rail">
+          {posts.map(post => <BlogPostCard key={post.id} post={post} />)}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Rail({ title, icon: Icon, link, products }) {
   if (!products || products.length === 0) return null;
   return (
@@ -159,6 +205,7 @@ export default function Marketplace() {
   const [showPitch, setShowPitch] = useState(() => !hasSeenPitch());
   const [trending, setTrending] = useState(null);
   const [fresh, setFresh] = useState(null);
+  const [blogPosts, setBlogPosts] = useState(null);
   const [byCategory, setByCategory] = useState({});
   const [spotlightCreators, setSpotlightCreators] = useState(null);
   const [reelsByCreator, setReelsByCreator] = useState({});
@@ -187,10 +234,11 @@ export default function Marketplace() {
       fetch('/api/products?limit=8').then(r => r.json()).catch(() => []),
       fetch('/api/creators?limit=14').then(r => r.json()).catch(() => []),
       fetch('/api/reels?limit=60').then(r => r.json()).catch(() => []),
+      fetch('/api/blog?limit=6').then(r => r.json()).catch(() => []),
       Promise.all(categoryEntries.map(c =>
         fetch(`/api/products?category=${c.value}&limit=6`).then(r => r.json()).catch(() => [])
       ))
-    ]).then(([popular, newest, creators, reels, categoryResults]) => {
+    ]).then(([popular, newest, creators, reels, blog, categoryResults]) => {
       setTrending(popular);
       // With little to no like activity yet, "popular" and "newest" can
       // return the exact same products in the exact same order, the tie
@@ -200,6 +248,7 @@ export default function Marketplace() {
       setFresh(newest.filter(p => !trendingIds.has(p.id)));
 
       setSpotlightCreators(creators);
+      setBlogPosts(blog);
 
       // Recent reels across everyone, grouped by creator handle client-
       // side , one request instead of asking "does this creator have
@@ -275,6 +324,8 @@ export default function Marketplace() {
           )}
         </div>
       </header>
+
+      <BlogRail posts={blogPosts} />
 
       <CreatorSpotlight creators={spotlightCreators} reelsByCreator={reelsByCreator} onPlay={setViewingReels} />
 

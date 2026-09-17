@@ -992,19 +992,16 @@ img{max-width:100%;display:block;}
 }
 .tab:hover{background:var(--green-tint);color:var(--green-glow);}
 .tab--active{background:var(--ink);color:var(--ink-contrast);}
-/* The dashboard nav has 9 real destinations - wrapping that many pill
-   tabs onto 3 stacked rows (confirmed live on a phone) ate close to
-   300px of vertical space above any actual page content, and the wrap
-   points landed wherever the words happened to run out, not by any
-   real grouping. A single horizontally-scrollable row keeps every tab
-   the same size and reachable with one swipe instead of a wall of
-   buttons, same "swipe for more" pattern the product rails already use
-   elsewhere on the site. */
-.tabs--scroll{
-  flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;
-}
-.tabs--scroll::-webkit-scrollbar{display:none;}
-.tabs--scroll .tab{flex-shrink:0;}
+/* First pass made this a horizontally-scrolling single row - real
+   feedback was that hiding half the nav off-screen with nothing telling
+   you to swipe is worse than a taller bar: this is primary navigation
+   (Orders/Wallet/Settings aren't optional, someone genuinely needs all
+   of them), not a "more if you're curious" product rail where scrolling
+   is an expected, forgivable pattern. Every tab stays visible and
+   reachable with one tap instead; .tabs--dense just shrinks the pills
+   themselves so 9 of them wrap onto 2 rows on a phone instead of 3. */
+.tabs--dense{gap:5px;}
+.tabs--dense .tab{padding:.42rem .78rem;font-size:.78rem;gap:5px;}
 
 /* ---- admin ---- */
 .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);}

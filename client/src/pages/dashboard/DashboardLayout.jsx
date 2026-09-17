@@ -80,12 +80,12 @@ export default function DashboardLayout() {
         </div>
       </div>
 
-      <nav className="tabs tabs--scroll">
+      <nav className="tabs tabs--dense">
         {TABS.map(([to, label, Icon]) => (
           <NavLink key={to} to={to} end={to === '/dashboard'} className={({ isActive }) =>
             'tab' + (isActive ? ' tab--active' : '')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-            <Icon size={15} /> {label}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+            <Icon size={13} /> {label}
           </NavLink>
         ))}
       </nav>

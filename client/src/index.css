@@ -107,6 +107,18 @@
 }
 
 *,*::before,*::after{box-sizing:border-box;}
+/* Real report: the page could be dragged/panned left-right on a phone
+   even with nothing actually overflowing (confirmed - document/body
+   scrollWidth matched the viewport exactly on every page checked). That's
+   not overflow, it's the touch-driven rubber-band/overscroll gesture
+   mobile browsers allow on the X axis by default - a horizontal swipe
+   that starts anywhere on the page (not just inside an intentionally
+   scrollable rail) bounces the whole viewport sideways and back. Blocking
+   it on the X axis only leaves normal vertical scrolling, and the rails'
+   own intentional horizontal scroll (.rail, .tabs--dense, etc.) still
+   works since this is about the outer page bouncing, not inner scroll
+   containers being disabled. */
+html,body{overscroll-behavior-x:none;touch-action:pan-y;}
 html{scroll-behavior:smooth;}
 @media (prefers-reduced-motion: reduce){
   html{scroll-behavior:auto;}
@@ -271,7 +283,7 @@ img{max-width:100%;display:block;}
 .type-pill:hover{border-color:var(--green-glow);color:var(--green-glow);}
 .type-pill--active{background:var(--ink);border-color:var(--ink);color:var(--ink-contrast);}
 
-.category-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:16px;scrollbar-width:thin;}
+.category-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:16px;scrollbar-width:thin;touch-action:pan-x pan-y;}
 .category-chip{
   display:flex;align-items:center;gap:6px;padding:.5rem .95rem;border-radius:999px;
   border:1.5px solid var(--line);background:var(--surface);font-size:.82rem;font-weight:600;
@@ -626,6 +638,10 @@ img{max-width:100%;display:block;}
 .rail{
   display:flex;gap:var(--sp-3);overflow-x:auto;padding:2px 2px 10px;
   scroll-snap-type:x proximity;scrollbar-width:thin;
+  /* html/body block horizontal touch panning site-wide (see that rule's
+     own comment) - restored here since this one's meant to scroll
+     sideways on purpose. */
+  touch-action:pan-x pan-y;
 }
 .rail::-webkit-scrollbar{height:5px;}
 .rail::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px;}
@@ -1004,7 +1020,7 @@ img{max-width:100%;display:block;}
 .tabs--dense .tab{padding:.42rem .78rem;font-size:.78rem;gap:5px;}
 
 /* ---- admin ---- */
-.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);touch-action:pan-x pan-y;}
 .admin-table{width:100%;border-collapse:collapse;font-size:.86rem;white-space:nowrap;}
 .admin-table th{
   text-align:left;padding:11px 14px;font-size:.74rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
@@ -1377,7 +1393,7 @@ img{max-width:100%;display:block;}
 }
 
 /* ---- homepage creator spotlight (story-bubble tray) ---- */
-.creator-spotlight{display:flex;gap:18px;overflow-x:auto;padding:4px 2px 10px;scroll-snap-type:x proximity;scrollbar-width:thin;}
+.creator-spotlight{display:flex;gap:18px;overflow-x:auto;padding:4px 2px 10px;scroll-snap-type:x proximity;scrollbar-width:thin;touch-action:pan-x pan-y;}
 .creator-spotlight::-webkit-scrollbar{height:5px;}
 .creator-spotlight::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px;}
 .creator-spotlight__item{
@@ -1533,7 +1549,11 @@ img{max-width:100%;display:block;}
    several phantom empty columns sitting next to the real card, a big dead
    gap on desktop. auto-fit collapses those unused trailing tracks instead,
    and the minmax cap keeps a lone card from stretching to fill the row. */
-.blog-grid{display:grid;gap:var(--sp-6);grid-template-columns:repeat(auto-fit, minmax(280px, 380px));}
+/* Sized back down after a first pass made these bigger - more cards
+   visible at once without scrolling matters more on a browsing/listing
+   page than each individual card taking up more room. The shadow/hover/
+   scrim polish stays, just not the size bump. */
+.blog-grid{display:grid;gap:var(--sp-5);grid-template-columns:repeat(auto-fit, minmax(260px, 320px));}
 .blog-card{
   display:flex;flex-direction:column;border-radius:var(--radius);overflow:hidden;
   background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow-1);
@@ -1578,8 +1598,8 @@ img{max-width:100%;display:block;}
   padding:5px 11px;border-radius:999px;font-size:.72rem;font-weight:700;
   background:rgba(255,255,255,.92);color:var(--ink);backdrop-filter:blur(2px);box-shadow:var(--shadow-1);
 }
-.blog-card__body{padding:22px 22px 24px;}
-.blog-card__byline{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.blog-card__body{padding:16px 18px 20px;}
+.blog-card__byline{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
 .blog-card__avatar{
   width:24px;height:24px;border-radius:50%;background:var(--green-glow) center/cover;color:#fff;
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
@@ -1587,7 +1607,7 @@ img{max-width:100%;display:block;}
 }
 .blog-card__byline-text{color:var(--muted);font-size:.78rem;font-weight:600;}
 .blog-card__title{
-  font-size:1.2rem;line-height:1.32;margin-bottom:10px;transition:color .15s ease;
+  font-size:1.05rem;line-height:1.32;margin-bottom:8px;transition:color .15s ease;
 }
 .blog-card:hover .blog-card__title{color:var(--green-glow);}
 .blog-card__excerpt{
@@ -1644,7 +1664,7 @@ img{max-width:100%;display:block;}
   margin:0 0 1.2em;padding:2px 0 2px 16px;border-left:3px solid var(--gold);color:var(--muted);font-style:italic;
 }
 .blog-post__body code{background:var(--paper);padding:.15em .4em;border-radius:4px;font-size:.9em;}
-.blog-post__body pre{background:var(--ink-800);color:#fff;padding:16px;border-radius:var(--radius-sm);overflow-x:auto;margin:0 0 1.2em;}
+.blog-post__body pre{background:var(--ink-800);color:#fff;padding:16px;border-radius:var(--radius-sm);overflow-x:auto;margin:0 0 1.2em;touch-action:pan-x pan-y;}
 .blog-post__body pre code{background:none;padding:0;}
 .blog-post__more-link{display:flex;align-items:center;gap:12px;}
 .blog-post__more-cover{

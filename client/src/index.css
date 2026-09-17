@@ -1211,6 +1211,14 @@ img{max-width:100%;display:block;}
    touched by this rule at any width. */
 .wizard-step__label{display:none;}
 @media (min-width:640px){ .wizard-step__label{display:inline;} }
+/* Login's own signup wizard has only 2 short steps ("Account"/
+   "Security") - real feedback was that on mobile, hiding the label
+   left just two bare unlabeled circles with nothing saying what step 1
+   or 2 actually are. Onboarding's 4-step wizard (Basics/About/Payout/
+   Review) keeps the default hide - four labels plus connectors
+   genuinely doesn't fit a 360px screen - opted in here specifically
+   since two short words comfortably do. */
+.wizard-steps--labeled .wizard-step__label{display:inline;}
 
 /* ---- form + live preview (desktop) ---- */
 /* Shared section block for the creator-dashboard forms (see FormSection.jsx). */

@@ -237,7 +237,7 @@ export default function Login() {
           )}
 
           {tab === 'signup' && (
-            <div className="wizard-steps" style={{ marginBottom: 24 }}>
+            <div className="wizard-steps wizard-steps--labeled" style={{ marginBottom: 24 }}>
               <div className={`wizard-step${signupStep === 0 ? ' wizard-step--active' : ' wizard-step--done'}`}>
                 <span className="wizard-step__circle">{signupStep > 0 ? <FiCheck size={13} /> : 1}</span>
                 <span className="wizard-step__label">Account</span>

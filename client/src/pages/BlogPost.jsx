@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { FiShare2, FiCheck, FiClock, FiArrowLeft } from 'react-icons/fi';
+import { FiShare2, FiCheck, FiClock, FiArrowLeft, FiArrowRight } from 'react-icons/fi';
 import { api } from '../lib/api';
 import { useSEO } from '../lib/seo';
 import { SITE_ORIGIN } from '../lib/site';
@@ -46,7 +46,7 @@ export default function BlogPost() {
       image: post.cover_path ? [post.cover_path] : undefined,
       datePublished: post.published_at,
       dateModified: post.updated_at || post.published_at,
-      author: { '@type': 'Organization', name: post.author_name },
+      author: post.creator_handle ? { '@type': 'Person', name: post.author_name } : { '@type': 'Organization', name: post.author_name },
       publisher: { '@type': 'Organization', name: 'SCORPIO' },
       mainEntityOfPage: postUrl
     } : undefined
@@ -97,13 +97,36 @@ export default function BlogPost() {
 
       <h1 className="blog-post__title">{post.title}</h1>
       <p className="blog-post__meta">
-        {post.author_name} &middot; {formatDate(post.published_at)}
+        {post.creator_handle ? <Link to={`/@${post.creator_handle}`} style={{ color: 'inherit', fontWeight: 600 }}>@{post.creator_handle}</Link> : post.author_name}
+        {' '}&middot; {formatDate(post.published_at)}
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginLeft: 6 }}>
           &middot; <FiClock size={13} /> {readingTime(post.body_markdown)} min read
         </span>
       </p>
 
       <div className="blog-post__body" dangerouslySetInnerHTML={{ __html: renderMarkdown(post.body_markdown) }} />
+
+      {/* The actual content-to-commerce link the whole point of letting
+          creators write for the blog rests on (see routes/blog.js's
+          featured_product_id) — a real, specific "want this?" card, not
+          a generic "check out my store" plug. */}
+      {post.featured_product_slug && (
+        <Link
+          to={`/@${post.featured_product_creator_handle}/${post.featured_product_slug}`}
+          className="card card--pad"
+          style={{ marginTop: 32, display: 'flex', alignItems: 'center', gap: 16, textDecoration: 'none' }}
+        >
+          <div style={{
+            width: 64, height: 64, borderRadius: 'var(--radius-sm)', flexShrink: 0,
+            background: post.featured_product_cover ? `url(${post.featured_product_cover}) center/cover` : 'var(--green-tint)'
+          }} />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p className="muted" style={{ fontSize: '.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 4 }}>Want this?</p>
+            <p style={{ fontWeight: 600 }}>{post.featured_product_title}</p>
+          </div>
+          <FiArrowRight size={18} style={{ flexShrink: 0, color: 'var(--muted)' }} />
+        </Link>
+      )}
 
       <button onClick={share} className="btn btn--ghost" style={{ marginTop: 32 }}>
         {copied ? <><FiCheck size={15} /> Link copied</> : <><FiShare2 size={15} /> Share this post</>}

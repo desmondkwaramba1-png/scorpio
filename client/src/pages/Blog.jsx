@@ -28,7 +28,7 @@ function BlogCard({ post, featured }) {
       </div>
       <div className="blog-card__body">
         <p className="blog-card__meta">
-          {formatDate(post.published_at)} &middot; {post.author_name}
+          {formatDate(post.published_at)} &middot; {post.creator_handle ? `@${post.creator_handle}` : post.author_name}
         </p>
         <h2 className="blog-card__title">{post.title}</h2>
         {post.excerpt && <p className="blog-card__excerpt">{post.excerpt}</p>}

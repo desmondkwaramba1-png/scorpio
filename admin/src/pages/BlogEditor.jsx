@@ -1,17 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
+import { FiAlertTriangle } from 'react-icons/fi';
 import { useAdmin } from '../context/AdminContext.jsx';
 import { renderMarkdown } from '../lib/markdown';
 import { SITE_ORIGIN } from '../lib/site';
 
 const EMPTY_FORM = { title: '', slug: '', excerpt: '', author_name: 'SCORPIO Team', body_markdown: '' };
 
+const STATUS_LABEL = {
+  draft: 'Draft', pending_review: 'Pending review', published: 'Published', rejected: 'Rejected'
+};
+
 export default function BlogEditor() {
   const { id } = useParams();
   const isEdit = !!id;
   const navigate = useNavigate();
   const location = useLocation();
-  const { adminFetch, adminUpload } = useAdmin();
+  const { adminFetch, adminPost, adminUpload } = useAdmin();
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [slugTouched, setSlugTouched] = useState(false);
@@ -22,6 +27,10 @@ export default function BlogEditor() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
+  // Read-only context about who actually wrote this — an admin editing a
+  // creator's submission needs to see that plainly, not mistake it for
+  // one of the platform's own posts.
+  const [meta, setMeta] = useState(null);
 
   // navigate() after a save always carries a fresh state object (even when
   // landing on the same URL a second save already sits on), so this fires
@@ -45,10 +54,35 @@ export default function BlogEditor() {
         });
         setExistingCoverPath(post.cover_path);
         setSlugTouched(true);
+        setMeta({
+          status: post.status, creatorHandle: post.creator_handle, rejectionNote: post.rejection_note,
+          featuredProductTitle: post.featured_product_title
+        });
         setLoading(false);
       })
       .catch(err => setError(err.message));
   }, [id, isEdit, adminFetch]);
+
+  async function review(action) {
+    setSubmitting(true);
+    setError(null);
+    try {
+      let updated;
+      if (action === 'approve') {
+        updated = await adminPost(`/api/blog/admin/posts/${id}/approve`);
+      } else {
+        const note = window.prompt('What needs to change? This goes straight to the creator.');
+        if (!note || !note.trim()) { setSubmitting(false); return; }
+        updated = await adminPost(`/api/blog/admin/posts/${id}/reject`, { note: note.trim() });
+      }
+      setMeta(m => ({ ...m, status: updated.status, rejectionNote: updated.rejection_note }));
+      setNotice({ justSaved: updated.status, slug: updated.slug, at: Date.now() });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   function updateTitle(e) {
     const title = e.target.value;
@@ -98,7 +132,27 @@ export default function BlogEditor() {
   return (
     <div style={{ maxWidth: 720 }}>
       <Link to="/blog" className="muted" style={{ fontSize: '.85rem', fontWeight: 600 }}>&larr; All posts</Link>
-      <h2 style={{ margin: '12px 0 24px' }}>{isEdit ? 'Edit post' : 'New post'}</h2>
+      <h2 style={{ margin: '12px 0 16px' }}>{isEdit ? 'Edit post' : 'New post'}</h2>
+
+      {meta?.creatorHandle && (
+        <div className="card card--pad" style={{ marginBottom: 20 }}>
+          <p style={{ fontSize: '.88rem' }}>
+            Submitted by <strong>@{meta.creatorHandle}</strong> &middot; {STATUS_LABEL[meta.status] || meta.status}
+            {meta.featuredProductTitle && <> &middot; features "{meta.featuredProductTitle}"</>}
+          </p>
+          {meta.status === 'rejected' && meta.rejectionNote && (
+            <p style={{ fontSize: '.85rem', marginTop: 8, display: 'flex', alignItems: 'flex-start', gap: 6, color: 'var(--red)' }}>
+              <FiAlertTriangle size={14} style={{ flexShrink: 0, marginTop: 2 }} /> {meta.rejectionNote}
+            </p>
+          )}
+          {meta.status === 'pending_review' && (
+            <div className="btn-row" style={{ marginTop: 12 }}>
+              <button className="btn btn--gold" disabled={submitting} onClick={() => review('approve')}>Approve &amp; publish</button>
+              <button className="btn btn--ghost" disabled={submitting} onClick={() => review('reject')}>Reject</button>
+            </div>
+          )}
+        </div>
+      )}
 
       {notice && (
         <div className="card card--pad" style={{
@@ -106,7 +160,10 @@ export default function BlogEditor() {
           justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap'
         }}>
           <span style={{ color: 'var(--green-glow)', fontWeight: 600 }}>
-            {notice.justSaved === 'published' ? 'Published — it\'s live now.' : 'Saved as a draft. Not visible on the blog yet.'}
+            {notice.justSaved === 'published' ? 'Published — it\'s live now.'
+              : notice.justSaved === 'pending_review' ? 'Sent back for review.'
+              : notice.justSaved === 'rejected' ? 'Rejected — the creator can see why and resubmit.'
+              : 'Saved as a draft. Not visible on the blog yet.'}
           </span>
           <div style={{ display: 'flex', gap: 10 }}>
             {notice.justSaved === 'published' && (

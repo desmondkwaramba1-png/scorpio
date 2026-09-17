@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, Link, Navigate } from 'react-router-dom';
-import { FiGrid, FiBox, FiFilm, FiShoppingBag, FiBarChart2, FiCreditCard, FiRepeat, FiSettings, FiCopy, FiCheck, FiExternalLink } from 'react-icons/fi';
+import { FiGrid, FiBox, FiFilm, FiShoppingBag, FiBarChart2, FiCreditCard, FiRepeat, FiSettings, FiCopy, FiCheck, FiExternalLink, FiBookOpen } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import Seal from '../../components/Seal.jsx';
 import { SITE_HOST, SITE_ORIGIN } from '../../lib/site.js';
@@ -11,6 +11,7 @@ const TABS = [
   ['/dashboard/reels', 'Reels', FiFilm],
   ['/dashboard/orders', 'Orders', FiShoppingBag],
   ['/dashboard/subscriptions', 'Subscriptions', FiRepeat],
+  ['/dashboard/blog', 'Blog', FiBookOpen],
   ['/dashboard/insights', 'Insights', FiBarChart2],
   ['/dashboard/wallet', 'Wallet', FiCreditCard],
   ['/dashboard/settings', 'Settings', FiSettings]

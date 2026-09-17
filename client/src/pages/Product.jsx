@@ -346,7 +346,7 @@ export default function Product() {
             so a subscriber had nowhere on this page to actually see what
             they were getting, or that anything had been published at all. */}
         {['serial', 'subscription'].includes(product.type) && (
-          <div className="card card--pad" style={{ marginTop: 28 }}>
+          <div id="issues-section" className="card card--pad" style={{ marginTop: 28 }}>
             <p style={{ fontWeight: 600, marginBottom: 4 }}>Issues</p>
             <p className="muted" style={{ fontSize: '.85rem', marginBottom: 4 }}>
               {product.type === 'subscription'
@@ -464,24 +464,41 @@ export default function Product() {
             </ul>
           )}
 
-          {/* Serial/subscription already show their own "you have this"
-              state (the issues list, "already subscribed"). Every other
-              type had nothing - a buyer revisiting something they'd
-              already bought (their own library, a shared link, anywhere)
-              saw the exact same buy CTA a stranger would, no sign they
-              already owned it, which read as "buy this again." The real
-              download/access still lives on their own purchases, not
-              here - this just stops selling to them and points them
-              there instead. */}
+          {/* Every type had nothing telling a buyer revisiting something
+              they'd already bought (their own library, a shared link,
+              anywhere) that they owned it - same buy CTA a stranger
+              would see, which read as "buy this again." Serial/
+              subscription get a different second line and button on
+              purpose: the actual content (the issues list, "Get it"
+              links) is already further down THIS SAME page - sending
+              them to /account first, only to have nothing to do there
+              but come back here, was a real dead-end loop, confirmed
+              live. Single/service genuinely have nowhere else on this
+              page to get the file/access from, so /account is correct
+              for those. */}
           {!isOwner && product.already_purchased ? (
             <>
               <div className="trust-line" style={{ color: 'var(--green-glow)', fontWeight: 600 }}>
                 <FiCheck size={16} />
-                <span>You already own this. Find it in your library to download or view it.</span>
+                <span>
+                  {['serial', 'subscription'].includes(product.type)
+                    ? 'You already own this. Your issues are below.'
+                    : 'You already own this. Find it in your library to download or view it.'}
+                </span>
               </div>
-              <Link to="/account" className="btn btn--gold btn--block">
-                <FiPackage size={15} /> Go to your library
-              </Link>
+              {['serial', 'subscription'].includes(product.type) ? (
+                <button
+                  type="button"
+                  className="btn btn--gold btn--block"
+                  onClick={() => document.getElementById('issues-section')?.scrollIntoView({ behavior: 'smooth' })}
+                >
+                  <FiDownload size={15} /> Go to your issues
+                </button>
+              ) : (
+                <Link to="/account" className="btn btn--gold btn--block">
+                  <FiPackage size={15} /> Go to your library
+                </Link>
+              )}
             </>
           ) : isOwner ? (
             <>

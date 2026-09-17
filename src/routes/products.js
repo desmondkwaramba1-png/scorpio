@@ -335,6 +335,17 @@ router.get('/:slug', (req, res) => {
     `).get(req.user.id, product.id);
   }
 
+  // The "Add to cart" button had no memory - clicking it on something
+  // already sitting in the cart silently re-added nothing (cart.js's own
+  // UNIQUE-constraint catch already made that a no-op), but the page
+  // itself never knew, so the button flashed "Added to cart" then reset
+  // right back to "Add to cart" a couple seconds later even though the
+  // item was still genuinely in there. Checked on page load, not just
+  // after a click, so a returning visit shows the real state immediately.
+  if (req.user && !isOwner) {
+    product.in_cart = !!db.prepare('SELECT 1 FROM cart_items WHERE user_id = ? AND product_id = ?').get(req.user.id, product.id);
+  }
+
   // Lets Checkout.jsx/Product.jsx show "already subscribed, renews on
   // <date>" instead of a buy form, without a second round-trip.
   if (product.type === 'subscription' && req.user) {

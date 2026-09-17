@@ -86,12 +86,14 @@ router.post('/', requireAuth, (req, res) => {
     return res.status(409).json({ error: 'This product is sold out.' });
   }
 
+  let alreadyInCart = false;
   try {
     db.prepare('INSERT INTO cart_items (user_id, product_id) VALUES (?, ?)').run(req.user.id, product.id);
   } catch (err) {
-    if (!/UNIQUE/.test(err.message)) throw err; // already in cart, treat as success
+    if (!/UNIQUE/.test(err.message)) throw err;
+    alreadyInCart = true; // already in cart, treat as success, just say so honestly
   }
-  res.status(201).json({ added: true, cart_count: cartCount(req.user.id) });
+  res.status(201).json({ added: true, already_in_cart: alreadyInCart, cart_count: cartCount(req.user.id) });
 });
 
 // DELETE /api/cart/:productId

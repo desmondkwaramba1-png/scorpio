@@ -113,6 +113,7 @@ export default function Product() {
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [justAddedFresh, setJustAddedFresh] = useState(false);
   const [cartError, setCartError] = useState(null);
   const [moreFromCreator, setMoreFromCreator] = useState(null);
   const [productReel, setProductReel] = useState(null);
@@ -127,6 +128,7 @@ export default function Product() {
     api.get(`/api/products/${slug}`)
       .then(product => {
         setProduct(product);
+        setAddedToCart(!!product.in_cart);
         // /api/creators/:handle doesn't repeat creator_handle on each
         // product row (every item in that list is obviously the same
         // creator), CompactProductCard needs it to build a link, so it's
@@ -271,12 +273,22 @@ export default function Product() {
     : product.price_minor === 0 ? 'Get for free'
     : `Buy for ${product.promo_active ? discountedPrice : price}`;
 
+  // Used to revert back to "Add to cart" on a timer regardless of
+  // whether the item was actually still in the cart — real, confirmed:
+  // the button flashed "Added" then reset itself a couple seconds later
+  // even though nothing about the cart had changed, inviting a second,
+  // pointless click. Once it's genuinely in the cart, the button just
+  // says so and stays that way (see product.in_cart above, checked on
+  // page load too) — the only way it goes back to "Add to cart" is
+  // actually removing it, from the real cart page.
   async function handleAddToCart() {
     if (!user) { navigate(`/login?role=buyer&next=${encodeURIComponent(productUrl)}`); return; }
+    if (addedToCart) return;
     try {
-      await addToCart(product.slug);
+      const data = await addToCart(product.slug);
       setAddedToCart(true);
-      setTimeout(() => setAddedToCart(false), 1800);
+      setJustAddedFresh(!data.already_in_cart);
+      setTimeout(() => setJustAddedFresh(false), 1800);
     } catch (err) {
       setCartError(err.message);
     }
@@ -572,8 +584,14 @@ export default function Product() {
                     {buyLabel}
                   </Link>
                   {!product.pay_what_you_want && product.price_minor !== 0 && product.type !== 'service' && (
-                    <button onClick={handleAddToCart} className="btn btn--ghost btn--block" style={{ marginTop: 10 }}>
-                      {addedToCart ? <><FiCheck size={15} /> Added to cart</> : <><FiShoppingCart size={15} /> Add to cart</>}
+                    <button
+                      onClick={handleAddToCart}
+                      className="btn btn--ghost btn--block"
+                      style={{ marginTop: 10, ...(addedToCart ? { cursor: 'default' } : {}) }}
+                    >
+                      {addedToCart
+                        ? <><FiCheck size={15} /> {justAddedFresh ? 'Added to cart' : 'Already in cart'}</>
+                        : <><FiShoppingCart size={15} /> Add to cart</>}
                     </button>
                   )}
                   {cartError && <p className="error-text" style={{ marginTop: 8 }}>{cartError}</p>}

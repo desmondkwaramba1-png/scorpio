@@ -1416,6 +1416,15 @@ img{max-width:100%;display:block;}
 .blog-card__cover-image{
   position:absolute;inset:0;background-size:contain;background-position:center;background-repeat:no-repeat;
 }
+/* The whole card is a link, but a plain photo gives no hint of that —
+   real feedback was people not realizing a cover was clickable at all.
+   Same small-pill pattern as .compact-card__badge, just signalling
+   "this opens something" instead of a discount. */
+.blog-card__read-badge{
+  position:absolute;bottom:8px;right:8px;display:inline-flex;align-items:center;gap:4px;
+  padding:4px 10px;border-radius:999px;font-size:.72rem;font-weight:700;
+  background:rgba(19,25,33,.78);color:#fff;backdrop-filter:blur(2px);
+}
 .blog-card__body{padding:18px 20px;}
 .blog-card__meta{color:var(--muted);font-size:.78rem;margin-bottom:8px;}
 .blog-card__title{font-size:1.05rem;line-height:1.35;margin-bottom:8px;}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { FiBookOpen } from 'react-icons/fi';
 import { api } from '../lib/api';
 import { useSEO } from '../lib/seo';
 import { SITE_ORIGIN } from '../lib/site';
@@ -25,6 +26,7 @@ function BlogCard({ post }) {
             <div className="blog-card__cover-image" style={{ backgroundImage: `url(${post.cover_path})` }} />
           </>
         )}
+        <span className="blog-card__read-badge"><FiBookOpen size={11} /> Read</span>
       </div>
       <div className="blog-card__body">
         <p className="blog-card__meta">

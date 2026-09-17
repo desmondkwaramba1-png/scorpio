@@ -150,6 +150,7 @@ function BlogPostCard({ post }) {
         style={post.cover_path ? { backgroundImage: `url(${post.cover_path})` } : undefined}
       >
         {!post.cover_path && post.title.charAt(0).toUpperCase()}
+        <span className="compact-card__badge">Read</span>
       </div>
       <div className="compact-card__body">
         <p className="compact-card__title">{post.title}</p>

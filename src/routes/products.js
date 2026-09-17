@@ -298,17 +298,24 @@ router.get('/:slug', (req, res) => {
       unlocked: !!unlocked,
       external_url: unlocked ? i.external_url : null
     }));
+    // `unlocked` only ever changed what the issues LIST looked like
+    // (unlock icons, download links) - it never touched the buy panel's
+    // own CTA below, so a buyer who already owned a serial/subscription
+    // with zero issues published yet (nothing in the list to show
+    // "unlocked" through) landed on a page that still read as a pure
+    // sales page: full price, "Get for free"/buy button, no sign they'd
+    // already paid. Real, confirmed: clicking "View" from a buyer's own
+    // library sent them to what looked like a fresh purchase flow.
+    product.already_purchased = !isOwner && !!unlocked;
   }
 
-  // Serial/subscription already have their own "you have this" signal
-  // (product.issues[].unlocked, product.my_subscription below) - every
-  // other type (single, service) had nothing at all, so a buyer revisiting
-  // something they'd already bought (from their library, a shared link,
-  // anywhere) saw the exact same "Buy"/"Get for free" CTA a stranger would,
-  // with no sign they already own it. The actual download/access itself
-  // still lives on the buyer's own purchases (purchases.js's fileAccessFor,
-  // license keys, etc.) - this only tells the product page whether to point
-  // them there instead of selling to them again.
+  // Every other type (single, service) had nothing at all telling a
+  // buyer revisiting something they'd already bought (from their
+  // library, a shared link, anywhere) that they owned it - same "Buy"/
+  // "Get for free" CTA a stranger would see. The actual download/access
+  // still lives on the buyer's own purchases (purchases.js's
+  // fileAccessFor, license keys, etc.) - this only tells the product
+  // page whether to point them there instead of selling to them again.
   if (!['serial', 'subscription'].includes(product.type) && req.user && !isOwner) {
     product.already_purchased = !!db.prepare(`
       SELECT 1 FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id

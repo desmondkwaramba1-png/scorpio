@@ -164,7 +164,8 @@ const FEED_SELECT = `
          (SELECT COUNT(*) FROM product_shares WHERE product_id = p.id) AS share_count,
          (SELECT ROUND(AVG(rating), 1) FROM product_reviews WHERE product_id = p.id) AS avg_rating,
          (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) AS review_count,
-         EXISTS(SELECT 1 FROM product_likes WHERE product_id = p.id AND user_id = ?) AS liked_by_me
+         EXISTS(SELECT 1 FROM product_likes WHERE product_id = p.id AND user_id = ?) AS liked_by_me,
+         EXISTS(SELECT 1 FROM cart_items WHERE product_id = p.id AND user_id = ?) AS in_cart
   FROM products p
   JOIN creators c ON c.id = p.creator_id
 `;
@@ -174,7 +175,8 @@ const FEED_SELECT = `
 router.get('/', (req, res) => {
   const { type, q, sort, limit, category } = req.query;
   const clauses = ["p.status = 'published'"];
-  const params = [req.user ? req.user.id : 0];
+  const uid = req.user ? req.user.id : 0;
+  const params = [uid, uid];
 
   // A creator browsing the marketplace is shopping, same as anyone else -
   // their own listing showing up in that feed isn't useful to them (they

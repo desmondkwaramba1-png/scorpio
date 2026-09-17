@@ -35,8 +35,20 @@ function fileFormatLabel(files) {
 // a separate app. Same fix as Account.jsx's OrderRow already applies to
 // regular purchases: watch/listen inline for media, and for anything
 // else, an embedded viewer instead of forcing a download to see it at all.
-function IssueRow({ iss }) {
+function IssueRow({ iss, focused }) {
   const [expanded, setExpanded] = useState(false);
+  const rowRef = useRef(null);
+
+  // Jumping here from the buy panel's "latest issue" button should land
+  // the buyer already reading/watching it, not just scrolled to a list
+  // they then have to click into themselves - that extra click was the
+  // whole reason the old plain scroll button felt pointless.
+  useEffect(() => {
+    if (focused && iss.unlocked) {
+      setExpanded(true);
+      rowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [focused, iss.unlocked]);
 
   if (!iss.unlocked) {
     return (
@@ -64,7 +76,7 @@ function IssueRow({ iss }) {
   const label = iss.is_video ? 'Watch' : iss.is_audio ? 'Listen' : isExternal ? 'Open' : 'Read';
 
   return (
-    <div style={{ padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)' }}>
+    <div ref={rowRef} style={{ padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
         <div style={{ minWidth: 0 }}>
           <p style={{ fontWeight: 600, fontSize: '.9rem' }}>Issue {iss.issue_number}: {iss.title}</p>
@@ -115,6 +127,7 @@ export default function Product() {
   const [addedToCart, setAddedToCart] = useState(false);
   const [justAddedFresh, setJustAddedFresh] = useState(false);
   const [cartError, setCartError] = useState(null);
+  const [focusIssueId, setFocusIssueId] = useState(null);
   const [moreFromCreator, setMoreFromCreator] = useState(null);
   const [productReel, setProductReel] = useState(null);
   const commentsRef = useRef(null);
@@ -454,7 +467,7 @@ export default function Product() {
               <p className="muted" style={{ fontSize: '.88rem' }}>Nothing published yet, check back soon.</p>
             ) : (
               <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-                {product.issues.map(iss => <IssueRow key={iss.id} iss={iss} />)}
+                {product.issues.map(iss => <IssueRow key={iss.id} iss={iss} focused={iss.id === focusIssueId} />)}
               </div>
             )}
           </div>
@@ -547,18 +560,30 @@ export default function Product() {
                 <FiCheck size={16} />
                 <span>
                   {['serial', 'subscription'].includes(product.type)
-                    ? 'You already own this. Your issues are below.'
+                    ? 'You already own this.'
                     : 'You already own this. Find it in your library to download or view it.'}
                 </span>
               </div>
               {['serial', 'subscription'].includes(product.type) ? (
-                <button
-                  type="button"
-                  className="btn btn--gold btn--block"
-                  onClick={() => document.getElementById('issues-section')?.scrollIntoView({ behavior: 'smooth' })}
-                >
-                  <FiDownload size={15} /> Go to your issues
-                </button>
+                product.issues && product.issues.length > 0 ? (
+                  <button
+                    type="button"
+                    className="btn btn--gold btn--block"
+                    onClick={() => {
+                      setFocusIssueId(product.issues[0].id);
+                      document.getElementById('issues-section')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                  >
+                    {product.issues[0].is_video || product.issues[0].is_audio
+                      ? <FiPlay size={15} /> : <FiFileText size={15} />}
+                    {product.issues[0].is_video ? 'Watch' : product.issues[0].is_audio ? 'Listen to' : 'Read'}
+                    {' '}"Issue {product.issues[0].issue_number}: {product.issues[0].title}"
+                  </button>
+                ) : (
+                  <p className="muted" style={{ fontSize: '.85rem' }}>
+                    No issues published yet — they'll show up here the moment the creator posts one.
+                  </p>
+                )
               ) : (
                 <Link to="/account" className="btn btn--gold btn--block">
                   <FiPackage size={15} /> Go to your library

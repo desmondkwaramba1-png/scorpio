@@ -169,11 +169,12 @@ router.get('/:handle', (req, res) => {
            (SELECT COUNT(*) FROM product_likes WHERE product_id = p.id) AS like_count,
            (SELECT COUNT(*) FROM product_comments WHERE product_id = p.id) AS comment_count,
            (SELECT COUNT(*) FROM product_shares WHERE product_id = p.id) AS share_count,
-           EXISTS(SELECT 1 FROM product_likes WHERE product_id = p.id AND user_id = ?) AS liked_by_me
+           EXISTS(SELECT 1 FROM product_likes WHERE product_id = p.id AND user_id = ?) AS liked_by_me,
+           EXISTS(SELECT 1 FROM cart_items WHERE product_id = p.id AND user_id = ?) AS in_cart
     FROM products p
     WHERE p.creator_id = ? AND p.status = 'published'
     ORDER BY p.created_at DESC
-  `).all(req.user ? req.user.id : 0, creator.id);
+  `).all(req.user ? req.user.id : 0, req.user ? req.user.id : 0, creator.id);
 
   res.json({ ...publicCreator(creator), avg_rating: ratingAgg.avg_rating, review_count: ratingAgg.review_count, products });
 });

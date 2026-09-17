@@ -30,16 +30,16 @@ export default function ProductCard({ product, isOwner = false }) {
   const [likeCount, setLikeCount] = useState(p.like_count ?? 0);
   const [shareCount, setShareCount] = useState(p.share_count ?? 0);
   const [copied, setCopied] = useState(false);
-  const [addedToCart, setAddedToCart] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(!!p.in_cart);
   const [cartError, setCartError] = useState(null);
 
   async function handleAddToCart(e) {
     e.stopPropagation();
     if (!user) { navigate(`/login?role=buyer&next=${encodeURIComponent(productUrl)}`); return; }
+    if (addedToCart) return;
     try {
       await addToCart(p.slug);
       setAddedToCart(true);
-      setTimeout(() => setAddedToCart(false), 1800);
     } catch (err) {
       setCartError(err.message);
       setTimeout(() => setCartError(null), 2600);
@@ -154,8 +154,8 @@ export default function ProductCard({ product, isOwner = false }) {
             <button
               onClick={handleAddToCart}
               className="btn btn--ghost btn--sm"
-              title="Add to cart"
-              style={addedToCart ? { borderColor: 'var(--green-glow)', color: 'var(--green-glow)' } : undefined}
+              title={addedToCart ? 'Already in cart' : 'Add to cart'}
+              style={addedToCart ? { borderColor: 'var(--green-glow)', color: 'var(--green-glow)', cursor: 'default' } : undefined}
             >
               {addedToCart ? <FiCheck size={13} /> : <FiShoppingCart size={13} />}
             </button>

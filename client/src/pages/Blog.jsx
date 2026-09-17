@@ -15,9 +15,9 @@ function formatDate(sqliteDatetimeOrIso) {
 // bodies over the wire). The excerpt is the only text this card has, so
 // reading time here is a rough estimate off that instead — real per-post
 // reading time is correct once you're actually on the post itself.
-function BlogCard({ post, featured }) {
+function BlogCard({ post }) {
   return (
-    <Link to={`/blog/${post.slug}`} className={`blog-card${featured ? ' blog-card--featured' : ''}`}>
+    <Link to={`/blog/${post.slug}`} className="blog-card">
       <div className="blog-card__cover">
         {post.cover_path && (
           <>
@@ -64,19 +64,16 @@ export default function Blog() {
       </div>
 
       {!posts && (
-        <div style={{ display: 'grid', gap: 24 }}>
-          <div className="skeleton" style={{ height: 320, borderRadius: 'var(--radius)' }} />
-          <div className="blog-grid">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="skeleton-card">
-                <div className="skeleton" style={{ aspectRatio: '16/9' }} />
-                <div style={{ padding: 16 }}>
-                  <div className="skeleton" style={{ height: 13, width: '40%', marginBottom: 10 }} />
-                  <div className="skeleton" style={{ height: 18, width: '85%' }} />
-                </div>
+        <div className="blog-grid">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="skeleton-card">
+              <div className="skeleton" style={{ aspectRatio: '16/9' }} />
+              <div style={{ padding: 16 }}>
+                <div className="skeleton" style={{ height: 13, width: '40%', marginBottom: 10 }} />
+                <div className="skeleton" style={{ height: 18, width: '85%' }} />
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -88,14 +85,9 @@ export default function Blog() {
       )}
 
       {posts && posts.length > 0 && (
-        <>
-          <BlogCard post={posts[0]} featured />
-          {posts.length > 1 && (
-            <div className="blog-grid" style={{ marginTop: 28 }}>
-              {posts.slice(1).map(post => <BlogCard key={post.id} post={post} />)}
-            </div>
-          )}
-        </>
+        <div className="blog-grid">
+          {posts.map(post => <BlogCard key={post.id} post={post} />)}
+        </div>
       )}
     </div>
   );

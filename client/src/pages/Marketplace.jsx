@@ -28,7 +28,7 @@ function TrustBand() {
         <div className="trust-grid">
           {TRUST_ITEMS.map(item => (
             <div key={item.title} className="trust-item">
-              <span className="trust-item__icon"><item.icon size={16} /></span>
+              <span className="trust-item__icon"><item.icon size={12} /></span>
               <p className="trust-item__title">{item.title}</p>
             </div>
           ))}

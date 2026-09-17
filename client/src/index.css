@@ -197,6 +197,15 @@ img{max-width:100%;display:block;}
 
 /* ---- form fields ---- */
 .field{margin-bottom:20px;text-align:left;}
+/* A signup card wide enough for two fields side by side (see AuthShell's
+   `wide` prop) still stacked every field in one column regardless - all
+   the extra desktop width bought nothing but a longer scroll. Two fields
+   that are genuinely independent of each other (email/phone,
+   password/confirm) can safely sit side by side once there's room;
+   below that they stack exactly like a lone .field always has. */
+.field-row{display:grid;gap:0 16px;grid-template-columns:1fr;}
+.field-row .field{margin-bottom:20px;}
+@media (min-width:560px){ .field-row{grid-template-columns:1fr 1fr;} }
 .field label{
   display:block;font-size:.82rem;font-weight:700;color:var(--ink-dim);margin-bottom:7px;letter-spacing:.01em;
 }
@@ -566,19 +575,19 @@ img{max-width:100%;display:block;}
    stranger want to buy in the first place.
    Started as 3 stacked icon+title+sentence rows (~600px tall on a phone)
    — real feedback was that on a phone, that alone pushed every actual
-   product below the first couple of screens of scrolling. A single
-   compact row (icon + short label only, no sentence) carries the same
-   three promises in a fraction of the height, so there's real room left
-   for products to show up fast. */
+   product below the first couple of screens of scrolling. Went to a
+   compact grid of icon-over-label next, still ~130px tall; a single
+   thin inline strip (icon beside label, one line, wraps to 2 if it must)
+   gets the same three promises across in closer to 50px. */
 .trust-band{background:var(--green-tint);}
-.trust-band .section{padding:16px 0;}
-.trust-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:var(--sp-3);}
-.trust-item{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;}
+.trust-band .section{padding:10px 0;}
+.trust-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 20px;}
+.trust-item{display:flex;align-items:center;gap:6px;}
 .trust-item__icon{
-  width:32px;height:32px;border-radius:10px;background:var(--surface);color:var(--green-glow);
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:var(--shadow-1);
+  width:20px;height:20px;border-radius:6px;background:var(--surface);color:var(--green-glow);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
 }
-.trust-item__title{font-size:.74rem;font-weight:700;color:var(--ink);line-height:1.25;}
+.trust-item__title{font-size:.72rem;font-weight:700;color:var(--ink);line-height:1.2;white-space:nowrap;}
 
 /* ---- homepage: blog band ---- */
 /* Its own tinted band, not the same flat paper background every product

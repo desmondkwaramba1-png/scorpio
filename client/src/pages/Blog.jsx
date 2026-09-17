@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { FiBookOpen } from 'react-icons/fi';
+import { Link, useSearchParams } from 'react-router-dom';
+import { FiBookOpen, FiSearch } from 'react-icons/fi';
 import { api } from '../lib/api';
 import { useSEO } from '../lib/seo';
 import { SITE_ORIGIN } from '../lib/site';
@@ -40,15 +40,30 @@ function BlogCard({ post }) {
 }
 
 export default function Blog() {
+  const [params, setParams] = useSearchParams();
   const [posts, setPosts] = useState(null);
   const [error, setError] = useState(null);
 
+  const q = params.get('q') || '';
+
   useEffect(() => {
-    api.get('/api/blog?limit=20').then(setPosts).catch(err => setError(err.message));
-  }, []);
+    const qs = new URLSearchParams({ limit: '30' });
+    if (q) qs.set('q', q);
+    setPosts(null);
+    setError(null);
+    api.get(`/api/blog?${qs.toString()}`).then(setPosts).catch(err => setError(err.message));
+  }, [q]);
+
+  function updateQuery(value) {
+    const next = new URLSearchParams(params);
+    if (value) next.set('q', value); else next.delete('q');
+    setParams(next);
+  }
 
   useSEO({
-    title: 'Blog, real guides for selling and buying digitally in Zimbabwe | SCORPIO',
+    title: q
+      ? `"${q}", Blog search results | SCORPIO`
+      : 'Blog, real guides for selling and buying digitally in Zimbabwe | SCORPIO',
     description: 'How to start an online business, price your first product, get paid with EcoCash, and more, real guides from the SCORPIO team.',
     url: `${SITE_ORIGIN}/blog`
   });
@@ -56,17 +71,33 @@ export default function Blog() {
   if (error) return <div className="wrap center-page" style={{ padding: 20 }}><p className="error-text">{error}</p></div>;
 
   return (
-    <div className="wrap" style={{ padding: '48px 20px 80px' }}>
-      <div className="section__head" style={{ marginBottom: 40 }}>
-        <p className="section__eyebrow">THE SCORPIO BLOG</p>
-        <h1 style={{ fontSize: '2rem', marginBottom: 10 }}>Guides for building something real</h1>
-        <p className="muted" style={{ fontSize: '1.05rem', lineHeight: 1.6 }}>
-          How to start, price, and grow a digital business in Zimbabwe, no fluff, written by the people building SCORPIO.
-        </p>
+    <div className="wrap" style={{ padding: '40px 20px 80px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+        <FiBookOpen size={22} color="var(--green)" />
+        <h1 style={{ fontSize: '1.8rem' }}>The SCORPIO Blog</h1>
+      </div>
+      <p className="muted" style={{ marginBottom: 24 }}>
+        How to start, price, and grow a digital business in Zimbabwe, no fluff, written by the people building SCORPIO.
+      </p>
+
+      <div className="discover-filters">
+        <div className="input-icon" style={{ flex: '1 1 220px' }}>
+          <FiSearch size={15} />
+          <input
+            value={q} onChange={e => updateQuery(e.target.value)}
+            placeholder="Search guides and articles..."
+          />
+        </div>
       </div>
 
-      {!posts && (
-        <div className="blog-grid">
+      {posts && posts.length > 0 && (
+        <p className="muted" style={{ fontSize: '.85rem', margin: '16px 0' }}>
+          {posts.length} post{posts.length === 1 ? '' : 's'}
+        </p>
+      )}
+
+      {!posts && !error && (
+        <div className="blog-grid" style={{ marginTop: 16 }}>
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="skeleton-card">
               <div className="skeleton" style={{ aspectRatio: '16/9' }} />
@@ -81,8 +112,8 @@ export default function Blog() {
 
       {posts && posts.length === 0 && (
         <div className="empty-state">
-          <strong>Nothing published yet.</strong>
-          Check back soon, real guides are on the way.
+          <strong>{q ? `No posts match "${q}".` : 'Nothing published yet.'}</strong>
+          {q ? 'Try a different search.' : 'Check back soon, real guides are on the way.'}
         </div>
       )}
 

@@ -557,12 +557,13 @@ img{max-width:100%;display:block;}
    was trying and failing to do. */
 .section--row{padding:26px 0;}
 .section--row + .section--row{border-top:1px solid var(--line);}
-.rail-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:var(--sp-4);}
+.rail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:var(--sp-4);}
 .rail-head__title{
   font-size:1.05rem;font-weight:700;letter-spacing:-.01em;color:var(--ink);min-width:0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
-.rail-head__link{color:var(--link-ink);font-size:.85rem;font-weight:700;white-space:nowrap;flex-shrink:0;}
+.rail-head__subtitle{color:var(--muted);font-size:.82rem;margin-top:3px;}
+.rail-head__link{color:var(--link-ink);font-size:.85rem;font-weight:700;white-space:nowrap;flex-shrink:0;padding-top:3px;}
 
 /* ---- shop: horizontal carousel of compact cards ---- */
 /* The fade lives on a wrapper, not .rail itself, so it can sit outside the
@@ -674,9 +675,10 @@ img{max-width:100%;display:block;}
 .shop-hero__browse-btn:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.55);transform:translateY(-1px);}
 .shop-hero__browse-btn svg{flex-shrink:0;}
 
-.shop-hero__search{
+.shop-hero__search{max-width:560px;}
+.shop-hero__search-row{
   display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:999px;
-  padding:6px 6px 6px 20px;max-width:560px;box-shadow:var(--shadow-2);
+  padding:6px 6px 6px 20px;box-shadow:var(--shadow-2);
 }
 .shop-hero__search input{
   flex:1;border:none;background:none;outline:none;font-size:1rem;color:var(--ink);padding:10px 0;
@@ -696,6 +698,10 @@ img{max-width:100%;display:block;}
    a lone search bar — flatten to the solid navy and shrink the padding
    way down instead of dragging the full hero height along for no reason. */
 .shop-hero--compact{background:var(--green-dark);padding:18px 0;}
+.shop-hero__compact-label{
+  display:block;color:rgba(255,255,255,.6);font-size:.8rem;font-weight:600;
+  margin-bottom:10px;letter-spacing:.01em;
+}
 
 /* ---- nav search ---- */
 .nav__search{

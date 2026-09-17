@@ -94,9 +94,12 @@ function CreatorSpotlight({ creators, reelsByCreator, onPlay }) {
   return (
     <section className="section section--row wrap">
       <div className="rail-head">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <FiUsers size={16} color="var(--green-glow)" />
-          <h2 className="rail-head__title">Meet the creators</h2>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <FiUsers size={16} color="var(--green-glow)" />
+            <h2 className="rail-head__title">Meet the creators</h2>
+          </div>
+          <p className="rail-head__subtitle">Real people behind the listings, not anonymous storefronts.</p>
         </div>
         <Link to="/creators" className="rail-head__link">See all <FiChevronRight size={13} /></Link>
       </div>
@@ -165,9 +168,12 @@ function BlogRail({ posts }) {
   return (
     <section className="section section--row wrap">
       <div className="rail-head">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <FiBookOpen size={16} color="var(--green-glow)" />
-          <h2 className="rail-head__title">From the blog</h2>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <FiBookOpen size={16} color="var(--green-glow)" />
+            <h2 className="rail-head__title">From the blog</h2>
+          </div>
+          <p className="rail-head__subtitle">Real guides on selling and buying digitally, from the people building this.</p>
         </div>
         <Link to="/blog" className="rail-head__link">See all <FiChevronRight size={13} /></Link>
       </div>
@@ -180,14 +186,17 @@ function BlogRail({ posts }) {
   );
 }
 
-function Rail({ title, icon: Icon, link, products }) {
+function Rail({ title, subtitle, icon: Icon, link, products }) {
   if (!products || products.length === 0) return null;
   return (
     <section className="section section--row wrap">
       <div className="rail-head">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {Icon && <Icon size={16} color="var(--green-glow)" />}
-          <h2 className="rail-head__title">{title}</h2>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {Icon && <Icon size={16} color="var(--green-glow)" />}
+            <h2 className="rail-head__title">{title}</h2>
+          </div>
+          {subtitle && <p className="rail-head__subtitle">{subtitle}</p>}
         </div>
         <Link to={link} className="rail-head__link">See all</Link>
       </div>
@@ -313,16 +322,24 @@ export default function Marketplace() {
                   compact header (a returning visitor who already dismissed
                   it) showed none at all, a real page-has-heading-one fail
                   a screen reader user would hit on every repeat visit, not
-                  just a first-time edge case. */}
+                  just a first-time edge case. Also gave the bar itself
+                  nothing but a floating search field on a flat block, real
+                  visitors reported it read as an empty gap on the page —
+                  this label carries a visible line of real content instead. */}
               <h1 className="sr-only">SCORPIO, Zimbabwe's marketplace for ebooks, guides, templates and courses</h1>
-              <FiSearch size={16} color="var(--muted)" />
-              <input
-                value={q} onChange={e => setQ(e.target.value)}
-                placeholder={EBOOKS_ONLY ? 'Search guides, templates, courses...' : 'Search for ebooks, courses, music, templates...'}
-              />
-              <button type="submit" className="shop-hero__search-btn" aria-label="Search">
-                <FiSearch size={18} />
-              </button>
+              <span className="shop-hero__compact-label">
+                {EBOOKS_ONLY ? 'Guides, templates, and courses from real Zimbabwean creators.' : "Zimbabwe's marketplace for real digital products."}
+              </span>
+              <div className="shop-hero__search-row">
+                <FiSearch size={16} color="var(--muted)" />
+                <input
+                  value={q} onChange={e => setQ(e.target.value)}
+                  placeholder={EBOOKS_ONLY ? 'Search guides, templates, courses...' : 'Search for ebooks, courses, music, templates...'}
+                />
+                <button type="submit" className="shop-hero__search-btn" aria-label="Search">
+                  <FiSearch size={18} />
+                </button>
+              </div>
             </form>
           )}
         </div>
@@ -349,8 +366,14 @@ export default function Marketplace() {
         </section>
       )}
 
-      <Rail title="Trending now" icon={FiTrendingUp} link="/discover?sort=popular" products={trending} />
-      <Rail title="New arrivals" icon={FiClock} link="/discover" products={fresh} />
+      <Rail
+        title="Trending now" subtitle="What buyers are grabbing right now."
+        icon={FiTrendingUp} link="/discover?sort=popular" products={trending}
+      />
+      <Rail
+        title="New arrivals" subtitle="Just listed, be the first to grab these."
+        icon={FiClock} link="/discover" products={fresh}
+      />
 
       {ACTIVE_CATEGORIES.length > 1 && ACTIVE_CATEGORIES.map(c => (
         <Rail

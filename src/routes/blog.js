@@ -94,14 +94,22 @@ const DETAIL_JOINS = `
 // id, same as its own slug 404ing below.
 router.get('/', (req, res) => {
   const limit = Math.min(parseInt(req.query.limit, 10) || 20, 50);
+  const q = (req.query.q || '').trim();
+  const clauses = ["bp.status = 'published'", "bp.published_at <= datetime('now')"];
+  const params = [];
+  if (q) {
+    clauses.push('(bp.title LIKE ? OR bp.excerpt LIKE ?)');
+    params.push(`%${q}%`, `%${q}%`);
+  }
+  params.push(limit);
   const posts = db.prepare(`
     SELECT ${LIST_FIELDS}
     FROM blog_posts bp
     LEFT JOIN creators c ON c.id = bp.creator_id
-    WHERE bp.status = 'published' AND bp.published_at <= datetime('now')
+    WHERE ${clauses.join(' AND ')}
     ORDER BY bp.published_at DESC
     LIMIT ?
-  `).all(limit);
+  `).all(...params);
   res.json(posts);
 });
 

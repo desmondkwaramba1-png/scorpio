@@ -161,9 +161,19 @@ router.post('/:id/deliver', requireAuth, requireCreator, deliveryUpload.single('
   }
   let storagePath = null;
   if (file) {
-    const key = `deliveries/${randomUUID()}${path.extname(file.originalname)}`;
-    await storage.uploadBuffer(key, file.buffer, file.mimetype);
-    storagePath = storage.publicUrl(key);
+    // Unguarded, a rejected upload (a real R2 hiccup, not hypothetical)
+    // left this request hanging forever with no response ever sent —
+    // Express 4 doesn't route a rejected promise to the error middleware
+    // on its own — and worse here specifically: the order would sit stuck
+    // at awaiting_delivery with no sign anything went wrong, since
+    // markDelivered() below never even ran.
+    try {
+      const key = `deliveries/${randomUUID()}${path.extname(file.originalname)}`;
+      await storage.uploadBuffer(key, file.buffer, file.mimetype);
+      storagePath = storage.publicUrl(key);
+    } catch (err) {
+      return res.status(502).json({ error: 'Could not upload that file, try again.' });
+    }
   }
   markDelivered(purchase.id, {
     message,

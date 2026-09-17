@@ -175,7 +175,13 @@ router.post('/mine', requireAuth, requireCreator, upload.single('cover'), async 
   const postStatus = status === 'submit' ? 'pending_review' : 'draft';
 
   let coverPath = null;
-  if (req.file) coverPath = await uploadCover(req.file);
+  // Unguarded, a rejected upload (a real R2 hiccup) used to hang the
+  // request forever with no response ever sent - Express 4 doesn't route
+  // a rejected promise to the error middleware on its own.
+  if (req.file) {
+    try { coverPath = await uploadCover(req.file); }
+    catch (err) { return res.status(502).json({ error: 'Could not upload that cover image, try again.' }); }
+  }
 
   const result = db.prepare(`
     INSERT INTO blog_posts (slug, title, excerpt, cover_path, body_markdown, status, author_name, creator_id, featured_product_id)
@@ -211,7 +217,13 @@ router.patch('/mine/:id', requireAuth, requireCreator, upload.single('cover'), a
   const nextStatus = submitting || ['published', 'rejected'].includes(existing.status) ? 'pending_review' : 'draft';
 
   let coverPath = existing.cover_path;
-  if (req.file) coverPath = await uploadCover(req.file);
+  // Unguarded, a rejected upload (a real R2 hiccup) used to hang the
+  // request forever with no response ever sent - Express 4 doesn't route
+  // a rejected promise to the error middleware on its own.
+  if (req.file) {
+    try { coverPath = await uploadCover(req.file); }
+    catch (err) { return res.status(502).json({ error: 'Could not upload that cover image, try again.' }); }
+  }
 
   db.prepare(`
     UPDATE blog_posts SET
@@ -287,7 +299,13 @@ router.post('/admin/posts', requireAdmin, upload.single('cover'), async (req, re
   const publishedAt = postStatus === 'published' ? nowSql() : null;
 
   let coverPath = null;
-  if (req.file) coverPath = await uploadCover(req.file);
+  // Unguarded, a rejected upload (a real R2 hiccup) used to hang the
+  // request forever with no response ever sent - Express 4 doesn't route
+  // a rejected promise to the error middleware on its own.
+  if (req.file) {
+    try { coverPath = await uploadCover(req.file); }
+    catch (err) { return res.status(502).json({ error: 'Could not upload that cover image, try again.' }); }
+  }
 
   const result = db.prepare(`
     INSERT INTO blog_posts (slug, title, excerpt, cover_path, body_markdown, status, author_name, published_at)
@@ -321,7 +339,13 @@ router.patch('/admin/posts/:id', requireAdmin, upload.single('cover'), async (re
   const publishedAt = postStatus === 'published' && !existing.published_at ? nowSql() : existing.published_at;
 
   let coverPath = existing.cover_path;
-  if (req.file) coverPath = await uploadCover(req.file);
+  // Unguarded, a rejected upload (a real R2 hiccup) used to hang the
+  // request forever with no response ever sent - Express 4 doesn't route
+  // a rejected promise to the error middleware on its own.
+  if (req.file) {
+    try { coverPath = await uploadCover(req.file); }
+    catch (err) { return res.status(502).json({ error: 'Could not upload that cover image, try again.' }); }
+  }
 
   db.prepare(`
     UPDATE blog_posts SET

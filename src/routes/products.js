@@ -689,7 +689,16 @@ router.post('/', requireAuth, requireCreator, upload.fields([
     return fileKey;
   })() : Promise.resolve(null);
 
-  const [coverPath, previewVideoPath, fileKey] = await Promise.all([uploadCover, uploadPreview, uploadFile]);
+  // Unguarded, any one of these three rejecting (a real R2 hiccup, not
+  // hypothetical) left the request hanging forever with no response ever
+  // sent — Express 4 doesn't route a rejected promise to the error
+  // middleware on its own.
+  let coverPath, previewVideoPath, fileKey;
+  try {
+    [coverPath, previewVideoPath, fileKey] = await Promise.all([uploadCover, uploadPreview, uploadFile]);
+  } catch (err) {
+    return res.status(502).json({ error: 'Could not upload one of those files, try again.' });
+  }
 
   const slug = slugify(title);
   const productCurrency = ['USD', 'ZWG'].includes(currency) ? currency : 'USD';
@@ -878,7 +887,14 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
     return fileKey;
   })() : Promise.resolve(null);
 
-  const [coverPath, previewVideoPath, fileKey] = await Promise.all([uploadCover, uploadPreview, uploadFile]);
+  // Same reasoning as the POST handler above: unguarded, any one of these
+  // rejecting used to hang the request forever with no response ever sent.
+  let coverPath, previewVideoPath, fileKey;
+  try {
+    [coverPath, previewVideoPath, fileKey] = await Promise.all([uploadCover, uploadPreview, uploadFile]);
+  } catch (err) {
+    return res.status(502).json({ error: 'Could not upload one of those files, try again.' });
+  }
 
   db.prepare(`
     UPDATE products SET

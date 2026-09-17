@@ -248,7 +248,16 @@ router.post('/accept-terms', requireAuth, (req, res) => {
 // exists for users who've completed creator onboarding, every account
 // should be able to add a photo, not just sellers.
 router.patch('/me', requireAuth, avatarUpload.single('avatar'), async (req, res) => {
-  const avatarUrl = req.file ? await uploadAvatar(req.file) : req.user.avatar_url;
+  // See creators.js's PATCH /me for why this needs its own try/catch:
+  // Express 4 never routes a rejected promise to the error middleware on
+  // its own, so an unguarded await that fails (a real R2 hiccup) used to
+  // just hang the request forever with no response ever sent.
+  let avatarUrl;
+  try {
+    avatarUrl = req.file ? await uploadAvatar(req.file) : req.user.avatar_url;
+  } catch (err) {
+    return res.status(502).json({ error: 'Could not upload that photo, try again.' });
+  }
   const { name } = req.body;
 
   db.prepare('UPDATE users SET avatar_url = ?, name = ? WHERE id = ?')

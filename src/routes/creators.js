@@ -94,7 +94,19 @@ router.patch('/me', requireAuth, upload.single('avatar'), async (req, res) => {
   if (!req.creator) return res.status(404).json({ error: 'No creator profile yet.' });
 
   const { name, bio, what_selling, who_for, payout_ecocash_number, payout_bank_details } = req.body;
-  const avatarPath = req.file ? await uploadAvatar(req.file) : req.creator.avatar_path;
+  // Express 4 doesn't route a rejected promise to the error middleware on
+  // its own (that's Express 5 behavior) - an unguarded await here that
+  // rejects (a real R2 network hiccup, not hypothetical) used to leave the
+  // request hanging forever instead of responding with an error, since
+  // nothing ever caught it. Every other write in this file already wraps
+  // its own uploadAvatar() call for exactly this reason (see POST / just
+  // above) - this one didn't.
+  let avatarPath;
+  try {
+    avatarPath = req.file ? await uploadAvatar(req.file) : req.creator.avatar_path;
+  } catch (err) {
+    return res.status(502).json({ error: 'Could not upload that photo, try again.' });
+  }
 
   db.prepare(`
     UPDATE creators SET

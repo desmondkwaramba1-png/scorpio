@@ -92,6 +92,25 @@ router.get('*', (req, res) => {
     }
   }
 
+  // Blog post: blog/slug
+  const post = path.match(/^blog\/([a-z0-9][a-z0-9-]*)$/i);
+  if (post) {
+    const row = db.prepare(`
+      SELECT bp.title, bp.excerpt, bp.cover_path, bp.slug, bp.author_name, c.handle
+      FROM blog_posts bp LEFT JOIN creators c ON c.id = bp.creator_id
+      WHERE bp.slug = ? AND bp.status = 'published' AND bp.published_at <= datetime('now')
+    `).get(post[1]);
+    if (row) {
+      return res.send(render({
+        title: `${row.title} · SCORPIO Blog`,
+        description: truncate(row.excerpt || `A guide from ${row.handle ? '@' + row.handle : row.author_name} on the SCORPIO blog.`),
+        image: ogImage(row.cover_path),
+        url: `${SITE}/blog/${row.slug}`,
+        type: 'article',
+      }));
+    }
+  }
+
   // Storefront: @handle
   const store = path.match(/^@([a-z0-9][a-z0-9_-]*)$/i);
   if (store) {

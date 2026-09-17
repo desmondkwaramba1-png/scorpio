@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { FiUser, FiCreditCard, FiCheck, FiCamera } from 'react-icons/fi';
+import { FiUser, FiCheck, FiCamera } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import Seal from '../../components/Seal.jsx';
-import FormSection from '../../components/FormSection.jsx';
 import ImageCropper from '../../components/ImageCropper.jsx';
 import ThemeToggle from '../../components/ThemeToggle.jsx';
 
 export default function Settings() {
-  const { creator, refresh } = useAuth();
+  const { user, creator, refresh } = useAuth();
 
   const [form, setForm] = useState({
     name: creator?.name || '',
@@ -67,83 +66,141 @@ export default function Settings() {
 
   return (
     <div>
-      <h1 style={{ fontSize: '1.5rem', marginBottom: 4 }}>Storefront settings</h1>
-      <p className="muted" style={{ marginBottom: 28 }}>How your storefront looks, and where your money goes.</p>
+      <h1 style={{ fontSize: '1.5rem', marginBottom: 4 }}>Settings</h1>
+      <p className="muted" style={{ marginBottom: 28 }}>Your account, your storefront, and where your money goes.</p>
 
       <div className="form-layout">
         <form onSubmit={handleSubmit} style={{ maxWidth: 480 }}>
-          <FormSection icon={FiUser} title="Your profile">
-            <div className="field" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <label htmlFor="avatar" style={{ position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
-                <input id="avatar" type="file" accept="image/*" onChange={handleAvatar}
-                  style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', border: 0 }} />
-                <div style={{
-                  width: 64, height: 64, borderRadius: '50%',
-                  background: avatarUrl ? `url(${avatarUrl}) center/cover` : 'var(--green-tint)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--green-glow)'
-                }}>
-                  {!avatarUrl && <FiUser size={26} />}
-                </div>
-                <div style={{
-                  position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderRadius: '50%',
-                  background: 'var(--gold)', color: 'var(--green-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: '2px solid var(--surface)'
-                }}>
-                  <FiCamera size={11} />
-                </div>
-              </label>
-              <div>
-                <p style={{ fontWeight: 600, fontSize: '.9rem' }}>Profile photo</p>
-                <label htmlFor="avatar" className="muted" style={{ fontSize: '.82rem', fontWeight: 600, cursor: 'pointer', color: 'var(--green-glow)' }}>
-                  {avatar ? 'Photo updated, save to apply' : (creator.avatar_path ? 'Change photo' : 'Choose a photo')}
-                </label>
+          {/* Real settings pages lead with who you actually are (username,
+              email, phone) before anything about how your storefront
+              looks - this app had nowhere at all showing that, Settings
+              jumped straight into public-facing profile fields as if
+              "account" and "storefront" were the same thing. Read-only
+              for now (no change-password/change-email flow exists yet),
+              but at least visible, which is what most of "doesn't feel
+              like a settings page" actually meant. */}
+          <div className="settings-group">
+            <p className="settings-group__label">Account</p>
+            <div className="settings-card">
+              <div className="settings-row">
+                <span className="settings-row__label">Username</span>
+                <span className="settings-row__value">{user?.username}</span>
+              </div>
+              <div className="settings-row">
+                <span className="settings-row__label">Email</span>
+                <span className="settings-row__value" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  {user?.email}
+                  <span className={`badge ${user?.email_verified_at ? 'badge--green' : 'badge--neutral'}`} style={{ fontSize: '.68rem' }}>
+                    {user?.email_verified_at ? 'Verified' : 'Unverified'}
+                  </span>
+                </span>
+              </div>
+              <div className="settings-row">
+                <span className="settings-row__label">Phone</span>
+                <span className="settings-row__value">{user?.phone}</span>
               </div>
             </div>
+          </div>
 
-            {cropping && (
-              <div className="field">
-                <ImageCropper
-                  file={cropping} aspect={1} round
-                  onCancel={() => setCropping(null)}
-                  onApply={applyAvatarCrop}
-                />
+          <div className="settings-group">
+            <p className="settings-group__label">Storefront profile</p>
+            <div className="settings-card">
+              <div className="settings-row">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <label htmlFor="avatar" style={{ position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
+                    <input id="avatar" type="file" accept="image/*" onChange={handleAvatar}
+                      style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', border: 0 }} />
+                    <div style={{
+                      width: 56, height: 56, borderRadius: '50%',
+                      background: avatarUrl ? `url(${avatarUrl}) center/cover` : 'var(--green-tint)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--green-glow)'
+                    }}>
+                      {!avatarUrl && <FiUser size={24} />}
+                    </div>
+                    <div style={{
+                      position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, borderRadius: '50%',
+                      background: 'var(--gold)', color: 'var(--green-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: '2px solid var(--surface)'
+                    }}>
+                      <FiCamera size={10} />
+                    </div>
+                  </label>
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: '.9rem' }}>Profile photo</p>
+                    <label htmlFor="avatar" className="muted" style={{ fontSize: '.82rem', fontWeight: 600, cursor: 'pointer', color: 'var(--green-glow)' }}>
+                      {avatar ? 'Photo updated, save to apply' : (creator.avatar_path ? 'Change photo' : 'Choose a photo')}
+                    </label>
+                  </div>
+                </div>
               </div>
-            )}
 
-            <div className="field">
-              <label htmlFor="name">Your name</label>
-              <input id="name" required value={form.name} onChange={update('name')} />
+              {cropping && (
+                <div className="settings-row settings-row--stacked">
+                  <ImageCropper
+                    file={cropping} aspect={1} round
+                    onCancel={() => setCropping(null)}
+                    onApply={applyAvatarCrop}
+                  />
+                </div>
+              )}
+
+              <div className="settings-row settings-row--stacked">
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label htmlFor="name">Your name</label>
+                  <input id="name" required value={form.name} onChange={update('name')} />
+                </div>
+              </div>
+
+              <div className="settings-row settings-row--stacked">
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label htmlFor="bio">A short bio</label>
+                  <textarea id="bio" value={form.bio} onChange={update('bio')} placeholder="A line or two about who you are." />
+                </div>
+              </div>
             </div>
+          </div>
 
-            <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="bio">A short bio</label>
-              <textarea id="bio" value={form.bio} onChange={update('bio')} placeholder="A line or two about who you are." />
+          <div className="settings-group">
+            <p className="settings-group__label">Why buyers should trust you</p>
+            <div className="settings-card">
+              <div className="settings-row settings-row--stacked">
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label htmlFor="what_selling">What are you selling?</label>
+                  <textarea id="what_selling" required value={form.what_selling} onChange={update('what_selling')} />
+                </div>
+              </div>
+              <div className="settings-row settings-row--stacked">
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label htmlFor="who_for">Who is it for?</label>
+                  <textarea id="who_for" required value={form.who_for} onChange={update('who_for')} />
+                </div>
+              </div>
             </div>
-          </FormSection>
+          </div>
 
-          <FormSection icon={FiCheck} title="Why buyers should trust you"
-            note="This shows up on your storefront, and it's part of how buyers decide to buy.">
-            <div className="field">
-              <label htmlFor="what_selling">What are you selling?</label>
-              <textarea id="what_selling" required value={form.what_selling} onChange={update('what_selling')} />
+          <div className="settings-group">
+            <p className="settings-group__label">Payouts</p>
+            <div className="settings-card">
+              <div className="settings-row settings-row--stacked">
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label htmlFor="payout_ecocash_number">EcoCash number</label>
+                  <input id="payout_ecocash_number" value={form.payout_ecocash_number} onChange={update('payout_ecocash_number')}
+                    placeholder="077 123 4567" />
+                  <small>Where your earnings get paid out. Also required to unlock verification.</small>
+                </div>
+              </div>
             </div>
+          </div>
 
-            <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="who_for">Who is it for?</label>
-              <textarea id="who_for" required value={form.who_for} onChange={update('who_for')} />
-            </div>
-          </FormSection>
-
-          <FormSection icon={FiCreditCard} title="Payouts">
-            <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="payout_ecocash_number">EcoCash number</label>
-              <input id="payout_ecocash_number" value={form.payout_ecocash_number} onChange={update('payout_ecocash_number')}
-                placeholder="077 123 4567" />
-              <small>Where your earnings get paid out. Also required to unlock verification.</small>
-            </div>
-          </FormSection>
-
-          <div style={{ marginTop: 20 }}><ThemeToggle /></div>
+          {/* ThemeToggle is already its own self-contained card (icon,
+              label, description, action button) shared with Account.jsx's
+              buyer-facing settings - nesting it inside another card/row
+              here would just double up the box-in-a-box look instead of
+              matching it. */}
+          <div className="settings-group">
+            <p className="settings-group__label">Appearance</p>
+            <ThemeToggle />
+          </div>
 
           {error && <p className="error-text" style={{ marginTop: 16 }}>{error}</p>}
           {saved && (

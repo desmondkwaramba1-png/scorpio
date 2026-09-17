@@ -1255,6 +1255,35 @@ img{max-width:100%;display:block;}
   .form-layout__preview{position:static;order:-1;max-width:340px;}
 }
 
+/* ---- settings page ---- */
+/* Settings used to reuse the exact same icon-card-per-section shape
+   NewProduct/EditProduct use for their forms - real feedback was that
+   it just read as "another form," not a settings page. Real settings
+   screens (iOS, Stripe, GitHub) group things under a plain small-caps
+   label and list them as rows in one card with dividers between them,
+   not a stack of separately-bordered icon-headed cards each holding
+   one big label-over-input field. */
+.settings-group{margin-bottom:var(--sp-6);}
+.settings-group__label{
+  font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--muted);
+  text-transform:uppercase;margin:0 0 8px 4px;
+}
+.settings-card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+}
+.settings-row{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;
+}
+.settings-row + .settings-row{border-top:1px solid var(--line);}
+.settings-row__label{font-weight:600;font-size:.9rem;color:var(--ink);}
+.settings-row__value{color:var(--muted);font-size:.88rem;text-align:right;}
+/* A field that needs real room (a textarea, a longer input with its
+   own helper text) instead of a compact label-left/value-right row -
+   same card, same divider rhythm, just stacked top-to-bottom like the
+   row above it instead of squeezed onto one line. */
+.settings-row--stacked{flex-direction:column;align-items:stretch;gap:0;}
+.settings-row--stacked .field{margin-bottom:0;}
+
 /* ---- auth pages: a real dedicated screen, not form fields floating on
    the plain page background ---- */
 /* Login, signup, onboarding, and the post-OAuth role question all used to

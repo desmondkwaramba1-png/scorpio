@@ -5,13 +5,18 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import Seal from '../../components/Seal.jsx';
 import { SITE_HOST, SITE_ORIGIN } from '../../lib/site.js';
 
+// Grouped by what they're actually for, not just the order features
+// shipped in: what you publish (Overview, then Products/Reels/Blog),
+// what you're fulfilling (Orders/Subscriptions), then money
+// (Insights/Wallet), Settings last - a real order to scan or swipe
+// through, not just however the list happened to grow over time.
 const TABS = [
   ['/dashboard', 'Overview', FiGrid],
   ['/dashboard/products', 'Products', FiBox],
   ['/dashboard/reels', 'Reels', FiFilm],
+  ['/dashboard/blog', 'Blog', FiBookOpen],
   ['/dashboard/orders', 'Orders', FiShoppingBag],
   ['/dashboard/subscriptions', 'Subscriptions', FiRepeat],
-  ['/dashboard/blog', 'Blog', FiBookOpen],
   ['/dashboard/insights', 'Insights', FiBarChart2],
   ['/dashboard/wallet', 'Wallet', FiCreditCard],
   ['/dashboard/settings', 'Settings', FiSettings]
@@ -75,7 +80,7 @@ export default function DashboardLayout() {
         </div>
       </div>
 
-      <nav className="tabs">
+      <nav className="tabs tabs--scroll">
         {TABS.map(([to, label, Icon]) => (
           <NavLink key={to} to={to} end={to === '/dashboard'} className={({ isActive }) =>
             'tab' + (isActive ? ' tab--active' : '')}

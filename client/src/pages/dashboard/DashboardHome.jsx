@@ -30,7 +30,10 @@ export default function DashboardHome() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
-        <h1 style={{ fontSize: '1.5rem' }}>Welcome back, {creator.name}</h1>
+        <div>
+          <p className="section__eyebrow mono" style={{ marginBottom: 4 }}>YOUR STOREFRONT</p>
+          <h1 style={{ fontSize: '1.5rem' }}>Welcome back, {creator.name}</h1>
+        </div>
         <Link to="/dashboard/products/new" className="btn btn--gold btn--sm">
           <FiPlus size={15} /> New product
         </Link>

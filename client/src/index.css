@@ -1603,25 +1603,25 @@ img{max-width:100%;display:block;}
 .creators-heading h1{font-size:2rem;line-height:1.15;margin-bottom:7px;}
 .creators-heading__row p{max-width:58ch;color:var(--muted);font-size:.9rem;}
 .creators-heading__count{flex-shrink:0;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink-dim);font-size:.76rem;font-weight:700;}
-.creators-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill, minmax(250px, 1fr));}
+.creators-grid{display:grid;gap:8px;grid-template-columns:repeat(auto-fill, minmax(270px, 1fr));}
 /* A deliberate, predictable 2 columns on phones rather than leaving it to
    auto-fill's exact-fit math — the actual overflow bug (see .creator-card
    below) was a min-width:auto grid item, not this, but a fixed count here
    is still more robust on narrow screens than relying on auto-fill to
    land on the same number every time. */
 @media (max-width:480px){
-  .creators-grid{grid-template-columns:repeat(2, minmax(0, 1fr));gap:12px;}
+  .creators-grid{grid-template-columns:minmax(0, 1fr);gap:7px;}
   .creators-page{padding-top:26px;padding-bottom:56px;}
   .creators-heading{padding-top:6px;margin-bottom:18px;}
   .creators-heading__row{align-items:flex-start;flex-direction:column;gap:10px;}
 }
 .creator-card{
-  display:flex;align-items:center;position:relative;overflow:hidden;min-width:0;min-height:84px;padding:14px 14px 14px 16px;border-radius:10px;
-  background:linear-gradient(155deg,var(--green-tint),var(--surface) 68%);border:1px solid var(--line);box-shadow:var(--shadow-1);
-  transition:transform .18s cubic-bezier(.22,.7,.3,1), box-shadow .18s ease, border-color .18s ease;
-  content-visibility:auto;contain-intrinsic-size:auto 84px;
+  display:flex;align-items:center;position:relative;overflow:hidden;min-width:0;min-height:62px;padding:8px 10px;border-radius:8px;
+  background:var(--surface);border:1px solid var(--line);box-shadow:none;
+  transition:background .15s ease, border-color .15s ease;
+  content-visibility:auto;contain-intrinsic-size:auto 62px;
 }
-.creator-card::before{content:'';position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--green-glow),var(--gold));opacity:.82;}
+.creator-card::before{content:none;}
 /* Root cause of the real overflow bug: a grid item's default min-width is
    "auto" (its content's min-content size), not 0 — a handle like
    "@chitowncrossroads" is one unbroken string with nowhere to wrap, so
@@ -1633,18 +1633,17 @@ img{max-width:100%;display:block;}
   display:block;margin-top:2px;font-size:.72rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .creator-card:hover, .creator-card:focus-visible{
-  transform:translateY(-4px);
-  box-shadow:var(--shadow-2);
+  background:var(--green-tint);
   border-color:var(--green-glow);
 }
 .creator-card__avatar{
-  position:relative;width:46px;height:46px;flex:0 0 46px;border-radius:50%;background-size:cover;background-position:center;
-  margin:0 12px 0 0;
+  position:relative;width:36px;height:36px;flex:0 0 36px;border-radius:50%;background-size:cover;background-position:center;
+  margin:0 10px 0 0;
   display:flex;align-items:center;justify-content:center;color:var(--green-glow);font-weight:800;font-size:1.3rem;
   background-color:var(--surface);
-  box-shadow:0 0 0 3px var(--surface), 0 0 0 4px var(--line-strong),var(--shadow-1);
+  box-shadow:0 0 0 2px var(--surface), 0 0 0 3px var(--line-strong);
 }
-.creator-card--verified .creator-card__avatar{box-shadow:0 0 0 3px var(--surface), 0 0 0 4px var(--gold),var(--shadow-1);}
+.creator-card--verified .creator-card__avatar{box-shadow:0 0 0 2px var(--surface), 0 0 0 3px var(--gold);}
 .creator-card__info{min-width:0;flex:1;}
 .creator-card__name{display:flex;align-items:center;gap:5px;max-width:100%;}
 /* Truncation has to live on the text node itself, not the flex row around
@@ -1657,13 +1656,13 @@ img{max-width:100%;display:block;}
   font-weight:800;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
 }
 .creator-card__verified-icon{color:var(--gold-ink);flex:0 0 auto;}
-.creator-card__stats{display:flex;align-items:center;gap:10px;margin-top:7px;color:var(--ink-dim);font-size:.68rem;white-space:nowrap;}
+.creator-card__stats{display:flex;align-items:center;gap:9px;margin-top:4px;color:var(--ink-dim);font-size:.65rem;white-space:nowrap;}
 .creator-card__stats span{display:inline-flex;align-items:center;gap:4px;}
 .creator-card__stats svg{color:var(--gold-ink);}
 .creator-card__stats small{font-size:.64rem;color:var(--muted);}
-.creator-card__visit{display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-left:10px;color:var(--link-ink);font-size:.72rem;font-weight:800;}
+.creator-card__visit{display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-left:8px;color:var(--link-ink);font-size:.68rem;font-weight:800;}
 .creator-card__visit > span:last-child{display:inline-flex;align-items:center;gap:4px;}
-.creator-skeleton{min-height:84px;padding:14px;}
+.creator-skeleton{min-height:62px;padding:8px;}
 
 /* ---- homepage creator spotlight (story-bubble tray) ---- */
 .creator-spotlight{display:flex;gap:18px;overflow-x:auto;padding:4px 2px 10px;scroll-snap-type:x proximity;scrollbar-width:thin;touch-action:pan-x pan-y;}

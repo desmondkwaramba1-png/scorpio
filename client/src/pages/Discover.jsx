@@ -64,14 +64,17 @@ export default function Discover() {
   });
 
   return (
-    <div className="wrap" style={{ padding: '40px 20px 80px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <FiCompass size={22} color="var(--green)" />
-        <h1 style={{ fontSize: '1.8rem' }}>Discover</h1>
-      </div>
-      <p className="muted" style={{ marginBottom: 24 }}>
-        {EBOOKS_ONLY ? 'Ebooks, guides, templates, and courses from people who actually know the subject.' : 'Products from creators across Zimbabwe.'}
-      </p>
+    <div className="discover-page wrap">
+      <header className="discover-heading">
+        <div className="discover-heading__icon"><FiCompass size={20} /></div>
+        <div>
+          <p className="section__eyebrow mono">THE SCORPIO MARKETPLACE</p>
+          <h1>Discover something useful.</h1>
+          <p className="discover-heading__intro">
+            {EBOOKS_ONLY ? 'Ebooks, guides, templates, and courses from people who actually know the subject.' : 'Products from creators across Zimbabwe.'}
+          </p>
+        </div>
+      </header>
 
       {ACTIVE_CATEGORIES.length > 1 && (
         <div className="category-chips">
@@ -93,39 +96,39 @@ export default function Discover() {
         </div>
       )}
 
-      <div className="discover-filters">
-        <div className="input-icon" style={{ flex: '1 1 220px' }}>
-          <FiSearch size={15} />
-          <input
-            value={q} onChange={e => updateParam('q', e.target.value)}
-            placeholder="Search products..."
-          />
+      <section className="discover-toolbar" aria-label="Filter products">
+        <div className="discover-filters">
+          <label className="input-icon discover-search">
+            <FiSearch size={16} />
+            <input
+              value={q} onChange={e => updateParam('q', e.target.value)}
+              placeholder="Search products..."
+              aria-label="Search products"
+            />
+          </label>
+          <select value={sort} onChange={e => updateParam('sort', e.target.value)} className="discover-sort" aria-label="Sort by">
+            <option value="">Newest first</option>
+            <option value="popular">Most popular</option>
+            <option value="bestselling">Bestselling</option>
+            <option value="price_asc">Price: low to high</option>
+            <option value="price_desc">Price: high to low</option>
+          </select>
         </div>
-        <select value={sort} onChange={e => updateParam('sort', e.target.value)} className="discover-sort" aria-label="Sort by">
-          <option value="">Newest first</option>
-          <option value="popular">Most popular</option>
-          <option value="bestselling">Bestselling</option>
-          <option value="price_asc">Price: low to high</option>
-          <option value="price_desc">Price: high to low</option>
-        </select>
-      </div>
 
-      <div className="type-pills">
-        {TYPES.map(t => (
-          <button key={t.value} onClick={() => updateParam('type', t.value)}
-            className={`type-pill${type === t.value ? ' type-pill--active' : ''}`}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+        <div className="discover-toolbar__bottom">
+          <div className="type-pills" aria-label="Product format">
+            {TYPES.map(t => (
+              <button key={t.value} onClick={() => updateParam('type', t.value)}
+                className={`type-pill${type === t.value ? ' type-pill--active' : ''}`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {products && !error && <p className="discover-count">{products.length} {products.length === 1 ? 'product' : 'products'}</p>}
+        </div>
+      </section>
 
       {error && <p className="error-text">{error}</p>}
-
-      {products && products.length > 0 && (
-        <p className="muted" style={{ fontSize: '.85rem', marginBottom: 16 }}>
-          {products.length} product{products.length === 1 ? '' : 's'}
-        </p>
-      )}
 
       {!products && !error && (
         <div className="product-grid">

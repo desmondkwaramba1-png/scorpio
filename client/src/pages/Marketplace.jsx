@@ -21,6 +21,24 @@ const TRUST_ITEMS = [
   { icon: FiShield, title: '5-day buyer protection' }
 ];
 
+const FEATURE_BENEFITS = [
+  {
+    icon: FiBookOpen,
+    title: 'Built for learning and earning',
+    text: 'Discover books, guides, templates, and courses created by people who actually know the subject.'
+  },
+  {
+    icon: FiShield,
+    title: 'Trust-first buying',
+    text: 'Every listing is reviewed and every purchase is protected, so buyers can move faster with confidence.'
+  },
+  {
+    icon: FiTrendingUp,
+    title: 'A storefront that sells for you',
+    text: 'Creators can publish quickly, manage their catalog, and keep the entire customer experience in one place.'
+  }
+];
+
 function TrustBand() {
   return (
     <section className="trust-band">
@@ -31,6 +49,30 @@ function TrustBand() {
               <span className="trust-item__icon"><item.icon size={12} /></span>
               <p className="trust-item__title">{item.title}</p>
             </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FeatureHighlights() {
+  return (
+    <section className="feature-strip">
+      <div className="wrap">
+        <div className="feature-strip__header">
+          <p className="section__eyebrow mono">WHY PEOPLE BUY HERE</p>
+          <h2 className="section__title">A marketplace designed for momentum.</h2>
+        </div>
+        <div className="feature-strip__grid">
+          {FEATURE_BENEFITS.map(({ icon: Icon, title, text }) => (
+            <article key={title} className="feature-card">
+              <span className="feature-card__icon"><Icon size={18} /></span>
+              <div className="feature-card__content">
+                <h3>{title}</h3>
+                <p>{text}</p>
+              </div>
+            </article>
           ))}
         </div>
       </div>
@@ -463,17 +505,22 @@ export default function Marketplace() {
                   first thing anyone sees. */}
               <span className="mono shop-hero__badge shop-hero__reveal" style={{ animationDelay: '.05s' }}><FiZap size={12} /> ZIMBABWE'S MARKETPLACE FOR DIGITAL PRODUCTS</span>
               <h1 className="shop-hero__title">
-                {EBOOKS_ONLY ? 'Ebooks, guides, and courses worth paying for.' : 'Real digital products worth paying for.'}
+                {EBOOKS_ONLY ? 'Find digital products that actually help you grow.' : 'Find real digital products that move work forward.'}
               </h1>
               <p className="shop-hero__sub">
                 {EBOOKS_ONLY
-                  ? "From people who've actually done the work, not scraped off the internet. Every file is checked before it goes live."
-                  : "From people who've actually done the work, not scraped off the internet. Every listing is checked before it goes live."}
+                  ? "Curated learning, templates, and practical guides from Zimbabwean creators who build what people actually use."
+                  : "Discover ebooks, templates, courses, and tools from people who know their craft. Clear pricing, instant access, and buyer protection built in."}
               </p>
+              <div className="shop-hero__meta shop-hero__reveal" style={{ animationDelay: '.2s' }}>
+                <span>Instant access</span>
+                <span>EcoCash ready</span>
+                <span>Verified sellers</span>
+              </div>
               <div className="shop-hero__actions shop-hero__reveal" style={{ animationDelay: '.35s' }}>
                 <Link to="/discover" className="btn btn--gold shop-hero__cta">Browse products</Link>
                 <Link to="/login?role=creator" className="shop-hero__browse-btn">
-                  Have something to sell? <FiChevronRight size={14} />
+                  Sell your work <FiChevronRight size={14} />
                 </Link>
               </div>
 
@@ -538,6 +585,7 @@ export default function Marketplace() {
       </header>
 
       <TrustBand />
+      <FeatureHighlights />
       <GettingStarted />
 
       {/* Real proof comes before anything else below the hero and trust

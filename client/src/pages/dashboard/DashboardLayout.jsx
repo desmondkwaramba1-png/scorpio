@@ -51,35 +51,29 @@ export default function DashboardLayout() {
   if (!creator) return <Navigate to="/onboarding" replace />;
 
   return (
-    <div className="wrap" style={{ padding: '32px 20px 80px' }}>
+    <div className="dashboard-shell wrap">
       <TourGuide run={runGuide} setRun={setRunGuide} />
-      <div className="card card--pad" style={{
-        marginBottom: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        gap: 16, flexWrap: 'wrap'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
-          <div style={{
-            width: 56, height: 56, borderRadius: '50%', flexShrink: 0,
-            background: creator.avatar_path ? `url(${creator.avatar_path}) center/cover` : 'var(--green-dark)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontWeight: 700, fontSize: '1.3rem'
+      <div className="card dashboard-profile">
+        <div className="dashboard-profile__identity">
+          <div className="dashboard-profile__avatar" style={{
+            background: creator.avatar_path ? `url(${creator.avatar_path}) center/cover` : 'var(--green-dark)'
           }}>
             {!creator.avatar_path && creator.name.charAt(0).toUpperCase()}
           </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <p style={{ fontWeight: 700, fontSize: '1.05rem' }}>{creator.name}</p>
+          <div className="dashboard-profile__details">
+            <div className="dashboard-profile__name">
+              <p>{creator.name}</p>
               {!!creator.verified && <Seal />}
             </div>
             {/* A long handle (up to 30 chars, HANDLE_RE's own limit)
                 otherwise just got clipped raw by the card's edge with no
                 ellipsis at all - confirmed live with a 21-char test handle. */}
-            <p className="mono muted" style={{ fontSize: '.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <p className="dashboard-profile__url mono muted">
               {SITE_HOST}/@{creator.handle}
             </p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="dashboard-profile__actions">
           <CopyLinkButton handle={creator.handle} />
           <Link to={`/@${creator.handle}`} className="btn btn--ghost btn--sm">
             <FiExternalLink /> View storefront
@@ -87,7 +81,7 @@ export default function DashboardLayout() {
         </div>
       </div>
 
-      <nav className="tabs tabs--dense">
+      <nav className="tabs tabs--dense dashboard-tabs" aria-label="Creator dashboard">
         {TABS.map(([to, label, Icon]) => (
           <NavLink key={to} to={to} end={to === '/dashboard'} className={({ isActive }) =>
             'tab' + (isActive ? ' tab--active' : '')}

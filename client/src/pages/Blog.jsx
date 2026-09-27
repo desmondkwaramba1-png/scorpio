@@ -92,35 +92,31 @@ export default function Blog() {
   if (error) return <div className="wrap center-page" style={{ padding: 20 }}><p className="error-text">{error}</p></div>;
 
   return (
-    <div className="wrap" style={{ padding: '40px 20px 80px' }}>
-      <p className="section__eyebrow mono">
-        <FiBookOpen size={13} style={{ verticalAlign: -2, marginRight: 6 }} /> REAL GUIDES, NO FLUFF
-      </p>
-      <h1 style={{ fontSize: 'clamp(1.6rem, 3.6vw, 2.2rem)', marginBottom: 10, maxWidth: '20ch' }}>
-        Guides for building something real.
-      </h1>
-      <p className="muted" style={{ marginBottom: 24, fontSize: '1.02rem', maxWidth: '58ch' }}>
-        How to start, price, and grow a digital business in Zimbabwe, no fluff, written by the people building SCORPIO.
-      </p>
-
-      <div className="discover-filters">
-        <div className="input-icon" style={{ flex: '1 1 220px' }}>
-          <FiSearch size={15} />
+    <div className="blog-page wrap">
+      <header className="blog-heading">
+        <div className="blog-heading__copy">
+          <p className="section__eyebrow mono"><FiBookOpen size={13} /> FIELD NOTES</p>
+          <h1>Ideas for building something real.</h1>
+          <p>Practical lessons on starting, pricing, and growing a digital business in Zimbabwe.</p>
+        </div>
+        <label className="input-icon blog-search">
+          <FiSearch size={16} />
           <input
             value={q} onChange={e => updateQuery(e.target.value)}
-            placeholder="Search guides and articles..."
+            placeholder="Search articles..."
+            aria-label="Search articles"
           />
-        </div>
-      </div>
+        </label>
+      </header>
 
       {posts && posts.length > 0 && (
-        <p className="muted" style={{ fontSize: '.85rem', margin: '16px 0' }}>
+        <p className="blog-results-count">
           {posts.length} post{posts.length === 1 ? '' : 's'}
         </p>
       )}
 
       {!posts && !error && (
-        <div className="blog-grid" style={{ marginTop: 16 }}>
+        <div className="blog-grid blog-grid--loading">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="skeleton-card">
               <div className="skeleton" style={{ aspectRatio: '16/9' }} />

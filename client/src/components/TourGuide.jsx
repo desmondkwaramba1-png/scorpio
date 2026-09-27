@@ -3,26 +3,26 @@ import { Joyride, STATUS } from 'react-joyride';
 export default function TourGuide({ run, setRun }) {
   const steps = [
     {
-      target: '.wrap',
-      content: 'Welcome to your SCORPIO dashboard! This quick guide will help you get around.',
-      placement: 'center',
+      target: '[data-tour="products"]',
+      title: 'Welcome to your dashboard',
+      content: 'Start here to publish a product and manage everything in your shop.',
+      placement: 'bottom',
       disableBeacon: true,
     },
     {
-      target: 'nav.tabs a[href="/dashboard/products"]',
-      content: 'Here you can create and manage your products.',
+      target: '[data-tour="orders"]',
+      title: 'Orders',
+      content: 'See what customers bought and keep track of fulfillment.',
     },
     {
-      target: 'nav.tabs a[href="/dashboard/orders"]',
-      content: 'View and fulfill your orders here.',
+      target: '[data-tour="wallet"]',
+      title: 'Wallet',
+      content: 'Review your available balance and payout activity.',
     },
     {
-      target: 'nav.tabs a[href="/dashboard/wallet"]',
-      content: 'Check your balance and request payouts.',
-    },
-    {
-      target: 'nav.tabs a[href="/dashboard/settings"]',
-      content: 'You can update your profile or restart this guide anytime from Settings.',
+      target: '[data-tour="settings"]',
+      title: 'Settings',
+      content: 'Update your storefront and restart this guide whenever you need it.',
     }
   ];
 
@@ -45,11 +45,33 @@ export default function TourGuide({ run, setRun }) {
       showProgress={true}
       showSkipButton={true}
       steps={steps}
+      options={{
+        zIndex: 10000,
+        primaryColor: 'var(--green-glow)',
+        overlayColor: 'rgba(15,17,17,.72)',
+        spotlightPadding: 7,
+        spotlightRadius: 9,
+        targetWaitTimeout: 5000
+      }}
       styles={{
-        options: {
-          zIndex: 10000,
-          primaryColor: 'var(--green)'
-        }
+        tooltip: {
+          backgroundColor: 'var(--surface)',
+          borderRadius: 12,
+          color: 'var(--ink)',
+          boxShadow: 'var(--shadow-3)',
+          padding: 0
+        },
+        tooltipTitle: { color: 'var(--ink)', fontSize: 16, fontWeight: 800 },
+        tooltipContent: { color: 'var(--ink-dim)', lineHeight: 1.55, padding: '8px 18px 12px' },
+        tooltipFooter: { padding: '0 18px 16px' },
+        buttonPrimary: {
+          backgroundColor: 'var(--green-glow)',
+          borderRadius: 8,
+          color: '#fff',
+          fontWeight: 700,
+          padding: '9px 14px'
+        },
+        buttonSkip: { color: 'var(--muted)', fontWeight: 700 }
       }}
     />
   );

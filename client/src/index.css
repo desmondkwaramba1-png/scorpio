@@ -1529,13 +1529,14 @@ img{max-width:100%;display:block;}
 .method-btn--active{border-color:var(--ink);color:var(--ink);}
 
 /* ---- creators directory ---- */
-/* Compact on purpose: the visual interest lives entirely in the avatar's
-   gradient ring, not in a separate banner strip or a bio line — a
-   directory of many creators reads better as a dense, scannable grid of
-   faces than as a column of tall cards. The full bio still lives on the
-   creator's own profile page (/@handle); repeating it here is exactly
-   the bulk that was making these feel oversized. */
-.creators-grid{display:grid;gap:var(--sp-3);grid-template-columns:repeat(auto-fill, minmax(122px, 1fr));}
+.creators-page{padding-top:40px;padding-bottom:80px;}
+.creators-heading{padding:12px 0 24px;margin-bottom:24px;border-bottom:1px solid var(--line);}
+.creators-heading .section__eyebrow{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
+.creators-heading__row{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;}
+.creators-heading h1{font-size:2rem;line-height:1.15;margin-bottom:7px;}
+.creators-heading__row p{max-width:58ch;color:var(--muted);font-size:.9rem;}
+.creators-heading__count{flex-shrink:0;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink-dim);font-size:.76rem;font-weight:700;}
+.creators-grid{display:grid;gap:var(--sp-4);grid-template-columns:repeat(auto-fill, minmax(150px, 1fr));}
 /* A deliberate, predictable 2 columns on phones rather than leaving it to
    auto-fill's exact-fit math — the actual overflow bug (see .creator-card
    below) was a min-width:auto grid item, not this, but a fixed count here
@@ -1543,13 +1544,17 @@ img{max-width:100%;display:block;}
    land on the same number every time. */
 @media (max-width:480px){
   .creators-grid{grid-template-columns:repeat(2, 1fr);}
+  .creators-page{padding-top:26px;padding-bottom:56px;}
+  .creators-heading{padding-top:6px;margin-bottom:18px;}
+  .creators-heading__row{align-items:flex-start;flex-direction:column;gap:10px;}
 }
 .creator-card{
-  display:block;min-width:0;text-align:center;padding:16px 10px 12px;border-radius:var(--radius-sm);
-  background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow-1);
+  display:block;position:relative;overflow:hidden;min-width:0;min-height:176px;text-align:center;padding:22px 12px 16px;border-radius:12px;
+  background:linear-gradient(165deg,var(--green-tint),var(--surface) 62%);border:1px solid var(--line);box-shadow:var(--shadow-1);
   transition:transform .18s cubic-bezier(.22,.7,.3,1), box-shadow .18s ease, border-color .18s ease;
   content-visibility:auto;contain-intrinsic-size:auto 160px;
 }
+.creator-card::before{content:'';position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--green-glow),var(--gold));opacity:.82;}
 /* Root cause of the real overflow bug: a grid item's default min-width is
    "auto" (its content's min-content size), not 0 — a handle like
    "@chitowncrossroads" is one unbroken string with nowhere to wrap, so
@@ -1561,19 +1566,18 @@ img{max-width:100%;display:block;}
   display:block;font-size:.72rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .creator-card:hover, .creator-card:focus-visible{
-  transform:translateY(-3px);
-  box-shadow:0 8px 20px -8px rgba(var(--gold-rgb),.35), var(--shadow-2);
-  border-color:rgba(var(--gold-rgb),.5);
+  transform:translateY(-4px);
+  box-shadow:var(--shadow-2);
+  border-color:var(--green-glow);
 }
 .creator-card__avatar{
-  width:52px;height:52px;border-radius:50%;background-size:cover;background-position:center;
-  margin:0 auto 8px;
-  display:flex;align-items:center;justify-content:center;color:var(--green-dark);font-weight:700;font-size:1.15rem;
-  background-color:var(--gold);
-  /* The ring is the card's whole visual hook now that there's no banner. */
-  box-shadow:0 0 0 2.5px var(--surface), 0 0 0 4.5px var(--green-glow);
+  position:relative;width:62px;height:62px;border-radius:50%;background-size:cover;background-position:center;
+  margin:0 auto 12px;
+  display:flex;align-items:center;justify-content:center;color:var(--green-glow);font-weight:800;font-size:1.3rem;
+  background-color:var(--surface);
+  box-shadow:0 0 0 3px var(--surface), 0 0 0 4px var(--line-strong),var(--shadow-1);
 }
-.creator-card--verified .creator-card__avatar{box-shadow:0 0 0 2.5px var(--surface), 0 0 0 4.5px var(--gold);}
+.creator-card--verified .creator-card__avatar{box-shadow:0 0 0 3px var(--surface), 0 0 0 4px var(--gold),var(--shadow-1);}
 .creator-card__name{display:flex;align-items:center;justify-content:center;gap:4px;max-width:100%;}
 /* Truncation has to live on the text node itself, not the flex row around
    it — text-overflow:ellipsis on a flex container doesn't reliably clip
@@ -1582,12 +1586,13 @@ img{max-width:100%;display:block;}
    is what let the span refuse to shrink below its natural text width in
    the first place. */
 .creator-card__name span{
-  font-weight:700;font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
+  font-weight:800;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
 }
 .creator-card__count{
-  margin-top:7px;font-size:.66rem;color:var(--ink-dim);font-weight:700;letter-spacing:.02em;
-  display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:var(--field-bg);
+  margin-top:10px;font-size:.68rem;color:var(--gold-ink);font-weight:700;
+  display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;background:var(--gold-tint);
 }
+.creator-skeleton{padding:22px 12px 16px;}
 
 /* ---- homepage creator spotlight (story-bubble tray) ---- */
 .creator-spotlight{display:flex;gap:18px;overflow-x:auto;padding:4px 2px 10px;scroll-snap-type:x proximity;scrollbar-width:thin;touch-action:pan-x pan-y;}
@@ -1740,6 +1745,20 @@ img{max-width:100%;display:block;}
 .reel-manage-card__footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;}
 
 /* ---- blog ---- */
+.blog-page{padding-top:40px;padding-bottom:80px;}
+.blog-heading{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,360px);align-items:end;gap:28px;padding:10px 0 24px;margin-bottom:18px;border-bottom:1px solid var(--line);}
+.blog-heading__copy .section__eyebrow{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
+.blog-heading h1{max-width:22ch;font-size:2rem;line-height:1.14;margin-bottom:8px;}
+.blog-heading__copy > p:last-child{max-width:56ch;color:var(--muted);font-size:.9rem;line-height:1.55;}
+.blog-search{width:100%;}
+.blog-search input{height:48px;background:var(--surface);}
+.blog-results-count{margin:0 0 14px;color:var(--muted);font-size:.78rem;font-weight:700;}
+.blog-grid--loading{margin-top:16px;}
+@media (max-width:720px){
+  .blog-page{padding-top:26px;padding-bottom:56px;}
+  .blog-heading{grid-template-columns:1fr;gap:16px;padding-top:4px;padding-bottom:18px;}
+  .blog-heading h1{font-size:1.65rem;}
+}
 /* auto-fill (like .product-grid uses) computes column tracks off the
    container width regardless of how many posts actually exist - fine for
    a feed that's usually full, but a blog with only one or two posts left

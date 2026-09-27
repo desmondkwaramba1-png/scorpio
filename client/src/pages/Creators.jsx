@@ -40,21 +40,26 @@ export default function Creators() {
   }, []);
 
   return (
-    <div className="wrap" style={{ padding: '40px 20px 80px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <FiUsers size={22} color="var(--green)" />
-        <h1 style={{ fontSize: '1.8rem' }}>Meet the creators</h1>
-      </div>
-      <p className="muted" style={{ marginBottom: 28 }}>
-        Every guide, template, and ebook on SCORPIO comes from a real person behind it. Browse by who's selling, not just what's for sale.
-      </p>
+    <div className="creators-page wrap">
+      <header className="creators-heading">
+        <p className="section__eyebrow mono"><FiUsers size={13} /> THE PEOPLE BEHIND THE WORK</p>
+        <div className="creators-heading__row">
+          <div>
+            <h1>Meet the creators.</h1>
+            <p>Find the people behind the ideas, guides, and tools you use.</p>
+          </div>
+          {creators && creators.length > 0 && (
+            <span className="creators-heading__count">{creators.length} creators</span>
+          )}
+        </div>
+      </header>
 
       {error && <p className="error-text">{error}</p>}
 
       {!creators && !error && (
         <div className="creators-grid">
           {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} className="skeleton-card" style={{ padding: '16px 10px 12px' }}>
+            <div key={i} className="skeleton-card creator-skeleton">
               <div className="skeleton" style={{ width: 52, height: 52, borderRadius: '50%', margin: '0 auto 10px' }} />
               <div className="skeleton" style={{ height: 12, width: '70%', margin: '0 auto 8px' }} />
               <div className="skeleton" style={{ height: 10, width: '45%', margin: '0 auto' }} />

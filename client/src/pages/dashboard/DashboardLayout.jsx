@@ -85,6 +85,7 @@ export default function DashboardLayout() {
         {TABS.map(([to, label, Icon]) => (
           <NavLink key={to} to={to} end={to === '/dashboard'} className={({ isActive }) =>
             'tab' + (isActive ? ' tab--active' : '')}
+            data-tour={to === '/dashboard' ? 'overview' : to.split('/').pop()}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
             <Icon size={13} /> {label}
           </NavLink>

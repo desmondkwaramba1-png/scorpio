@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
 import ReportProblem from '../../components/ReportProblem.jsx';
+import DisputeThread from '../../components/DisputeThread.jsx';
 
 function formatDate(sqliteDatetime) {
   const d = new Date(sqliteDatetime.replace(' ', 'T'));
@@ -83,7 +84,7 @@ function DeliverForm({ purchaseId, onDelivered }) {
 // order list, so an aggregate count elsewhere kept counting an order
 // that had actually just been resolved. onUpdate is what closes that
 // loop here before it repeats.
-function OrderRow({ o, creator, onUpdate }) {
+function OrderRow({ o, creator, currentUserId, onUpdate }) {
   const [delivering, setDelivering] = useState(false);
   const fulfillment = o.fulfillment_status;
   const wa = whatsappLink(o.buyer_phone);
@@ -120,9 +121,13 @@ function OrderRow({ o, creator, onUpdate }) {
       </div>
 
       {fulfillment === 'disputed' && (
-        <p className="muted" style={{ fontSize: '.82rem', marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <FiAlertTriangle size={13} color="var(--red)" /> The buyer reported a problem with this order. It's being reviewed.
-        </p>
+        <>
+          <p className="muted" style={{ fontSize: '.82rem', marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FiAlertTriangle size={13} color="var(--red)" /> The buyer reported a problem with this order. It's being reviewed.
+          </p>
+          <DisputeThread purchaseId={o.id} currentUserId={currentUserId}
+            disputeStatus={o.dispute_status || 'open'} disputeReason={o.dispute_reason || ''} />
+        </>
       )}
 
       {delivering && fulfillment === 'awaiting_delivery' && (
@@ -143,7 +148,7 @@ function OrderRow({ o, creator, onUpdate }) {
 }
 
 export default function Orders() {
-  const { creator } = useAuth();
+  const { creator, user } = useAuth();
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
@@ -212,7 +217,7 @@ export default function Orders() {
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-          {data.orders.map(o => <OrderRow key={o.id} o={o} creator={creator} onUpdate={handleOrderUpdate} />)}
+          {data.orders.map(o => <OrderRow key={o.id} o={o} creator={creator} currentUserId={user?.id} onUpdate={handleOrderUpdate} />)}
         </div>
       )}
     </div>

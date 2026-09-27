@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiSearch, FiTrendingUp, FiClock, FiZap, FiUsers, FiChevronRight, FiPlay, FiBookOpen, FiCheckCircle, FiShield, FiCompass, FiLogIn, FiShoppingBag } from 'react-icons/fi';
+import { FiSearch, FiTrendingUp, FiClock, FiZap, FiUsers, FiChevronRight, FiPlay, FiBookOpen, FiCheckCircle, FiShield, FiCompass, FiLogIn, FiShoppingBag, FiDownload, FiUploadCloud, FiArrowUpRight } from 'react-icons/fi';
 import CompactProductCard from '../components/CompactProductCard.jsx';
 import Seal from '../components/Seal.jsx';
 import ReelViewer from '../components/ReelViewer.jsx';
@@ -32,6 +32,52 @@ function TrustBand() {
               <p className="trust-item__title">{item.title}</p>
             </div>
           ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function GettingStarted() {
+  return (
+    <section className="getting-started" aria-labelledby="getting-started-title">
+      <div className="wrap">
+        <div className="getting-started__head">
+          <div>
+            <p className="section__eyebrow mono">START HERE</p>
+            <h2 id="getting-started-title" className="section__title">What brings you to Scorpio?</h2>
+          </div>
+          <p className="getting-started__intro">Choose a path and we will take you to the right first step.</p>
+        </div>
+        <div className="getting-started__grid">
+          <div className="getting-started__card getting-started__card--buyer">
+            <div className="getting-started__icon"><FiCompass size={20} /></div>
+            <div className="getting-started__content">
+              <p className="getting-started__kicker">I want to buy</p>
+              <h3>Find something useful.</h3>
+              <p>Browse trusted ebooks, guides, templates, and courses. Pay with EcoCash and access your purchase straight away.</p>
+              <div className="getting-started__steps">
+                <span><FiSearch size={13} /> Browse</span>
+                <span><FiShield size={13} /> Buy safely</span>
+                <span><FiDownload size={13} /> Get access</span>
+              </div>
+              <Link to="/discover" className="btn btn--primary btn--sm">Browse products <FiChevronRight size={14} /></Link>
+            </div>
+          </div>
+          <div className="getting-started__card getting-started__card--seller">
+            <div className="getting-started__icon"><FiUploadCloud size={20} /></div>
+            <div className="getting-started__content">
+              <p className="getting-started__kicker">I want to sell</p>
+              <h3>Turn what you know into income.</h3>
+              <p>Create a storefront, upload your first product, and share one link with people who need what you know.</p>
+              <div className="getting-started__steps">
+                <span><FiShoppingBag size={13} /> Set up</span>
+                <span><FiUploadCloud size={13} /> Publish</span>
+                <span><FiZap size={13} /> Get paid</span>
+              </div>
+              <Link to="/login?role=creator" className="btn btn--gold btn--sm">Start selling <FiChevronRight size={14} /></Link>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -492,6 +538,7 @@ export default function Marketplace() {
       </header>
 
       <TrustBand />
+      <GettingStarted />
 
       {/* Real proof comes before anything else below the hero and trust
           band — a first-time visitor deciding whether this is worth their
@@ -516,11 +563,12 @@ export default function Marketplace() {
             <div className="category-feature-grid">
               {ACTIVE_CATEGORIES.map(c => (
                 <Link key={c.value} to={`/discover?category=${c.value}`} className="category-feature-card">
-                  <span className="category-feature-card__icon"><c.icon size={22} /></span>
-                  <span>
+                  <span className="category-feature-card__icon"><c.icon size={21} /></span>
+                  <span className="category-feature-card__body">
                     <span className="category-feature-card__label">{c.label}</span>
                     <span className="category-feature-card__tagline">{CATEGORY_TAGLINES[c.value] || 'Browse this category'}</span>
                   </span>
+                  <span className="category-feature-card__arrow" aria-hidden="true"><FiArrowUpRight size={16} /></span>
                 </Link>
               ))}
             </div>

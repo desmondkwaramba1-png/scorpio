@@ -780,6 +780,10 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
   const isService = product.type === 'service';
   const isSubscription = product.type === 'subscription';
 
+  if (status !== undefined && !['draft', 'published'].includes(status)) {
+    return res.status(400).json({ error: "status must be 'draft' or 'published'." });
+  }
+
   const deliverableError = checkDeliverableType(file, category !== undefined ? category : product.category);
   if (deliverableError) return res.status(400).json({ error: deliverableError });
   if (previewVideo && !VIDEO_TYPES.has(previewVideo.mimetype)) {

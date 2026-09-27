@@ -1,10 +1,10 @@
-const db = require('../db/schema');
+const { netOf } = require('../lib/fees');
 const { checkAndUpdateVerification } = require('./verification');
 const { createDownloadToken, productHasFile } = require('./downloads');
 const { productHasKeys, claimKeyForPurchase } = require('./licenseKeys');
 const { startEscrow, startDeliveredHold } = require('./escrow');
 const { sendEmail } = require('./notify');
-const { findOrCreateSubscription } = require('./subscriptions');
+const db = require('../db/schema');
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
@@ -17,7 +17,8 @@ function markPurchasePaid(purchaseId) {
   const purchase = db.prepare('SELECT * FROM purchases WHERE id = ?').get(purchaseId);
   if (!purchase || purchase.payment_status === 'paid') return purchase;
 
-  db.prepare("UPDATE purchases SET payment_status = 'paid' WHERE id = ?").run(purchaseId);
+  const { fee_minor, net_minor } = netOf(purchase.amount_minor);
+  db.prepare('UPDATE purchases SET fee_minor = ?, net_minor = ? WHERE id = ?').run(fee_minor, net_minor, purchaseId);
   const product = db.prepare('SELECT * FROM products WHERE id = ?').get(purchase.product_id);
 
   // A subscription renewal is not a new sale the way every other paid

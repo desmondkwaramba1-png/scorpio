@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { FiUser, FiCheck, FiCamera } from 'react-icons/fi';
+import { FiUser, FiCheck, FiCamera, FiCompass } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import Seal from '../../components/Seal.jsx';
@@ -64,10 +64,18 @@ export default function Settings() {
 
   const avatarUrl = avatarPreview || creator.avatar_path;
 
+  function restartGuide() {
+    localStorage.removeItem('scorpio_tour_completed');
+    window.location.assign('/dashboard');
+  }
+
   return (
     <div>
       <h1 style={{ fontSize: '1.5rem', marginBottom: 4 }}>Settings</h1>
       <p className="muted" style={{ marginBottom: 28 }}>Your account, your storefront, and where your money goes.</p>
+      <button type="button" className="btn btn--ghost btn--sm" onClick={restartGuide} style={{ marginBottom: 24 }}>
+        <FiCompass size={14} /> Restart dashboard guide
+      </button>
 
       <div className="form-layout">
         <form onSubmit={handleSubmit} style={{ maxWidth: 480 }}>

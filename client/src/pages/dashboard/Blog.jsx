@@ -94,8 +94,8 @@ export default function DashboardBlog() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                     <span className={`badge ${label.className}`}>{label.text}</span>
-                    <Link to={`/dashboard/blog/${post.id}/edit`} className="btn btn--ghost btn--sm"><FiEdit2 size={13} /></Link>
-                    <button onClick={() => handleDelete(post)} className="btn btn--ghost btn--sm"><FiTrash2 size={13} /></button>
+                    <Link to={`/dashboard/blog/${post.id}/edit`} className="btn btn--ghost btn--sm" title="Edit post" aria-label="Edit post"><FiEdit2 size={13} /></Link>
+                    <button onClick={() => handleDelete(post)} className="btn btn--ghost btn--sm" title="Delete post" aria-label="Delete post"><FiTrash2 size={13} /></button>
                   </div>
                 </div>
                 {post.status === 'rejected' && post.rejection_note && (

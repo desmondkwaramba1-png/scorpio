@@ -58,6 +58,12 @@ router.get('/disputes', requireAdmin, (req, res) => {
 
   for (const d of disputes) {
     d.delivery = db.prepare('SELECT message, external_url, storage_path FROM service_deliveries WHERE purchase_id = ? ORDER BY id DESC LIMIT 1').get(d.purchase_id) || null;
+    d.timeline = [
+      ...db.prepare('SELECT id, author_role, body, created_at FROM dispute_messages WHERE dispute_id = ?').all(d.dispute_id)
+        .map(item => ({ type: 'message', ...item })),
+      ...db.prepare('SELECT id, author_role, original_filename, storage_path, created_at FROM dispute_evidence WHERE dispute_id = ?').all(d.dispute_id)
+        .map(item => ({ type: 'evidence', ...item }))
+    ].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   }
 
   res.json(disputes);
@@ -328,8 +334,29 @@ router.post('/subscriptions/sweep', requireAdmin, (req, res) => {
   res.json({ ok: true, ...result });
 });
 
-module.exports = router;
 // Exported so routes/blog.js can gate its own admin routes with the exact
 // same timing-safe ADMIN_KEY check, rather than a second copy of
 // security-sensitive comparison logic.
+
+// POST /api/admin/disputes/:id/resolve — manual dispute resolution.
+// Admin reviews the case chat and evidence, then picks 'refund' (buyer wins,
+// money goes back) or 'release' (seller wins, money releases to wallet).
+router.post('/disputes/:id/resolve', requireAdmin, (req, res) => {
+  const { resolution, note } = req.body;
+  if (!['refund', 'release'].includes(resolution)) {
+    return res.status(400).json({ error: 'Resolution must be refund or release.' });
+  }
+  
+  const dispute = db.prepare('SELECT * FROM service_disputes WHERE id = ?').get(req.params.id);
+  if (!dispute) return res.status(404).json({ error: 'Dispute not found.' });
+  
+  if (dispute.status !== 'open') {
+    return res.status(400).json({ error: 'Dispute is already resolved.' });
+  }
+  
+  resolveDispute(dispute.id, resolution, note);
+  res.json({ ok: true });
+});
+
+module.exports = router;
 module.exports.requireAdmin = requireAdmin;

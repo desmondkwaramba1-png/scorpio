@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { FiTrash2, FiAlertTriangle, FiExternalLink, FiTag, FiKey, FiImage, FiBriefcase, FiPackage, FiFilePlus, FiArrowRight } from 'react-icons/fi';
+import { FiTrash2, FiAlertTriangle, FiExternalLink, FiTag, FiKey, FiImage, FiBriefcase, FiPackage, FiFilePlus, FiArrowRight, FiCheckCircle, FiSend, FiEyeOff } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
@@ -180,12 +180,26 @@ export default function EditProduct() {
   const categoryOptions = ACTIVE_CATEGORIES.some(c => c.value === product.category)
     ? ACTIVE_CATEGORIES
     : [...ACTIVE_CATEGORIES, ...CATEGORIES.filter(c => c.value === product.category)];
+  const hasDeliverable = product.type === 'service' || ['serial', 'subscription'].includes(product.type) || !!file || !!product.file_kind || product.total_keys > 0;
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
-        <h1 style={{ fontSize: '1.5rem' }}>Edit product</h1>
-        <span className={`badge ${product.status === 'published' ? 'badge--green' : 'badge--neutral'}`}>{product.status}</span>
+      <div className="product-editor-intro">
+        <div>
+          <p className="section__eyebrow mono">MANAGE YOUR LISTING</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <h1 style={{ fontSize: '1.5rem' }}>Edit product</h1>
+            <span className={`badge ${product.status === 'published' ? 'badge--green' : 'badge--neutral'}`}>{product.status}</span>
+          </div>
+          <p className="muted" style={{ marginTop: 6 }}>Update the details, check the buyer preview, then save or publish again.</p>
+        </div>
+        <div className="publish-steps" aria-label="Product publishing steps">
+          <span className="publish-step publish-step--active"><b>1</b> Details</span>
+          <span className="publish-step__line" />
+          <span className="publish-step"><b>2</b> Deliverable</span>
+          <span className="publish-step__line" />
+          <span className="publish-step"><b>3</b> Publish</span>
+        </div>
       </div>
       {publicUrl && (
         <p style={{ marginBottom: 28 }}>
@@ -388,6 +402,7 @@ export default function EditProduct() {
               className="btn btn--ghost" disabled={submitting} type="button"
               onClick={() => submit(product.status === 'published' ? 'draft' : 'published')}
             >
+              {product.status === 'published' ? <FiEyeOff size={14} /> : <FiSend size={14} />}
               {product.status === 'published' ? 'Unpublish' : 'Publish'}
             </button>
             <button className="btn btn--primary" style={{ flex: 1 }} disabled={submitting} type="submit">
@@ -397,9 +412,10 @@ export default function EditProduct() {
         </form>
 
         <div className="form-layout__preview">
-          <p className="muted" style={{ fontSize: '.8rem', fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.04em' }}>
-            Live preview
-          </p>
+          <div className="preview-heading">
+            <div><p className="preview-heading__eyebrow mono">BUYER PREVIEW</p><p className="preview-heading__title">What people will see</p></div>
+            <span className="preview-heading__badge">Live</span>
+          </div>
           <div className="product-card" style={{ cursor: 'default' }}>
             <div
               className={`product-card__cover${coverPreview ? '' : ' product-card__cover--empty'}`}
@@ -418,6 +434,14 @@ export default function EditProduct() {
               </div>
               <p className="mono product-card__price">{price || 'Set a price'}</p>
             </div>
+          </div>
+
+          <div className="publish-readiness">
+            <p className="publish-readiness__title">Ready to publish when:</p>
+            <p className={`publish-readiness__item${product.cover_path || cover ? ' is-ready' : ''}`}><FiCheckCircle size={14} /> Cover image added</p>
+            <p className={`publish-readiness__item${form.title && form.category ? ' is-ready' : ''}`}><FiCheckCircle size={14} /> Title and category chosen</p>
+            <p className={`publish-readiness__item${price !== null ? ' is-ready' : ''}`}><FiCheckCircle size={14} /> Price set</p>
+            <p className={`publish-readiness__item${hasDeliverable ? ' is-ready' : ''}`}><FiCheckCircle size={14} /> Buyer deliverable ready</p>
           </div>
 
           <div className="card card--pad" style={{ marginTop: 20 }}>

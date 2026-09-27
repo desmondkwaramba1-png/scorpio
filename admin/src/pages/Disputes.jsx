@@ -49,6 +49,18 @@ function DisputeCard({ dispute, onResolve }) {
         <p className="muted" style={{ fontSize: '.85rem', marginBottom: 14 }}>Seller never marked this delivered.</p>
       )}
 
+      {dispute.timeline?.length > 0 && (
+        <div className="card card--pad" style={{ background: 'var(--field-bg)', marginBottom: 14 }}>
+          <p style={{ fontSize: '.82rem', fontWeight: 600, marginBottom: 6 }}>Case chat and evidence</p>
+          {dispute.timeline.map(item => (
+            <p key={`${item.type}-${item.id}`} style={{ fontSize: '.85rem', margin: '6px 0' }}>
+              <strong>{item.author_role}:</strong>{' '}
+              {item.type === 'message' ? item.body : <a href={item.storage_path} target="_blank" rel="noopener noreferrer">{item.original_filename}</a>}
+            </p>
+          ))}
+        </div>
+      )}
+
       <div className="field" style={{ marginBottom: 10 }}>
         <label htmlFor={`note-${dispute.dispute_id}`}>Resolution note (optional, kept on record)</label>
         <input id={`note-${dispute.dispute_id}`} value={note} onChange={e => setNote(e.target.value)} />

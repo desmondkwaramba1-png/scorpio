@@ -56,9 +56,14 @@ function confirmDelivery(purchaseId) {
   db.prepare("UPDATE purchases SET fulfillment_status = 'released' WHERE id = ? AND fulfillment_status = 'delivered'").run(purchaseId);
 }
 
-function openDispute(purchaseId, reason) {
-  db.prepare('INSERT INTO service_disputes (purchase_id, reason) VALUES (?, ?)').run(purchaseId, reason);
+function openDispute(purchaseId, reason, openedByUserId = null) {
+  const existing = db.prepare("SELECT * FROM service_disputes WHERE purchase_id = ? AND status = 'open'").get(purchaseId);
+  if (existing) return existing;
+
+  db.prepare('INSERT INTO service_disputes (purchase_id, reason, opened_by_user_id) VALUES (?, ?, ?)')
+    .run(purchaseId, reason, openedByUserId || null);
   db.prepare("UPDATE purchases SET fulfillment_status = 'disputed' WHERE id = ?").run(purchaseId);
+  return disputeFor(purchaseId);
 }
 
 // resolution is 'refund' or 'release'. "Refund" here is a state change —
@@ -76,6 +81,14 @@ function resolveDispute(disputeId, resolution, note) {
   db.prepare("UPDATE purchases SET fulfillment_status = ? WHERE id = ?").run(newFulfillment, dispute.purchase_id);
   db.prepare("UPDATE service_disputes SET status = ?, resolved_at = datetime('now'), resolution_note = ? WHERE id = ?")
     .run(newDisputeStatus, note || null, disputeId);
+
+  // A refunded digital order shouldn't keep handing out the file from this
+  // platform. The buyer may already have a copy — that's the hard part of
+  // digital returns, and why an admin reads the thread before deciding —
+  // but new downloads from here stop.
+  if (resolution === 'refund') {
+    db.prepare("UPDATE download_tokens SET expires_at = datetime('now') WHERE purchase_id = ?").run(dispute.purchase_id);
+  }
 
   return db.prepare('SELECT * FROM service_disputes WHERE id = ?').get(disputeId);
 }

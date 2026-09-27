@@ -22,6 +22,7 @@ const downloadsRouter = require('./routes/downloads');
 const adminRouter = require('./routes/admin');
 const reelsRouter = require('./routes/reels');
 const reportsRouter = require('./routes/reports');
+const disputesRouter = require('./routes/disputes');
 const sitemapRouter = require('./routes/sitemap');
 const shareRouter = require('./routes/share');
 
@@ -89,8 +90,40 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
+// cookie-parser has to run before both sessions (attachUser reads
+// req.cookies) and csurf({ cookie: true }). Without it, every logged-in
+// mutation — including product publish/edit — saw no session cookie and
+// CSRF had nowhere to store its secret, so a failed publish left creators
+// unable to retry or edit: the request never reached the product handler.
 app.use(cookieParser());
+
+const csurf = require('csurf');
+const csrfProtection = csurf({
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production'
+  }
+});
+
+function maybeCsrf(req, res, next) {
+  // Dischub's webhook is a server-to-server POST with no browser cookie
+  // and no CSRF token to send; status is re-checked against Dischub
+  // itself (see routes/purchases.js), so skipping CSRF here isn't
+  // skipping the real authenticity check.
+  if (req.path === '/api/purchases/dischub/callback') return next();
+  // Admin app authenticates with X-Admin-Key, not the buyer/seller
+  // session cookie. Requiring a CSRF cookie there blocked every admin
+  // mutation (dispute resolve, blog publish) while GETs still worked.
+  if (req.headers['x-admin-key']) return next();
+  csrfProtection(req, res, next);
+}
+
+app.use(maybeCsrf);
+app.get('/api/csrf-token', (req, res) => {
+  res.json({ csrfToken: req.csrfToken() });
+});
 app.use(attachUser);
 // Same reasoning as db/schema.js: a freshly-mounted volume has no
 // uploads/ subdirectory yet, and multer's own destination configs (see
@@ -112,6 +145,7 @@ app.use('/api/downloads', downloadsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/reels', reelsRouter);
 app.use('/api/reports', reportsRouter);
+app.use('/api/disputes', disputesRouter);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 // Mounted at root, not under /api — see client/vercel.json's dedicated
@@ -130,6 +164,9 @@ app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     const message = err.code === 'LIMIT_FILE_SIZE' ? 'That file is too large.' : err.message;
     return res.status(400).json({ error: message });
+  }
+  if (err && err.code === 'EBADCSRFTOKEN') {
+    return res.status(403).json({ error: 'That request expired. Refresh the page and try again.' });
   }
   if (err && err.message === 'Not allowed by CORS') {
     return res.status(403).json({ error: 'Origin not allowed.' });

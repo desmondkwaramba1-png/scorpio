@@ -40,7 +40,7 @@ const deliveryUpload = multer({
 });
 
 function fileAccessFor(purchase) {
-  if (purchase.payment_status !== 'paid') {
+  if (purchase.payment_status !== 'paid' || purchase.fulfillment_status === 'refunded') {
     return { download_url: null, view_url: null, is_video: false, is_audio: false, license_key: null };
   }
   const file = getProductFile(purchase.product_id);
@@ -94,7 +94,13 @@ function serviceStatusFor(purchase) {
       external_url: delivery.external_url,
       file_url: delivery.storage_path || null
     } : null,
-    dispute: dispute ? { reason: dispute.reason, status: dispute.status, resolution_note: dispute.resolution_note } : null
+    dispute: dispute ? {
+      id: dispute.id,
+      reason: dispute.reason,
+      status: dispute.status,
+      resolution_note: dispute.resolution_note,
+      hold_paused: dispute.status === 'open'
+    } : null
   };
 }
 
@@ -225,8 +231,33 @@ router.post('/:id/dispute', requireAuth, (req, res) => {
   const reason = (req.body.reason || '').trim();
   if (!reason) return res.status(400).json({ error: 'Describe what went wrong.' });
 
-  openDispute(purchase.id, reason);
-  res.json({ ok: true });
+  const existing = disputeFor(purchase.id);
+  if (existing && existing.status === 'open') {
+    return res.status(409).json({ error: 'This order already has an open dispute. Use the case chat to continue it.' });
+  }
+
+  const dispute = openDispute(purchase.id, reason, req.user.id);
+  db.prepare(`
+    INSERT INTO dispute_messages (dispute_id, user_id, author_role, body)
+    VALUES (?, ?, 'buyer', ?)
+  `).run(dispute.id, req.user.id, reason);
+
+  const seller = db.prepare(`
+    SELECT u.email, p.title FROM purchases pu
+    JOIN products p ON p.id = pu.product_id
+    JOIN creators c ON c.id = p.creator_id
+    LEFT JOIN users u ON u.id = c.user_id
+    WHERE pu.id = ?
+  `).get(purchase.id);
+  if (seller?.email) {
+    sendEmail(
+      seller.email,
+      `Dispute opened: ${seller.title}`,
+      `A buyer opened a dispute on this order. The 5-day payout timer is paused and the money stays on hold until it's decided. Reply with your side (and any screenshots) from your orders page: ${FRONTEND_URL}/dashboard/orders`
+    );
+  }
+
+  res.json({ ok: true, dispute_id: dispute.id });
 });
 
 // POST /api/purchases/:id/resend-download
@@ -321,8 +352,8 @@ router.post('/', checkoutLimiter, requireAuth, async (req, res) => {
   }
 
   const insert = db.prepare(`
-    INSERT INTO purchases (buyer_id, product_id, amount_minor, currency, payment_status, discount_applied)
-    VALUES (?, ?, ?, ?, 'pending', ?)
+    INSERT INTO purchases (buyer_id, product_id, amount_minor, currency, payment_status, discount_applied, fee_minor, net_minor)
+    VALUES (?, ?, ?, ?, 'pending', ?, 0, 0)
   `).run(buyer.id, product.id, amountMinor, product.currency, discountApplied ? 1 : 0);
   const purchaseId = insert.lastInsertRowid;
 
@@ -424,6 +455,98 @@ router.post('/dischub/callback', orderLookupLimiter, async (req, res) => {
   }
 
   res.json({ ok: true });
+});
+
+// Helper to get purchase and check authorization for dispute actions.
+// Returns { purchase, dispute, role } or null if a response was already sent.
+function getAuthorizedDispute(req, res) {
+  const purchase = db.prepare('SELECT * FROM purchases WHERE id = ?').get(req.params.id);
+  if (!purchase) { res.status(404).json({ error: 'Order not found.' }); return null; }
+  
+  const buyer = db.prepare('SELECT user_id FROM buyers WHERE id = ?').get(purchase.buyer_id);
+  const product = db.prepare('SELECT creator_id FROM products WHERE id = ?').get(purchase.product_id);
+  if (!product) { res.status(404).json({ error: 'Product not found.' }); return null; }
+  const creator = db.prepare('SELECT user_id FROM creators WHERE id = ?').get(product.creator_id);
+  
+  let role = null;
+  if (buyer && buyer.user_id === req.user.id) role = 'buyer';
+  else if (creator && creator.user_id === req.user.id) role = 'seller';
+  
+  if (!role) { res.status(403).json({ error: 'Not authorized for this dispute.' }); return null; }
+  
+  const dispute = disputeFor(purchase.id);
+  if (!dispute) { res.status(404).json({ error: 'No dispute found for this order.' }); return null; }
+  
+  return { purchase, dispute, role };
+}
+
+// GET /api/purchases/:id/dispute/messages
+router.get('/:id/dispute/messages', requireAuth, (req, res) => {
+  const auth = getAuthorizedDispute(req, res);
+  if (!auth) return; // already sent response
+  const { dispute } = auth;
+  
+  const messages = db.prepare('SELECT * FROM dispute_messages WHERE dispute_id = ? ORDER BY created_at ASC').all(dispute.id);
+  const evidence = db.prepare('SELECT * FROM dispute_evidence WHERE dispute_id = ? ORDER BY created_at ASC').all(dispute.id);
+  
+  // Mix them into a single timeline
+  const timeline = [
+    ...messages.map(m => ({ type: 'message', ...m })),
+    ...evidence.map(e => ({ type: 'evidence', ...e, storage_path: storage.publicUrl(e.storage_path) }))
+  ].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  
+  res.json({ timeline, status: dispute.status });
+});
+
+// POST /api/purchases/:id/dispute/messages
+router.post('/:id/dispute/messages', requireAuth, (req, res) => {
+  const auth = getAuthorizedDispute(req, res);
+  if (!auth) return;
+  const { dispute, role } = auth;
+  
+  if (dispute.status !== 'open') {
+    return res.status(400).json({ error: 'This dispute is closed.' });
+  }
+  
+  const body = (req.body.body || '').trim();
+  if (!body) return res.status(400).json({ error: 'Message cannot be empty.' });
+  
+  db.prepare('INSERT INTO dispute_messages (dispute_id, user_id, author_role, body) VALUES (?, ?, ?, ?)')
+    .run(dispute.id, req.user.id, role, body);
+    
+  res.status(201).json({ ok: true });
+});
+
+// POST /api/purchases/:id/dispute/evidence
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+});
+
+router.post('/:id/dispute/evidence', requireAuth, upload.single('file'), async (req, res) => {
+  const auth = getAuthorizedDispute(req, res);
+  if (!auth) return;
+  const { dispute, role } = auth;
+  
+  if (dispute.status !== 'open') {
+    return res.status(400).json({ error: 'This dispute is closed.' });
+  }
+  
+  const file = req.file;
+  if (!file) return res.status(400).json({ error: 'No file uploaded.' });
+  
+  try {
+    const fileKey = 'evidence/' + Date.now() + '-' + file.originalname.replace(/[^a-zA-Z0-9.-]/g, '');
+    await storage.uploadBuffer(fileKey, file.buffer, file.mimetype);
+    
+    db.prepare('INSERT INTO dispute_evidence (dispute_id, user_id, author_role, storage_path, original_filename, mime) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(dispute.id, req.user.id, role, fileKey, file.originalname, file.mimetype);
+      
+    res.status(201).json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(502).json({ error: 'Failed to upload evidence.' });
+  }
 });
 
 module.exports = router;

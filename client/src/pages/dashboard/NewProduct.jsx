@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiImage, FiDollarSign, FiPackage, FiBriefcase, FiFilePlus } from 'react-icons/fi';
+import { FiImage, FiDollarSign, FiPackage, FiBriefcase, FiFilePlus, FiCheckCircle, FiSend } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
@@ -56,6 +56,7 @@ export default function NewProduct() {
   const hasIssues = isSerial || isSubscription;
   const isSoftware = form.category === 'software';
   const isCourse = form.category === 'courses';
+  const hasDeliverable = isService || hasIssues || !!file || form.license_keys.trim().length > 0;
 
   async function submit(status) {
     setError(null);
@@ -110,10 +111,20 @@ export default function NewProduct() {
 
   return (
     <div>
-      <h1 style={{ fontSize: '1.5rem', marginBottom: 10 }}>New product</h1>
-      <p style={{ color: 'var(--muted)', marginBottom: 28 }}>
-        Add a cover, set a price, and you're live. No separate website to build.
-      </p>
+      <div className="product-editor-intro">
+        <div>
+          <p className="section__eyebrow mono">CREATE A LISTING</p>
+          <h1 style={{ fontSize: '1.5rem', marginBottom: 6 }}>New product</h1>
+          <p className="muted">Set up the listing, add what buyers receive, then publish when the checks are ready.</p>
+        </div>
+        <div className="publish-steps" aria-label="Product publishing steps">
+          <span className="publish-step publish-step--active"><b>1</b> Details</span>
+          <span className="publish-step__line" />
+          <span className="publish-step"><b>2</b> Deliverable</span>
+          <span className="publish-step__line" />
+          <span className="publish-step"><b>3</b> Publish</span>
+        </div>
+      </div>
 
       <div className="form-layout">
         <form onSubmit={e => { e.preventDefault(); submit('published'); }} style={{ maxWidth: 480 }}>
@@ -288,15 +299,16 @@ export default function NewProduct() {
               Save as draft
             </button>
             <button className="btn btn--primary" style={{ flex: 1 }} disabled={submitting} type="submit">
-              {submitting ? 'Publishing...' : 'Publish it'}
+              <FiSend size={14} /> {submitting ? 'Publishing...' : 'Publish it'}
             </button>
           </div>
         </form>
 
         <div className="form-layout__preview">
-          <p className="muted" style={{ fontSize: '.8rem', fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.04em' }}>
-            Live preview
-          </p>
+          <div className="preview-heading">
+            <div><p className="preview-heading__eyebrow mono">BUYER PREVIEW</p><p className="preview-heading__title">What people will see</p></div>
+            <span className="preview-heading__badge">Live</span>
+          </div>
           <div className="product-card" style={{ cursor: 'default' }}>
             <div
               className={`product-card__cover${coverPreview ? '' : ' product-card__cover--empty'}`}
@@ -315,6 +327,13 @@ export default function NewProduct() {
               </div>
               <p className="mono product-card__price">{price || 'Set a price'}</p>
             </div>
+          </div>
+          <div className="publish-readiness">
+            <p className="publish-readiness__title">Ready to publish when:</p>
+            <p className={`publish-readiness__item${cover ? ' is-ready' : ''}`}><FiCheckCircle size={14} /> Cover image added</p>
+            <p className={`publish-readiness__item${form.title && form.category ? ' is-ready' : ''}`}><FiCheckCircle size={14} /> Title and category chosen</p>
+            <p className={`publish-readiness__item${price !== null ? ' is-ready' : ''}`}><FiCheckCircle size={14} /> Price set</p>
+            <p className={`publish-readiness__item${hasDeliverable ? ' is-ready' : ''}`}><FiCheckCircle size={14} /> Buyer deliverable ready</p>
           </div>
         </div>
       </div>

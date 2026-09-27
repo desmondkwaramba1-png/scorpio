@@ -2,7 +2,8 @@
 // both need the same "gross minus fee" math (available balance) — living
 // here once instead of as duplicated constants stops the two from quietly
 // drifting apart.
-const PLATFORM_FEE_PERCENT = 8;
+const DEFAULT_PLATFORM_FEE_PERCENT = 8;
+const PLATFORM_FEE_PERCENT = Number(process.env.PLATFORM_FEE_PERCENT) || DEFAULT_PLATFORM_FEE_PERCENT;
 
 function feeFor(grossMinor) {
   return Math.round(grossMinor * (PLATFORM_FEE_PERCENT / 100));

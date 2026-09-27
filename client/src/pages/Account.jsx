@@ -7,6 +7,7 @@ import { formatMoney } from '../lib/money';
 import { timeAgo } from '../lib/time';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 import ReportProblem from '../components/ReportProblem.jsx';
+import DisputeThread from '../components/DisputeThread.jsx';
 
 function formatDate(sqliteDatetime) {
   const d = new Date(sqliteDatetime.replace(' ', 'T'));
@@ -37,7 +38,7 @@ function whatsappLink(phone) {
 // unchanged, so "Needs your attention" kept listing an order the buyer
 // had already confirmed, it wasn't lying about anything stale, it
 // genuinely never found out.
-function ServiceStatus({ purchaseId, service: initial, sellerName, sellerEmail, sellerPhone, productTitle, onUpdate }) {
+function ServiceStatus({ purchaseId, service: initial, sellerName, sellerEmail, sellerPhone, productTitle, currentUserId, onUpdate }) {
   const [service, setService] = useState(initial);
   const [disputing, setDisputing] = useState(false);
   const [reason, setReason] = useState('');
@@ -174,9 +175,13 @@ function ServiceStatus({ purchaseId, service: initial, sellerName, sellerEmail, 
       )}
 
       {service.fulfillment_status === 'disputed' && (
-        <p style={{ fontSize: '.85rem', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--red)', marginTop: 10 }}>
-          <FiAlertTriangle size={13} /> Reported. This is being reviewed and your payment is held until it's resolved.
-        </p>
+        <>
+          <p style={{ fontSize: '.85rem', display: 'flex', alignItems: 'center', gap: 6, color: 'var(--red)', marginTop: 10 }}>
+            <FiAlertTriangle size={13} /> Reported. This is being reviewed and your payment is held until it's resolved.
+          </p>
+          <DisputeThread purchaseId={purchaseId} currentUserId={currentUserId}
+            disputeStatus={service.dispute?.status || 'open'} disputeReason={service.dispute?.reason || reason} />
+        </>
       )}
 
       {service.fulfillment_status === 'refunded' && (
@@ -364,7 +369,7 @@ function SeriesRow({ purchase }) {
   );
 }
 
-function OrderRow({ purchase, onResend, onServiceUpdate }) {
+function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId }) {
   const navigate = useNavigate();
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
@@ -475,7 +480,7 @@ function OrderRow({ purchase, onResend, onServiceUpdate }) {
         <ServiceStatus
           purchaseId={purchase.id} service={purchase.service}
           sellerName={purchase.creator_name} sellerEmail={purchase.creator_email} sellerPhone={purchase.creator_phone}
-          productTitle={purchase.product_title}
+          productTitle={purchase.product_title} currentUserId={currentUserId}
           onUpdate={patch => onServiceUpdate?.(purchase.id, patch)}
         />
       )}
@@ -629,7 +634,7 @@ export default function Account() {
             A seller delivered and is waiting on your OK, or an order is running past when it was promised.
           </p>
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-            {needsAttention.map(p => <OrderRow key={p.id} purchase={p} onResend={resend} onServiceUpdate={handleServiceUpdate} />)}
+            {needsAttention.map(p => <OrderRow key={p.id} purchase={p} onResend={resend} onServiceUpdate={handleServiceUpdate} currentUserId={user?.id} />)}
           </div>
         </div>
       )}
@@ -680,7 +685,7 @@ export default function Account() {
             Everything you've bought stays here: downloads, license keys, and services you're waiting on.
           </p>
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-            {rest.map(p => <OrderRow key={p.id} purchase={p} onResend={resend} onServiceUpdate={handleServiceUpdate} />)}
+            {rest.map(p => <OrderRow key={p.id} purchase={p} onResend={resend} onServiceUpdate={handleServiceUpdate} currentUserId={user?.id} />)}
           </div>
         </>
       )}

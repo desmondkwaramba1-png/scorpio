@@ -6,6 +6,13 @@ export default function AuthShell({ children, wide = false, cardStyle }) {
   return (
     <div className="auth-page">
       <div className={`auth-shell${wide ? ' auth-shell--wide' : ''}`}>
+        <div className="auth-shell__intro" aria-label="Scorpio">
+          <span className="auth-shell__mark">S</span>
+          <span className="auth-shell__brand">
+            <strong>SCORPIO</strong>
+            <small>Make something worth finding.</small>
+          </span>
+        </div>
         <div className="auth-card" style={cardStyle}>{children}</div>
       </div>
     </div>

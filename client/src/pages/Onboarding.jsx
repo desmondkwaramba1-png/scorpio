@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { FiCheck } from 'react-icons/fi';
+import { FiCheck, FiBox, FiLink, FiDollarSign } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api';
 import FileUpload from '../components/FileUpload.jsx';
@@ -8,6 +8,12 @@ import AuthShell from '../components/AuthShell.jsx';
 import { SITE_HOST } from '../lib/site.js';
 
 const STEPS = ['Basics', 'About', 'Payout', 'Review'];
+const STEP_HINTS = [
+  'Choose the name buyers will see and recognize.',
+  'A clear promise helps the right buyers trust your storefront.',
+  'Add EcoCash now, or finish it later from Settings.',
+  'Check your details, create the storefront, then publish a product.'
+];
 
 // Mirrors the backend's exact rule (see routes/creators.js's HANDLE_RE) ,
 // duplicated here isn't ideal, but a handle is validated in exactly one
@@ -91,7 +97,15 @@ export default function Onboarding() {
   return (
     <AuthShell wide>
       <h1 style={{ fontSize: '1.6rem', marginBottom: 6 }}>Set up your storefront</h1>
-      <p className="muted" style={{ marginBottom: 32 }}>Four short steps. Takes about two minutes.</p>
+      <p className="muted" style={{ marginBottom: 18 }}>Four short steps. Then you can publish your first product and start sharing.</p>
+
+      <div className="onboarding-path" aria-label="What happens after setup">
+        <div className="onboarding-path__item"><FiBox size={17} /><span><strong>Build</strong><small>Set up your storefront</small></span></div>
+        <div className="onboarding-path__line" />
+        <div className="onboarding-path__item"><FiLink size={17} /><span><strong>Publish</strong><small>Add a product and share it</small></span></div>
+        <div className="onboarding-path__line" />
+        <div className="onboarding-path__item"><FiDollarSign size={17} /><span><strong>Earn</strong><small>Track orders and payouts</small></span></div>
+      </div>
 
       <div className="wizard-steps">
         {STEPS.map((label, i) => (
@@ -104,6 +118,7 @@ export default function Onboarding() {
           </div>
         ))}
       </div>
+      <p className="onboarding-step-hint">{STEP_HINTS[step]}</p>
 
       {step === 0 && (
         <div>

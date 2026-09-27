@@ -25,6 +25,9 @@ router.get('/:token', async (req, res) => {
   if (!purchase || purchase.payment_status !== 'paid') {
     return res.status(403).send('This purchase is not paid.');
   }
+  if (purchase.fulfillment_status === 'refunded') {
+    return res.status(403).send('This order was refunded, so the download is no longer available.');
+  }
 
   const file = db.prepare('SELECT * FROM product_files WHERE product_id = ? LIMIT 1').get(purchase.product_id);
   if (!file) return res.status(404).send('No file is attached to this product yet.');
@@ -60,6 +63,9 @@ router.get('/:token/view', async (req, res) => {
   const purchase = db.prepare('SELECT * FROM purchases WHERE id = ?').get(row.purchase_id);
   if (!purchase || purchase.payment_status !== 'paid') {
     return res.status(403).send('This purchase is not paid.');
+  }
+  if (purchase.fulfillment_status === 'refunded') {
+    return res.status(403).send('This order was refunded, so the download is no longer available.');
   }
 
   const file = db.prepare('SELECT * FROM product_files WHERE product_id = ? LIMIT 1').get(purchase.product_id);

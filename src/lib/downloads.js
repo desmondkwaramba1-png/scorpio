@@ -40,6 +40,8 @@ function createDownloadToken(purchaseId) {
 }
 
 function getActiveTokenForPurchase(purchaseId) {
+  const purchase = db.prepare('SELECT fulfillment_status FROM purchases WHERE id = ?').get(purchaseId);
+  if (purchase && purchase.fulfillment_status === 'refunded') return null;
   return db.prepare(
     "SELECT * FROM download_tokens WHERE purchase_id = ? AND expires_at > datetime('now') ORDER BY created_at DESC LIMIT 1"
   ).get(purchaseId);

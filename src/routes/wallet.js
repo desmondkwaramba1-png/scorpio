@@ -11,8 +11,7 @@ router.get('/me', requireAuth, requireCreator, (req, res) => {
   sweepAutoReleases();
 
   const rows = db.prepare(`
-    SELECT pu.id, pu.amount_minor, pu.currency, pu.payment_status, pu.fulfillment_status, pu.created_at,
-           p.title AS product_title, b.name AS buyer_name, b.email AS buyer_email
+    SELECT pu.id, pu.amount_minor, pu.currency, pu.payment_status, pu.fulfillment_status, pu.created_at, pu.fee_minor, pu.net_minor, p.title AS product_title, b.name AS buyer_name, b.email AS buyer_email
     FROM purchases pu
     JOIN products p ON p.id = pu.product_id
     JOIN buyers b ON b.id = pu.buyer_id
@@ -22,7 +21,8 @@ router.get('/me', requireAuth, requireCreator, (req, res) => {
 
   const transactions = rows.map(r => ({
     ...r,
-    ...netOf(r.payment_status === 'paid' ? r.amount_minor : 0)
+    fee_minor: r.payment_status === 'paid' ? r.fee_minor : 0,
+    net_minor: r.payment_status === 'paid' ? r.net_minor : 0
   }));
 
   res.json({

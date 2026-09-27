@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, Link, Navigate } from 'react-router-dom';
 import { FiGrid, FiBox, FiFilm, FiShoppingBag, FiBarChart2, FiCreditCard, FiRepeat, FiSettings, FiCopy, FiCheck, FiExternalLink, FiBookOpen } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import Seal from '../../components/Seal.jsx';
 import { SITE_HOST, SITE_ORIGIN } from '../../lib/site.js';
+import TourGuide from '../../components/TourGuide.jsx';
 
 // Grouped by what they're actually for, not just the order features
 // shipped in: what you publish (Overview, then Products/Reels/Blog),
@@ -38,6 +39,11 @@ function CopyLinkButton({ handle }) {
 
 export default function DashboardLayout() {
   const { creator } = useAuth();
+  const [runGuide, setRunGuide] = useState(false);
+
+  useEffect(() => {
+    if (!localStorage.getItem('scorpio_tour_completed')) setRunGuide(true);
+  }, []);
 
   // A buyer with no creator profile has no business seeing the seller
   // dashboard shell (tabs, products, wallet) at all, not even a broken/
@@ -46,6 +52,7 @@ export default function DashboardLayout() {
 
   return (
     <div className="wrap" style={{ padding: '32px 20px 80px' }}>
+      <TourGuide run={runGuide} setRun={setRunGuide} />
       <div className="card card--pad" style={{
         marginBottom: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         gap: 16, flexWrap: 'wrap'

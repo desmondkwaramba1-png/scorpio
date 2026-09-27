@@ -1,336 +1,1308 @@
-const bcrypt = require('bcryptjs');
-const fs = require('fs');
-const path = require('path');
-const db = require('./schema');
-const { checkAndUpdateVerification } = require('../lib/verification');
-const { UPLOADS_DIR } = require('../lib/paths');
+```js
+/**
+ * ZIMSELAR FULL MARKETPLACE SEED
+ *
+ * Creates:
+ *   200 creators
+ *   1,000 products (5 per creator)
+ *   250 buyers
+ *   3,500 purchases
+ *   engagement, reviews, posts, reels, services, carts and issues
+ *
+ * All seeded accounts:
+ *   password = zimselar2026
+ *
+ * The seed is schema-aware: optional tables such as payouts/reports
+ * are only used if they actually exist.
+ */
 
-db.exec('DELETE FROM purchases');
-db.exec('DELETE FROM product_files');
-db.exec('DELETE FROM issues');
-db.exec('DELETE FROM products');
-db.exec('DELETE FROM creators');
-db.exec('DELETE FROM sessions');
-db.exec('DELETE FROM password_reset_tokens');
-db.exec('DELETE FROM email_verification_tokens');
-db.exec('DELETE FROM otp_codes');
-db.exec('DELETE FROM users');
-db.exec('DELETE FROM buyers');
+const path = require("path");
+const fs = require("fs");
+const Database = require("better-sqlite3");
+const bcrypt = require("bcryptjs");
 
-const DEV_PASSWORD = 'zimselar2026';
-const passwordHash = bcrypt.hashSync(DEV_PASSWORD, 10);
-const COVER = '/brand/cover.svg';
+const DB_PATH =
+  process.env.DB_PATH ||
+  path.join(__dirname, "zimselar.db");
 
-const insertUser = db.prepare(`
-  INSERT INTO users (username, email, phone, password_hash, email_verified_at, terms_accepted_at, name)
-  VALUES (?, ?, ?, ?, datetime('now'), datetime('now'), ?)
-`);
-// verified starts false for everyone — checkAndUpdateVerification() decides
-// it for real at the bottom of this script, from the same criteria the app
-// uses in production. No creator here is verified by fiat.
-const insertCreator = db.prepare(`
-  INSERT INTO creators
-    (user_id, handle, name, email, bio, what_selling, who_for, payout_ecocash_number, verified)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-`);
-const insertProduct = db.prepare(`
-  INSERT INTO products
-    (creator_id, title, description, type, category, price_minor, currency, quantity_limit, status, cover_path, slug)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'published', ?, ?)
-`);
-// Every published product needs something to actually deliver — mirrors the
-// file-or-external_url requirement enforced on POST /api/products.
-const insertProductFile = db.prepare(`
-  INSERT INTO product_files (product_id, kind, storage_path, original_filename, size_bytes)
-  VALUES (?, 'upload', ?, ?, ?)
-`);
-function attachSeedFile(productId, filename, originalName, content) {
-  const filePath = path.join(UPLOADS_DIR, filename);
-  fs.writeFileSync(filePath, content);
-  insertProductFile.run(productId, `/uploads/${filename}`, originalName, Buffer.byteLength(content));
+console.log("Seeding database: " + DB_PATH);
+
+if (!fs.existsSync(DB_PATH)) {
+  throw new Error("Database not found: " + DB_PATH);
 }
 
-// A real generated image at avatar_path, not a live-computed fallback
-// letter — "Meet the creators" should show something that reads as an
-// actual picture, not nine identical blank circles. Same gradient+initial
-// approach as the product covers below, just square (the frontend's own
-// border-radius:50% on the containing element is what makes it read as a
-// circle, so the source image doesn't need to be one).
-const updateCreatorAvatar = db.prepare('UPDATE creators SET avatar_path = ? WHERE id = ?');
-function assignSeedAvatar(creatorId, name, hue) {
-  const initial = name.trim().charAt(0).toUpperCase();
-  const from = `hsl(${hue}, 62%, 50%)`;
-  const to = `hsl(${(hue + 35) % 360}, 65%, 38%)`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0%" stop-color="${from}"/><stop offset="100%" stop-color="${to}"/>
-  </linearGradient></defs>
-  <rect width="200" height="200" fill="url(#g)"/>
-  <text x="100" y="100" font-family="Georgia, serif" font-size="90" font-weight="700"
-    fill="rgba(255,255,255,.95)" text-anchor="middle" dominant-baseline="central">${initial}</text>
-</svg>`;
-  const filename = `seed-avatar-${creatorId}.svg`;
-  fs.writeFileSync(path.join(UPLOADS_DIR, filename), svg);
-  updateCreatorAvatar.run(`/uploads/${filename}`, creatorId);
+const db = new Database(DB_PATH);
+
+db.pragma("foreign_keys = OFF");
+
+/* =========================================================
+   DATABASE HELPERS
+   ========================================================= */
+
+const tables = new Set(
+  db.prepare(`
+    SELECT name
+    FROM sqlite_master
+    WHERE type = 'table'
+      AND name NOT LIKE 'sqlite_%'
+  `).all().map(row => row.name)
+);
+
+function hasTable(name) {
+  return tables.has(name);
 }
 
-// 1. Pauline, a serial community newspaper. Meets every verification
-// criterion, so she'll come out verified.
-const paulineUserId = insertUser.run(
-  'chitowncrossroads', 'pauline@example.com', '+263771234001', passwordHash, 'Pauline Inasho'
-).lastInsertRowid;
-const paulineId = insertCreator.run(
-  paulineUserId, 'chitowncrossroads', 'Pauline Inasho C', 'pauline@example.com',
-  'Chitungwiza-based journalist and publisher of Chi-Town Crossroads.',
-  'A weekly community newspaper covering Chitungwiza.',
-  'Residents and businesses in and around Chitungwiza who want real local news.',
-  '0771234001'
-).lastInsertRowid;
-assignSeedAvatar(paulineId, 'Pauline Inasho', 200);
+const columnCache = new Map();
 
-const newspaperId = insertProduct.run(
-  paulineId, 'Chi-Town Crossroads',
-  'Weekly community newspaper covering Chitungwiza: local news, economy, and community issues.',
-  'serial', 'writing', 100, 'USD', null, COVER, 'chi-town-crossroads'
-).lastInsertRowid;
+function getColumns(table) {
+  if (!hasTable(table)) return [];
 
-db.prepare(`
-  INSERT INTO issues (product_id, issue_number, title, file_path)
-  VALUES (?, ?, ?, ?)
-`).run(
-  newspaperId, 1,
-  "Vendors Sustain Zimbabwe's Economy Amid Rising Informal Trade",
-  '/files/chi-town-crossroads/issue-1.pdf'
-);
-attachSeedFile(
-  newspaperId, 'seed-chi-town-crossroads-issue1.pdf', 'chi-town-crossroads-issue1.pdf',
-  "CHI-TOWN CROSSROADS: Issue 1\n\nVendors Sustain Zimbabwe's Economy Amid Rising Informal Trade\n\n" +
-  'A weekly community newspaper covering Chitungwiza: local news, economy, and community issues.\n'
-);
-
-// 2. Tanaka, a single ebook/course. Deliberately missing a payout number,
-// so this account genuinely fails one criterion and stays unverified —
-// a real, not asserted, "not there yet" example.
-const tanakaUserId = insertUser.run(
-  'tanakateaches', 'tanaka@example.com', '+263772234002', passwordHash, 'Tanaka Moyo'
-).lastInsertRowid;
-const tanakaId = insertCreator.run(
-  tanakaUserId, 'tanakateaches', 'Tanaka Moyo', 'tanaka@example.com',
-  'Small business consultant in Harare teaching practical Excel skills.',
-  'A downloadable Excel course for small business bookkeeping.',
-  'Vendors and small business owners who need to track money without an accountant.',
-  null
-).lastInsertRowid;
-assignSeedAvatar(tanakaId, 'Tanaka Moyo', 24);
-
-const excelId = insertProduct.run(
-  tanakaId, 'Excel for Small Business',
-  'A practical guide to tracking stock, sales, and expenses in Excel, built for Zimbabwean small businesses.',
-  'single', 'templates', 800, 'USD', null, COVER, 'excel-for-small-business'
-).lastInsertRowid;
-attachSeedFile(
-  excelId, 'seed-excel-for-small-business.pdf', 'excel-for-small-business.pdf',
-  'EXCEL FOR SMALL BUSINESS: Course Notes\n\n' +
-  '1. Setting up a stock sheet\n2. Daily sales log and running totals\n' +
-  '3. Tracking expenses against income\n4. Building a simple month-end summary\n'
-);
-
-// 3. Rudo, a limited-quantity event ticket. Also meets every criterion.
-const rudoUserId = insertUser.run(
-  'rudoevents', 'rudo@example.com', '+263773234003', passwordHash, 'Rudo Chikwira'
-).lastInsertRowid;
-const rudoId = insertCreator.run(
-  rudoUserId, 'rudoevents', 'Rudo Chikwira', 'rudo@example.com',
-  'Community organiser running monthly meetups for Harare founders.',
-  'Tickets to the monthly Harare Startup Mixer.',
-  'Founders, freelancers, and anyone building something in Harare.',
-  '0773234003'
-).lastInsertRowid;
-assignSeedAvatar(rudoId, 'Rudo Chikwira', 280);
-
-const ticketId = insertProduct.run(
-  rudoId, 'Harare Startup Mixer, August',
-  'An evening of demos, networking, and pizza for Harare\'s startup community. Limited to 50 tickets.',
-  'single', 'business', 500, 'USD', 50, COVER, 'harare-startup-mixer-august'
-).lastInsertRowid;
-attachSeedFile(
-  ticketId, 'seed-harare-startup-mixer-ticket.pdf', 'harare-startup-mixer-ticket.pdf',
-  "HARARE STARTUP MIXER, August: Entry Ticket\n\n" +
-  "An evening of demos, networking, and pizza for Harare's startup community.\n" +
-  'Show this confirmation at the door. Limited to 50 tickets.\n'
-);
-
-const readerId = db.prepare('INSERT INTO buyers (name, email) VALUES (?, ?)').run('Test Reader', 'reader@example.com').lastInsertRowid;
-const buyer2Id = db.prepare('INSERT INTO buyers (name, email) VALUES (?, ?)').run('Kuda M', 'kuda@example.com').lastInsertRowid;
-const buyer3Id = db.prepare('INSERT INTO buyers (name, email) VALUES (?, ?)').run('Tino R', 'tino@example.com').lastInsertRowid;
-
-const insertPurchase = db.prepare(`
-  INSERT INTO purchases (buyer_id, product_id, amount_minor, currency, payment_reference, payment_status, created_at)
-  VALUES (?, ?, ?, 'USD', ?, 'paid', datetime('now', ?))
-`);
-// A little purchase history so Insights and Wallet have real numbers to show.
-insertPurchase.run(readerId, excelId, 800, 'STUB-SEED-1', '-6 days');
-insertPurchase.run(buyer2Id, newspaperId, 100, 'STUB-SEED-2', '-4 days');
-insertPurchase.run(buyer3Id, newspaperId, 100, 'STUB-SEED-3', '-2 days');
-insertPurchase.run(readerId, newspaperId, 100, 'STUB-SEED-4', '-1 days');
-insertPurchase.run(buyer2Id, ticketId, 500, 'STUB-SEED-5', '-3 days');
-
-// Same function the app calls on a real purchase/publish/payout-add/email-
-// verify event — seed data earns the Seal the same way a real account would.
-checkAndUpdateVerification(paulineId);
-checkAndUpdateVerification(tanakaId);
-checkAndUpdateVerification(rudoId);
-
-// ---- bulk catalog: 50 products across 6 creators, for browsing/testing at
-// real marketplace scale rather than 3 hand-picked examples. Covers are
-// generated SVGs (a gradient + the title's initial) instead of real photos
-// — no network dependency, no external image source needed, and every one
-// is visually distinct, which is the part that actually matters for
-// browsing a grid. Deliverable files are the same honest text-stub pattern
-// as the three products above, just named .pdf to match what the buy page
-// actually shows ("Delivered as PDF") — real content, a seller would
-// upload their real file at this same path.
-function slugify(title, i) {
-  return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + i;
-}
-
-function writeSeedCover(filename, title, hue) {
-  const initial = title.trim().charAt(0).toUpperCase();
-  const from = `hsl(${hue}, 58%, 46%)`;
-  const to = `hsl(${(hue + 42) % 360}, 62%, 34%)`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="480" viewBox="0 0 600 480">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0%" stop-color="${from}"/><stop offset="100%" stop-color="${to}"/>
-  </linearGradient></defs>
-  <rect width="600" height="480" fill="url(#g)"/>
-  <text x="300" y="270" font-family="Georgia, serif" font-size="180" font-weight="700"
-    fill="rgba(255,255,255,.92)" text-anchor="middle" dominant-baseline="middle">${initial}</text>
-</svg>`;
-  fs.writeFileSync(path.join(UPLOADS_DIR, filename), svg);
-  return `/uploads/${filename}`;
-}
-
-const CATALOG_CREATORS = [
-  { handle: 'tendai_writes', name: 'Tendai Moyo', phone: '+263774001001',
-    bio: 'Freelance writer and educator based in Bulawayo, focused on practical study guides.',
-    what_selling: 'Study guides and educational ebooks for students and self-learners.',
-    who_for: 'Students and self-learners who want clear, practical material.',
-    products: [
-      ['Learn Shona in 30 Days', 'ebooks', 6, 'A structured 30-day course to build real conversational Shona, not just vocabulary lists.'],
-      ["The Freelance Writer's Handbook", 'ebooks', 9, 'How to find clients, price your work, and get paid on time as a freelance writer in Zimbabwe.'],
-      ['How to Start a Blog That Actually Makes Money', 'ebooks', 8, 'The practical, unglamorous steps to turning a blog into real income.'],
-      ["The Beginner's Guide to Public Speaking", 'ebooks', 5, 'Overcome nerves and structure a talk people actually remember.'],
-      ['Mastering Email Writing for Work', 'ebooks', 4, 'Clear, professional email templates for every awkward work situation.'],
-      ['The Complete Guide to Poultry Farming in Zimbabwe', 'ebooks', 10, 'Everything from housing to feed to market access, written for local conditions.'],
-      ['Home Gardening for Beginners', 'ebooks', 5, 'Grow real food in a small urban yard, season by season.'],
-      ['Nutrition Guide for New Mothers', 'ebooks', 7, 'Practical, affordable nutrition advice for the first year after birth.'],
-      ["The Zimbabwean Entrepreneur's Handbook", 'ebooks', 12, 'What actually works when starting a business here, from someone who has done it.']
-    ] },
-  { handle: 'nyasha_plans', name: 'Nyasha Chikwanha', phone: '+263774002002',
-    bio: 'Business consultant helping Zimbabwean entrepreneurs plan and launch.',
-    what_selling: 'Business plan templates and startup guides.',
-    who_for: 'Aspiring entrepreneurs and small business owners.',
-    products: [
-      ['30-Day Business Plan Template', 'templates', 10, 'A fill-in-the-blanks business plan you can actually finish in a month.'],
-      ['Startup Pitch Deck Template', 'templates', 12, 'The slide-by-slide structure investors actually expect to see.'],
-      ['Small Business Startup Checklist', 'templates', 6, 'Every registration, license, and setup step, in the right order.'],
-      ['Import/Export Business Plan Template', 'templates', 15, 'A plan template built around cross-border trade specifically.'],
-      ['Grant Proposal Template', 'templates', 9, 'A proposal structure that has actually won funding.'],
-      ['Tuck Shop Business Plan Template', 'templates', 8, 'A realistic, small-capital plan template for a tuck shop or kiosk.'],
-      ['Sales Pitch Deck Template', 'templates', 11, 'A clean deck template for pitching a product to a real buyer, not an investor.'],
-      ['New Employee Onboarding Checklist', 'templates', 7, 'Everything a new hire needs on day one, so nothing gets forgotten.'],
-      ['Freelance Contract Template Pack', 'templates', 6, 'Contracts that protect you and still feel fair to the client.']
-    ] },
-  { handle: 'farai_finance', name: 'Farai Ndlovu', phone: '+263774003003',
-    bio: 'Personal finance coach in Harare teaching practical money management.',
-    what_selling: 'Budgeting templates and personal finance ebooks.',
-    who_for: 'Anyone who wants to get their money under control.',
-    products: [
-      ['Monthly Budget Tracker Template', 'templates', 5, 'A no-nonsense spreadsheet for tracking income and expenses every month.'],
-      ['Debt Payoff Tracker Template', 'templates', 5, 'Visualize your debt shrinking, one payment at a time.'],
-      ['Personal Finance Tracker Bundle', 'templates', 9, 'Budget, savings goals, and debt tracking in one bundle.'],
-      ['A Beginner\'s Guide to Forex Trading', 'ebooks', 12, 'The honest basics, including the risks nobody puts in the ads.'],
-      ['Crypto Basics for Zimbabweans', 'ebooks', 8, 'What crypto actually is, and how people here really use it.'],
-      ['Understanding Zimbabwean Tax Law', 'ebooks', 10, 'A plain-language guide to what small businesses actually owe and when.'],
-      ['Mastering Personal Budgeting', 'ebooks', 6, 'A simple system that survives real life, not just a spreadsheet template.'],
-      ['The Side Hustle Starter Guide', 'ebooks', 7, 'Realistic side income ideas you can start this month with what you already have.']
-    ] },
-  { handle: 'rutendo_designs', name: 'Rutendo Mapfumo', phone: '+263774004004',
-    bio: 'Template designer making practical tools for small businesses and creators.',
-    what_selling: 'Resume templates, invoices, and business document packs.',
-    who_for: 'Job seekers and small business owners who need professional documents fast.',
-    products: [
-      ['Professional Resume Template Pack', 'templates', 7, 'Five clean resume layouts that pass applicant tracking systems.'],
-      ['CV & Cover Letter Template Pack', 'templates', 6, 'Matching CV and cover letter templates for a consistent application.'],
-      ['Invoice Template Bundle', 'templates', 5, 'Professional invoices ready to send, in USD and ZiG.'],
-      ['Content Creator Media Kit Template', 'templates', 8, 'A media kit template for pitching brand deals with real numbers.'],
-      ['Rental Agreement Template (Zimbabwe)', 'templates', 6, 'A lease template written for local rental practice, not a US template pasted over.'],
-      ['Social Media Content Calendar Template', 'templates', 7, 'Plan a month of posts across platforms without losing track.'],
-      ['Church Event Planning Template', 'templates', 6, 'A planning template for services, conferences, and outreach events.'],
-      ['Funeral Program Template', 'templates', 4, 'A respectful, easy-to-edit program template for a difficult time.']
-    ] },
-  { handle: 'tafadzwa_guides', name: 'Tafadzwa Sibanda', phone: '+263774005005',
-    bio: 'Tutor and author of practical study guides for Zimbabwean students.',
-    what_selling: 'Exam-focused study guides.',
-    who_for: 'O-Level and A-Level students preparing for exams.',
-    products: [
-      ['Study Guide: A-Level Mathematics', 'ebooks', 9, 'Worked examples and past-paper technique, topic by topic.'],
-      ['Study Guide: O-Level Combined Science', 'ebooks', 9, 'The exact syllabus areas that show up every year, explained simply.'],
-      ["The Complete Real Estate Investor's Handbook", 'ebooks', 14, 'A first-principles guide to property investment in the local market.'],
-      ['University Application Guide (Zimbabwe)', 'ebooks', 6, 'Deadlines, requirements, and how to actually stand out in an application.'],
-      ['The Art of Negotiation', 'ebooks', 7, 'Practical tactics for negotiating price, salary, or terms, not theory.'],
-      ['Time Management for Entrepreneurs', 'ebooks', 6, 'A system built for people whose days never look the same twice.'],
-      ["Building Your First App: A Beginner's Guide", 'ebooks', 11, 'From idea to a working app, with no prior coding assumed.'],
-      ["The Small Business Owner's Legal Guide", 'ebooks', 10, 'The legal basics every small business owner should know before trouble finds them.']
-    ] },
-  { handle: 'chido_events', name: 'Chido Marufu', phone: '+263774006006',
-    bio: 'Event planner sharing practical checklists and planning templates.',
-    what_selling: 'Event planning checklists and templates.',
-    who_for: 'Anyone planning a wedding, party, or community event.',
-    products: [
-      ['Wedding Budget Spreadsheet Template', 'templates', 7, 'Track every wedding cost against your actual budget, category by category.'],
-      ['Event Planning Checklist Template', 'templates', 5, 'A timeline checklist that starts at 6 months out and ends at the door.'],
-      ['Baby Shower Planning Checklist', 'templates', 4, 'Everything to plan a baby shower without last-minute panic.'],
-      ['Moving House Checklist Template', 'templates', 4, 'A room-by-room checklist so nothing gets left behind or forgotten.'],
-      ['Meal Prep Planner Template', 'templates', 5, 'Plan a week of meals and the shopping list that goes with it.'],
-      ['Home Workout Plan Template (8 Weeks)', 'templates', 6, 'A structured 8-week plan that needs no gym equipment.'],
-      ['Job Application Tracker Template', 'templates', 4, 'Track every application, follow-up, and interview in one place.'],
-      ['School Timetable Template', 'templates', 3, 'A clean, printable weekly timetable template for students.']
-    ] }
-];
-
-let productIndex = 0;
-let creatorIndex = 0;
-let totalCatalogProducts = 0;
-for (const c of CATALOG_CREATORS) {
-  creatorIndex += 1;
-  const email = `${c.handle}@example.com`;
-  const userId = insertUser.run(c.handle, email, c.phone, passwordHash, c.name).lastInsertRowid;
-  const creatorId = insertCreator.run(
-    userId, c.handle, c.name, email, c.bio, c.what_selling, c.who_for, c.phone.replace('+263', '0')
-  ).lastInsertRowid;
-  assignSeedAvatar(creatorId, c.name, (creatorIndex * 61 + 10) % 360);
-
-  for (const [title, category, priceUsd, description] of c.products) {
-    productIndex += 1;
-    const slug = slugify(title, productIndex);
-    const hue = (productIndex * 47) % 360;
-    const coverPath = writeSeedCover(`seed-cover-${slug}.svg`, title, hue);
-
-    const productId = insertProduct.run(
-      creatorId, title, description, 'single', category, priceUsd * 100, 'USD', null, coverPath, slug
-    ).lastInsertRowid;
-
-    attachSeedFile(
-      productId, `seed-file-${slug}.pdf`, `${slug}.pdf`,
-      `${title.toUpperCase()}\n\n${description}\n\n(Seed placeholder content. A real seller uploads their actual PDF here.)\n`
+  if (!columnCache.has(table)) {
+    columnCache.set(
+      table,
+      new Set(
+        db.prepare(`PRAGMA table_info("${table}")`)
+          .all()
+          .map(row => row.name)
+      )
     );
   }
-  checkAndUpdateVerification(creatorId);
-  totalCatalogProducts += c.products.length;
+
+  return columnCache.get(table);
 }
 
-const verifiedCount = db.prepare('SELECT COUNT(*) AS n FROM creators WHERE verified = 1').get().n;
-const totalProducts = 3 + totalCatalogProducts;
-console.log(`Seed complete: ${3 + CATALOG_CREATORS.length} creators (${verifiedCount} verified for real, by meeting the actual criteria), ${totalProducts} products, 3 buyers, sample purchases.`);
-console.log(`Log in as any seeded creator with their username (chitowncrossroads / tanakateaches / rudoevents / ${CATALOG_CREATORS.map(c => c.handle).join(' / ')}) and password "${DEV_PASSWORD}".`);
+function hasColumn(table, column) {
+  return getColumns(table).has(column);
+}
+
+function insertDynamic(table, data) {
+  if (!hasTable(table)) return null;
+
+  const usable = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    if (hasColumn(table, key) && value !== undefined) {
+      usable[key] = value;
+    }
+  }
+
+  const keys = Object.keys(usable);
+
+  if (!keys.length) return null;
+
+  const sql = `
+    INSERT INTO "${table}"
+    (${keys.map(k => `"${k}"`).join(", ")})
+    VALUES
+    (${keys.map(k => `@${k}`).join(", ")})
+  `;
+
+  const result = db.prepare(sql).run(usable);
+
+  return Number(result.lastInsertRowid);
+}
+
+function clearTable(table) {
+  if (hasTable(table)) {
+    db.prepare(`DELETE FROM "${table}"`).run();
+  }
+}
+
+function pick(array) {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function weightedPick(items) {
+  const total = items.reduce(
+    (sum, item) => sum + item.weight,
+    0
+  );
+
+  let n = Math.random() * total;
+
+  for (const item of items) {
+    n -= item.weight;
+
+    if (n <= 0) {
+      return item.value;
+    }
+  }
+
+  return items[items.length - 1].value;
+}
+
+function cleanUsername(value) {
+  return value
+    .replace(/[^A-Za-z0-9_]/g, "")
+    .toLowerCase();
+}
+
+function slugify(value) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function daysAgo(maxDays) {
+  const date = new Date(
+    Date.now() -
+    rand(0, maxDays) * 24 * 60 * 60 * 1000
+  );
+
+  return date.toISOString()
+    .slice(0, 19)
+    .replace("T", " ");
+}
+
+/* =========================================================
+   SOURCE DATA
+   ========================================================= */
+
+const firstNames = [
+  "Tendai",
+  "Nyasha",
+  "Rutendo",
+  "Farai",
+  "Chido",
+  "Tanaka",
+  "Rudo",
+  "Tafadzwa",
+  "Kudzai",
+  "Anesu",
+  "Munashe",
+  "Simba",
+  "Shamiso",
+  "Tatenda",
+  "Blessing",
+  "Brian",
+  "Michelle",
+  "Brenda",
+  "Melissa",
+  "Admire",
+  "Prince",
+  "Nyaradzo",
+  "Vimbai",
+  "Kundai",
+  "Chenai",
+  "Rumbidzai",
+  "Nokutenda"
+];
+
+const lastNames = [
+  "Moyo",
+  "Ncube",
+  "Dube",
+  "Chirwa",
+  "Mutsvairo",
+  "Mhlanga",
+  "Chikore",
+  "Mupfumi",
+  "Chisango",
+  "Nyoni",
+  "Zhou",
+  "Madziva",
+  "Gumbo",
+  "Mapfumo",
+  "Sibanda",
+  "Mabena",
+  "Chikowore",
+  "Tsvangirai",
+  "Muzenda",
+  "Ndlovu"
+];
+
+const categories = [
+  {
+    name: "Business",
+    weight: 18,
+    products: [
+      ["Small Business Pricing Playbook", 18, 45],
+      ["Zimbabwe SME Finance Template", 12, 35],
+      ["Business Plan Starter Kit", 15, 50],
+      ["Sales Tracker Spreadsheet", 8, 25],
+      ["Customer Research Workbook", 10, 30]
+    ]
+  },
+
+  {
+    name: "Education",
+    weight: 17,
+    products: [
+      ["Study Planner & Revision System", 5, 20],
+      ["Exam Preparation Masterclass", 15, 60],
+      ["Teacher Lesson Plan Bundle", 12, 40],
+      ["Student Notes Template Pack", 6, 25],
+      ["Learning Strategy Guide", 8, 30]
+    ]
+  },
+
+  {
+    name: "Design",
+    weight: 14,
+    products: [
+      ["Canva Social Media Template Pack", 8, 35],
+      ["Brand Identity Starter Kit", 20, 70],
+      ["Creator Thumbnail Template Pack", 7, 30],
+      ["Instagram Content System", 10, 45],
+      ["Presentation Design Bundle", 12, 50]
+    ]
+  },
+
+  {
+    name: "Technology",
+    weight: 13,
+    products: [
+      ["No-Code Automation Toolkit", 15, 55],
+      ["Web Developer Starter Templates", 18, 70],
+      ["API Integration Guide", 10, 40],
+      ["Python Beginner Project Pack", 8, 35],
+      ["AI Workflow Playbook", 12, 50]
+    ]
+  },
+
+  {
+    name: "Finance",
+    weight: 10,
+    products: [
+      ["Personal Budget Spreadsheet", 5, 20],
+      ["Freelancer Finance Kit", 10, 35],
+      ["Cash Flow Forecast Template", 12, 40],
+      ["Savings Challenge System", 4, 15],
+      ["Small Business Bookkeeping Kit", 15, 55]
+    ]
+  },
+
+  {
+    name: "Marketing",
+    weight: 10,
+    products: [
+      ["30-Day Content Calendar", 8, 30],
+      ["Social Media Growth Playbook", 12, 45],
+      ["Email Marketing Templates", 10, 35],
+      ["Digital Marketing Checklist", 6, 25],
+      ["Local Business Promotion Kit", 8, 30]
+    ]
+  },
+
+  {
+    name: "Lifestyle",
+    weight: 8,
+    products: [
+      ["Meal Planning Workbook", 5, 18],
+      ["Fitness Habit Tracker", 4, 15],
+      ["Wedding Planning Spreadsheet", 10, 35],
+      ["Home Organization Planner", 6, 22],
+      ["Personal Goal Setting System", 5, 20]
+    ]
+  },
+
+  {
+    name: "Creative",
+    weight: 10,
+    products: [
+      ["Photography Preset Collection", 12, 40],
+      ["Music Production Starter Pack", 15, 50],
+      ["Writing Prompt Collection", 4, 18],
+      ["Video Creator Toolkit", 12, 45],
+      ["Creator Media Kit Template", 8, 30]
+    ]
+  }
+];
+
+const demoHandles = [
+  "chitowncrossroads",
+  "tanakateaches",
+  "rudoevents",
+  "tendaiwrites",
+  "nyashaplans"
+];
+
+const passwordHash =
+  bcrypt.hashSync("zimselar2026", 10);
+
+/* =========================================================
+   WIPE TEST DATA
+   ========================================================= */
+
+const wipeOrder = [
+  "post_comments",
+  "post_likes",
+  "product_likes",
+  "product_comments",
+  "product_shares",
+  "product_reviews",
+  "download_tokens",
+  "license_keys",
+  "service_deliveries",
+  "service_disputes",
+  "cart_items",
+  "purchases",
+  "posts",
+  "reels",
+  "product_files",
+  "products",
+  "creators",
+  "buyers",
+  "reports",
+  "payouts",
+  "issues",
+  "users"
+];
+
+for (const table of wipeOrder) {
+  clearTable(table);
+}
+
+/* =========================================================
+   CREATE CREATORS
+   ========================================================= */
+
+const creators = [];
+
+for (let i = 1; i <= 200; i++) {
+  const first =
+    firstNames[(i - 1) % firstNames.length];
+
+  const last =
+    lastNames[
+      Math.floor((i - 1) / firstNames.length) %
+      lastNames.length
+    ];
+
+  const handle =
+    i <= demoHandles.length
+      ? demoHandles[i - 1]
+      : `${cleanUsername(first)}${cleanUsername(last)}${String(i).padStart(3, "0")}`;
+
+  const username = handle.slice(0, 24);
+
+  const email =
+    `${handle}@seed.zimselar.local`;
+
+  const category =
+    weightedPick(
+      categories.map(category => ({
+        value: category,
+        weight: category.weight
+      }))
+    );
+
+  /*
+   * Latent creator quality.
+   *
+   * This is intentional.
+   *
+   * Later, when we build the ML model, we want:
+   *
+   * quality
+   * audience
+   * engagement
+   * price
+   * conversion
+   * reviews
+   *
+   * to have relationships rather than being completely random.
+   */
+
+  const quality =
+    Math.min(
+      0.98,
+      Math.max(
+        0.30,
+        0.35 + Math.random() * 0.60
+      )
+    );
+
+  const audience =
+    Math.max(
+      20,
+      Math.round(
+        Math.pow(Math.random(), 2.1) *
+        25000 *
+        (0.5 + quality)
+      )
+    );
+
+  const userId =
+    insertDynamic("users", {
+      username,
+      email,
+      phone:
+        `+26377${String(1000000 + i).slice(-7)}`,
+      password_hash: passwordHash,
+      email_verified_at: daysAgo(300),
+      phone_verified_at: daysAgo(300),
+      name: `${first} ${last}`,
+      avatar_url:
+        `uploads/seed/avatars/avatar-${i}.svg`,
+      created_at: daysAgo(365),
+      terms_accepted_at: daysAgo(365)
+    });
+
+  const creatorId =
+    insertDynamic("creators", {
+      user_id: userId,
+      handle,
+      name: `${first} ${last}`,
+      email,
+
+      bio:
+        `${first} creates practical ` +
+        `${category.name.toLowerCase()} resources ` +
+        `for Zimbabwean and African creators, ` +
+        `students and small businesses.`,
+
+      what_selling:
+        `Digital ${category.name.toLowerCase()} ` +
+        `products, templates, guides and services`,
+
+      who_for:
+        "Creators, students, freelancers and small businesses",
+
+      avatar_path:
+        `uploads/seed/avatars/avatar-${i}.svg`,
+
+      payout_ecocash_number:
+        `077${String(1000000 + i).slice(-7)}`,
+
+      verified: 1,
+      created_at: daysAgo(365),
+      verified_at: daysAgo(300)
+    });
+
+  creators.push({
+    id: creatorId,
+    userId,
+    handle,
+    first,
+    last,
+    category,
+    quality,
+    audience
+  });
+}
+
+/* =========================================================
+   CREATE 1,000 PRODUCTS
+   ========================================================= */
+
+const products = [];
+
+for (const creator of creators) {
+  for (let p = 0; p < 5; p++) {
+
+    const specification =
+      creator.category.products[p];
+
+    const baseTitle = specification[0];
+    const minPrice = specification[1];
+    const maxPrice = specification[2];
+
+    /*
+     * Better creators tend to command
+     * slightly higher prices.
+     */
+
+    const price =
+      Math.round(
+        (
+          minPrice +
+          Math.random() *
+          (maxPrice - minPrice)
+        ) *
+        (
+          0.80 +
+          creator.quality * 0.60
+        )
+      );
+
+    const priceMinor =
+      Math.max(
+        100,
+        Math.round(price * 100)
+      );
+
+    const title =
+      `${baseTitle} — ${creator.first}`;
+
+    const isService =
+      p === 4 &&
+      creator.category.name === "Business";
+
+    const productId =
+      insertDynamic("products", {
+        creator_id: creator.id,
+
+        title,
+
+        description:
+          `A practical ${creator.category.name.toLowerCase()} ` +
+          `resource created by ${creator.first} ${creator.last}. ` +
+          `Includes actionable examples, reusable templates ` +
+          `and guidance designed for real-world use.`,
+
+        type:
+          isService
+            ? "service"
+            : "single",
+
+        price_minor: priceMinor,
+
+        currency: "USD",
+
+        pay_what_you_want: 0,
+
+        quantity_limit: null,
+
+        quantity_sold: 0,
+
+        status: "published",
+
+        cover_path:
+          `uploads/seed/covers/product-${creator.id}-${p + 1}.svg`,
+
+        slug:
+          `${slugify(title)}-${creator.id}`,
+
+        created_at: daysAgo(330),
+
+        category:
+          creator.category.name,
+
+        discount_percent:
+          Math.random() < 0.25
+            ? rand(5, 25)
+            : 0,
+
+        discount_limit:
+          Math.random() < 0.25
+            ? rand(5, 50)
+            : null,
+
+        discount_claimed: 0,
+
+        portfolio_url:
+          `https://example.com/${creator.handle}`,
+
+        delivery_days:
+          isService
+            ? rand(1, 7)
+            : null,
+
+        service_terms:
+          isService
+            ? "Delivery within the stated turnaround period. One revision included."
+            : null,
+
+        review_status: "clear",
+
+        flag_reason: null
+      });
+
+    products.push({
+      id: productId,
+      creatorId: creator.id,
+      creator,
+      priceMinor,
+      type:
+        isService
+          ? "service"
+          : "single"
+    });
+
+    /*
+     * Your current DB has product_files,
+     * so create a file record.
+     */
+
+    insertDynamic("product_files", {
+      product_id: productId,
+      kind: "external_link",
+      storage_path: null,
+      external_url:
+        `https://example.com/download/${productId}`,
+      original_filename:
+        `${slugify(title)}.pdf`,
+      size_bytes:
+        rand(50000, 900000),
+      created_at: daysAgo(300),
+      file_hash: null,
+      detected_mime: "application/pdf",
+      page_count: rand(3, 35)
+    });
+  }
+}
+
+/* =========================================================
+   CREATE BUYERS
+   ========================================================= */
+
+const buyers = [];
+
+for (let i = 1; i <= 250; i++) {
+
+  const first =
+    firstNames[(i + 7) % firstNames.length];
+
+  const last =
+    lastNames[(i + 3) % lastNames.length];
+
+  const username =
+    `buyer${String(i).padStart(3, "0")}`;
+
+  const email =
+    `${username}@seed.zimselar.local`;
+
+  const userId =
+    insertDynamic("users", {
+      username,
+      email,
+
+      phone:
+        `+26371${String(2000000 + i).slice(-7)}`,
+
+      password_hash: passwordHash,
+
+      email_verified_at:
+        daysAgo(250),
+
+      phone_verified_at:
+        daysAgo(250),
+
+      name:
+        `${first} ${last}`,
+
+      avatar_url: null,
+
+      created_at:
+        daysAgo(300),
+
+      terms_accepted_at:
+        daysAgo(300)
+    });
+
+  const buyerId =
+    insertDynamic("buyers", {
+      name:
+        `${first} ${last}`,
+
+      email,
+
+      created_at:
+        daysAgo(250),
+
+      user_id: userId
+    });
+
+  buyers.push({
+    id: buyerId,
+    userId,
+    name: `${first} ${last}`
+  });
+}
+
+/* =========================================================
+   CREATE 3,500 PURCHASES
+   ========================================================= */
+
+const paidPurchases = [];
+
+for (let i = 0; i < 3500; i++) {
+
+  /*
+   * Products from better creators with
+   * larger audiences get more probability.
+   */
+
+  const product =
+    weightedPick(
+      products.map(product => ({
+        value: product,
+
+        weight:
+          Math.max(
+            1,
+
+            product.creator.quality *
+            Math.max(
+              1,
+              product.creator.audience
+            ) *
+
+            (
+              0.35 +
+              Math.random() * 1.65
+            )
+          )
+      }))
+    );
+
+  const buyer = pick(buyers);
+
+  const randomStatus = Math.random();
+
+  const paymentStatus =
+    randomStatus < 0.90
+      ? "paid"
+      : randomStatus < 0.96
+        ? "pending"
+        : "failed";
+
+  const discount =
+    Math.random() < 0.18;
+
+  const amountMinor =
+    discount
+      ? Math.round(
+          product.priceMinor *
+          (
+            0.75 +
+            Math.random() * 0.15
+          )
+        )
+      : product.priceMinor;
+
+  const purchaseId =
+    insertDynamic("purchases", {
+      buyer_id: buyer.id,
+
+      product_id: product.id,
+
+      amount_minor: amountMinor,
+
+      currency: "USD",
+
+      payment_reference:
+        `SEED-${Date.now()}-${i}`,
+
+      payment_status: paymentStatus,
+
+      created_at:
+        daysAgo(240),
+
+      discount_applied:
+        discount ? 1 : 0,
+
+      fulfillment_status:
+        paymentStatus === "paid"
+          ? (
+              product.type === "service"
+                ? "awaiting_delivery"
+                : "delivered"
+            )
+          : null,
+
+      delivered_at:
+        paymentStatus === "paid" &&
+        product.type !== "service"
+          ? daysAgo(180)
+          : null
+    });
+
+  if (paymentStatus === "paid") {
+    paidPurchases.push({
+      purchaseId,
+      product,
+      buyer
+    });
+  }
+}
+
+/* =========================================================
+   PRODUCT ENGAGEMENT
+   ========================================================= */
+
+for (let i = 0; i < 6000; i++) {
+
+  const product =
+    weightedPick(
+      products.map(product => ({
+        value: product,
+
+        weight:
+          Math.max(
+            1,
+            product.creator.quality * 2 +
+            Math.random()
+          )
+      }))
+    );
+
+  const buyer = pick(buyers);
+
+  if (hasTable("product_likes")) {
+
+    insertDynamic("product_likes", {
+      product_id: product.id,
+      buyer_id: buyer.id,
+      user_id: buyer.userId,
+      created_at: daysAgo(180)
+    });
+  }
+
+  if (
+    hasTable("product_comments") &&
+    Math.random() < 0.28
+  ) {
+
+    const comment = pick([
+      "Very useful and easy to follow.",
+      "This saved me a lot of time.",
+      "Great resource.",
+      "Would love an expanded version.",
+      "The templates are practical."
+    ]);
+
+    insertDynamic("product_comments", {
+      product_id: product.id,
+      buyer_id: buyer.id,
+      user_id: buyer.userId,
+      comment,
+      body: comment,
+      created_at: daysAgo(150)
+    });
+  }
+
+  if (
+    hasTable("product_shares") &&
+    Math.random() < 0.16
+  ) {
+
+    insertDynamic("product_shares", {
+      product_id: product.id,
+      user_id: buyer.userId,
+      buyer_id: buyer.id,
+      created_at: daysAgo(150)
+    });
+  }
+}
+
+/* =========================================================
+   PRODUCT REVIEWS
+   ========================================================= */
+
+if (hasTable("product_reviews")) {
+
+  for (
+    const sale
+    of paidPurchases.slice(0, 1600)
+  ) {
+
+    if (Math.random() > 0.72) {
+      continue;
+    }
+
+    const quality =
+      sale.product.creator.quality;
+
+    const rating =
+      Math.min(
+        5,
+        Math.max(
+          1,
+          Math.round(
+            2 +
+            quality * 3 +
+            (Math.random() - 0.5)
+          )
+        )
+      );
+
+    insertDynamic("product_reviews", {
+      product_id:
+        sale.product.id,
+
+      buyer_id:
+        sale.buyer.id,
+
+      user_id:
+        sale.buyer.userId,
+
+      purchase_id:
+        sale.purchaseId,
+
+      rating,
+
+      review: pick([
+        "Clear, practical and worth the price.",
+        "Good quality resource with useful examples.",
+        "Exactly what I needed.",
+        "Helpful material and easy to use.",
+        "Solid product. I would recommend it."
+      ]),
+
+      comment:
+        "Useful resource with practical examples.",
+
+      created_at:
+        daysAgo(130)
+    });
+  }
+}
+
+/* =========================================================
+   POSTS
+   ========================================================= */
+
+if (hasTable("posts")) {
+
+  for (const creator of creators) {
+
+    const creatorProducts =
+      products.filter(
+        p => p.creatorId === creator.id
+      );
+
+    for (let i = 0; i < 4; i++) {
+
+      const type =
+        pick([
+          "text",
+          "photo",
+          "video"
+        ]);
+
+      insertDynamic("posts", {
+        creator_id:
+          creator.id,
+
+        product_id:
+          pick(creatorProducts).id,
+
+        type,
+
+        media_path:
+          type === "text"
+            ? null
+            : `uploads/seed/posts/post-${creator.id}-${i + 1}.svg`,
+
+        caption:
+          pick([
+            "New resource available on Zimselar.",
+            "Building practical tools for creators.",
+            "A quick tip from today's work.",
+            "What are you working on this week?",
+            "Sharing something useful with the community."
+          ]),
+
+        created_at:
+          daysAgo(120)
+      });
+    }
+  }
+}
+
+/* =========================================================
+   REELS
+   ========================================================= */
+
+if (hasTable("reels")) {
+
+  for (const creator of creators) {
+
+    const creatorProducts =
+      products.filter(
+        p => p.creatorId === creator.id
+      );
+
+    for (let i = 0; i < 2; i++) {
+
+      insertDynamic("reels", {
+        creator_id:
+          creator.id,
+
+        product_id:
+          pick(creatorProducts).id,
+
+        video_path:
+          `uploads/seed/reels/reel-${creator.id}-${i + 1}.svg`,
+
+        caption:
+          "Quick creator tip",
+
+        view_count:
+          Math.round(
+            creator.audience *
+            (
+              0.05 +
+              Math.random() * 0.8
+            )
+          ),
+
+        created_at:
+          daysAgo(100)
+      });
+    }
+  }
+}
+
+/* =========================================================
+   SERVICE DELIVERIES
+   ========================================================= */
+
+if (hasTable("service_deliveries")) {
+
+  const serviceSales =
+    paidPurchases
+      .filter(
+        sale =>
+          sale.product.type === "service"
+      )
+      .slice(0, 500);
+
+  for (const sale of serviceSales) {
+
+    const delivered =
+      Math.random() < 0.8;
+
+    insertDynamic("service_deliveries", {
+
+      purchase_id:
+        sale.purchaseId,
+
+      product_id:
+        sale.product.id,
+
+      creator_id:
+        sale.product.creatorId,
+
+      buyer_id:
+        sale.buyer.id,
+
+      status:
+        delivered
+          ? "delivered"
+          : "pending",
+
+      delivery_path:
+        null,
+
+      message:
+        "Seed service delivery record.",
+
+      created_at:
+        daysAgo(100),
+
+      delivered_at:
+        delivered
+          ? daysAgo(60)
+          : null
+    });
+  }
+}
+
+/* =========================================================
+   CARTS
+   ========================================================= */
+
+if (hasTable("cart_items")) {
+
+  for (let i = 0; i < 80; i++) {
+
+    const buyer = pick(buyers);
+    const product = pick(products);
+
+    insertDynamic("cart_items", {
+      buyer_id: buyer.id,
+      user_id: buyer.userId,
+      product_id: product.id,
+      quantity: 1,
+      created_at: daysAgo(30)
+    });
+  }
+}
+
+/* =========================================================
+   ISSUES
+   ========================================================= */
+
+if (hasTable("issues")) {
+
+  for (let i = 1; i <= 15; i++) {
+
+    const buyer = pick(buyers);
+
+    insertDynamic("issues", {
+      user_id: buyer.userId,
+
+      title:
+        `Seed support issue ${i}`,
+
+      description:
+        "Synthetic support issue for dashboard testing.",
+
+      issue_number:
+        `SEED-${String(i).padStart(4, "0")}`,
+
+      status:
+        "open",
+
+      created_at:
+        daysAgo(45)
+    });
+  }
+}
+
+/* =========================================================
+   OPTIONAL PAYOUTS
+   ========================================================= */
+
+if (hasTable("payouts")) {
+
+  const revenue = new Map();
+
+  for (const sale of paidPurchases) {
+
+    const creatorId =
+      sale.product.creatorId;
+
+    revenue.set(
+      creatorId,
+
+      (
+        revenue.get(creatorId) || 0
+      ) +
+      sale.product.priceMinor
+    );
+  }
+
+  for (
+    const [creatorId, amount] of revenue
+  ) {
+
+    if (Math.random() < 0.70) {
+
+      insertDynamic("payouts", {
+
+        creator_id:
+          creatorId,
+
+        amount_minor:
+          Math.round(amount * 0.80),
+
+        currency:
+          "USD",
+
+        status:
+          "paid",
+
+        payment_reference:
+          `SEED-PAYOUT-${creatorId}`,
+
+        created_at:
+          daysAgo(60)
+      });
+    }
+  }
+}
+
+/* =========================================================
+   OPTIONAL REPORTS
+   ========================================================= */
+
+if (hasTable("reports")) {
+
+  for (let i = 0; i < 20; i++) {
+
+    const buyer = pick(buyers);
+    const product = pick(products);
+
+    insertDynamic("reports", {
+
+      reporter_id:
+        buyer.userId,
+
+      user_id:
+        buyer.userId,
+
+      product_id:
+        product.id,
+
+      reason:
+        pick([
+          "spam",
+          "copyright",
+          "misleading"
+        ]),
+
+      description:
+        "Synthetic marketplace report for testing.",
+
+      status:
+        "open",
+
+      created_at:
+        daysAgo(45)
+    });
+  }
+}
+
+/* =========================================================
+   UPDATE PRODUCT SALES
+   ========================================================= */
+
+if (hasColumn("products", "quantity_sold")) {
+
+  const sales =
+    db.prepare(`
+      SELECT
+        product_id,
+        COUNT(*) AS n
+      FROM purchases
+      WHERE payment_status = 'paid'
+      GROUP BY product_id
+    `).all();
+
+  const update =
+    db.prepare(`
+      UPDATE products
+      SET quantity_sold = @n
+      WHERE id = @id
+    `);
+
+  for (const row of sales) {
+    update.run({
+      id: row.product_id,
+      n: row.n
+    });
+  }
+}
+
+/* =========================================================
+   FINISH
+   ========================================================= */
+
+db.pragma("foreign_keys = ON");
+
+db.close();
+
+console.log("");
+console.log("==========================================");
+console.log("       ZIMSELAR SEED COMPLETE");
+console.log("==========================================");
+console.log("");
+console.log(`Creators:       ${creators.length}`);
+console.log(`Products:       ${products.length}`);
+console.log(`Buyers:         ${buyers.length}`);
+console.log(`Paid purchases: ${paidPurchases.length}`);
+console.log("");
+console.log("Password for ALL seeded accounts:");
+console.log("  zimselar2026");
+console.log("");
+console.log("Demo creator accounts:");
+console.log("  chitowncrossroads");
+console.log("  tanakateaches");
+console.log("  rudoevents");
+console.log("  tendaiwrites");
+console.log("  nyashaplans");
+console.log("");
+console.log("==========================================");
+```
+
+
+

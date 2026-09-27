@@ -72,33 +72,19 @@ export default function Discover() {
         </p>
       </header>
 
-      <section className="discover-toolbar" aria-label="Filter products">
-        <div className="discover-filters">
-          <label className="input-icon discover-search">
-            <FiSearch size={16} />
-            <input
-              value={q} onChange={e => updateParam('q', e.target.value)}
-              placeholder="Search products..."
-              aria-label="Search products"
-            />
-          </label>
-          <div className="discover-toolbar__selects">
-            <select value={sort} onChange={e => updateParam('sort', e.target.value)} className="discover-sort" aria-label="Sort by">
-              <option value="">Newest first</option>
-              <option value="popular">Most popular</option>
-              <option value="bestselling">Bestselling</option>
-              <option value="price_asc">Price: low to high</option>
-              <option value="price_desc">Price: high to low</option>
-            </select>
-            <select value={type} onChange={e => updateParam('type', e.target.value)} className="discover-sort" aria-label="Product format">
-              {TYPES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
-            </select>
-          </div>
-        </div>
+      <section className="discover-toolbar" aria-label="Search and filter products">
+        <label className="input-icon discover-search">
+          <FiSearch size={18} />
+          <input
+            value={q} onChange={e => updateParam('q', e.target.value)}
+            placeholder="Search ebooks, courses, templates..."
+            aria-label="Search products"
+          />
+        </label>
 
-        {ACTIVE_CATEGORIES.length > 1 && (
-          <div className="discover-toolbar__categories">
-            <div className="category-chips" aria-label="Product category">
+        <div className="discover-toolbar__row">
+          {ACTIVE_CATEGORIES.length > 1 && (
+            <div className="discover-categories" aria-label="Product category">
               <button
                 onClick={() => updateParam('category', '')}
                 className={`category-chip${category === '' ? ' category-chip--active' : ''}`}
@@ -108,13 +94,23 @@ export default function Discover() {
                   key={item.value}
                   onClick={() => updateParam('category', item.value)}
                   className={`category-chip${category === item.value ? ' category-chip--active' : ''}`}
-                >
-                  <item.icon size={13} /> {item.label}
-                </button>
+                >{item.label}</button>
               ))}
             </div>
+          )}
+          <div className="discover-toolbar__options">
+            <select value={type} onChange={e => updateParam('type', e.target.value)} className="discover-sort" aria-label="Product format">
+              {TYPES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+            <select value={sort} onChange={e => updateParam('sort', e.target.value)} className="discover-sort" aria-label="Sort by">
+              <option value="">Newest</option>
+              <option value="popular">Popular</option>
+              <option value="bestselling">Best selling</option>
+              <option value="price_asc">Price: low to high</option>
+              <option value="price_desc">Price: high to low</option>
+            </select>
           </div>
-        )}
+        </div>
         {products && !error && <p className="discover-count">{products.length} {products.length === 1 ? 'product' : 'products'}</p>}
       </section>
 

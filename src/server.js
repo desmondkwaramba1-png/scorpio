@@ -48,6 +48,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 const ADMIN_URL = 'https://admin.scorpio.co.zw';
 const ALLOWED_ORIGINS = new Set([
   FRONTEND_URL, 'http://localhost:5173', 'http://127.0.0.1:5173',
+  'https://scorpio.co.zw', 'https://www.scorpio.co.zw',
   ADMIN_URL, 'http://localhost:5174', 'http://127.0.0.1:5174'
 ]);
 // A domain is reachable at both its apex and its www subdomain (Vercel

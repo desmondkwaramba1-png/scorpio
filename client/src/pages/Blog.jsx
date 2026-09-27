@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { FiBookOpen, FiSearch, FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
+import { FiBookOpen, FiSearch, FiRefreshCw, FiAlertCircle, FiArrowUpRight } from 'react-icons/fi';
 import { api } from '../lib/api';
 import { useSEO } from '../lib/seo';
 import { SITE_ORIGIN } from '../lib/site';

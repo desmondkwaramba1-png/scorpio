@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { FiBookOpen, FiSearch } from 'react-icons/fi';
+import { FiBookOpen, FiSearch, FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
 import { api } from '../lib/api';
 import { useSEO } from '../lib/seo';
 import { SITE_ORIGIN } from '../lib/site';
@@ -74,12 +74,21 @@ export default function Blog() {
 
   const q = params.get('q') || '';
 
-  useEffect(() => {
+  function loadBlog() {
     const qs = new URLSearchParams({ limit: '30' });
     if (q) qs.set('q', q);
     setPosts(null);
     setError(null);
-    api.get(`/api/blog?${qs.toString()}`).then(setPosts).catch(err => setError(err.message));
+    api.get(`/api/blog?${qs.toString()}`)
+      .then(data => setPosts(Array.isArray(data) ? data : []))
+      .catch(() => {
+        setPosts([]);
+        setError(null);
+      });
+  }
+
+  useEffect(() => {
+    loadBlog();
   }, [q]);
 
   function updateQuery(value) {
@@ -96,7 +105,20 @@ export default function Blog() {
     url: `${SITE_ORIGIN}/blog`
   });
 
-  if (error) return <div className="wrap center-page" style={{ padding: 20 }}><p className="error-text">{error}</p></div>;
+  if (error && posts === null) {
+    return (
+      <div className="wrap center-page" style={{ padding: 20 }}>
+        <div className="page-state page-state--error">
+          <div className="page-state__icon"><FiAlertCircle size={28} /></div>
+          <h2>We couldn’t load the latest field notes.</h2>
+          <p>{error}</p>
+          <button className="btn btn--primary" onClick={loadBlog}>
+            <FiRefreshCw size={15} /> Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="blog-page wrap">

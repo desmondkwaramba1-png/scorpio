@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiUsers, FiPackage, FiArrowUpRight, FiCheck } from 'react-icons/fi';
+import { FiUsers, FiPackage, FiArrowUpRight, FiCheck, FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
 
 // No text Seal badge here on purpose, at this card's width there's no
 // room for "Verified" without shoving the name itself into truncation
@@ -36,11 +36,26 @@ export default function Creators() {
   const [creators, setCreators] = useState(null);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
+  function loadCreators() {
+    setError(null);
     fetch('/api/creators')
       .then(r => r.json())
-      .then(setCreators)
-      .catch(() => setError('Could not load creators. Check your connection and try again.'));
+      .then(data => {
+        const list = Array.isArray(data) ? data : [];
+        list.sort((a, b) => {
+          if (Number(b.verified) !== Number(a.verified)) return Number(b.verified) - Number(a.verified);
+          return (b.product_count || 0) - (a.product_count || 0);
+        });
+        setCreators(list);
+      })
+      .catch(() => {
+        setCreators([]);
+        setError(null);
+      });
+  }
+
+  useEffect(() => {
+    loadCreators();
   }, []);
 
   return (
@@ -58,7 +73,16 @@ export default function Creators() {
         </div>
       </header>
 
-      {error && <p className="error-text">{error}</p>}
+      {error && creators === null && (
+        <div className="page-state page-state--error">
+          <div className="page-state__icon"><FiAlertCircle size={28} /></div>
+          <h2>We couldn’t load the creators.</h2>
+          <p>{error}</p>
+          <button className="btn btn--primary" onClick={loadCreators}>
+            <FiRefreshCw size={15} /> Retry
+          </button>
+        </div>
+      )}
 
       {!creators && !error && (
         <div className="creators-grid">

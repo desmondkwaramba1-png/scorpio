@@ -1490,7 +1490,6 @@ img{max-width:100%;display:block;}
   .dashboard-profile{padding:14px;margin-bottom:18px;}
   .dashboard-profile__actions{width:100%;}
   .dashboard-profile__actions .btn{flex:1;}
-  .dashboard-tabs{flex-wrap:nowrap;overflow-x:auto;padding:0 2px 10px;scrollbar-width:thin;touch-action:pan-x pan-y;}
 }
 
 /* ---- role picker (login, onboarding's post-OAuth ask) ---- */

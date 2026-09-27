@@ -41,16 +41,17 @@ export default function TourGuide({ run, setRun }) {
       callback={handleJoyrideCallback}
       continuous={true}
       run={run}
-      scrollToFirstStep={true}
+      scrollToFirstStep={false}
       showProgress={true}
       showSkipButton={true}
       steps={steps}
       options={{
         zIndex: 10000,
         primaryColor: 'var(--green-glow)',
-        overlayColor: 'rgba(15,17,17,.72)',
+        overlayColor: 'rgba(15,17,17,.48)',
         spotlightPadding: 7,
         spotlightRadius: 9,
+        skipScroll: true,
         targetWaitTimeout: 5000
       }}
       styles={{

@@ -26,9 +26,14 @@ export function AuthProvider({ children }) {
   useEffect(() => { refresh(); }, [refresh]);
 
   async function logout() {
-    await api.post('/api/auth/logout');
-    setUser(null);
-    setCreator(null);
+    try {
+      await api.post('/api/auth/logout');
+    } catch (err) {
+      console.error('[auth] server logout failed; clearing local session', err);
+    } finally {
+      setUser(null);
+      setCreator(null);
+    }
   }
 
   return (

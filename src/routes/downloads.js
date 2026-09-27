@@ -17,7 +17,7 @@ router.get('/:token', async (req, res) => {
   const row = db.prepare('SELECT * FROM download_tokens WHERE token = ?').get(req.params.token);
   if (!row) return res.status(404).send('This download link is invalid.');
   if (new Date(row.expires_at) < new Date()) return res.status(410).send('This download link has expired.');
-  if (row.download_count >= row.max_downloads) {
+  if (row.max_downloads !== null && row.max_downloads !== undefined && row.download_count >= row.max_downloads) {
     return res.status(429).send('This download link has reached its download limit. Ask the creator to resend it.');
   }
 
@@ -102,6 +102,7 @@ router.get('/issue/:issueId', requireAuth, async (req, res) => {
   const owns = db.prepare(`
     SELECT 1 FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
     WHERE b.user_id = ? AND pu.product_id = ? AND pu.payment_status = 'paid'
+      AND COALESCE(pu.fulfillment_status, '') != 'refunded'
   `).get(req.user.id, issue.product_id);
   if (!owns) return res.status(403).send("You don't have access to this issue.");
 
@@ -135,6 +136,7 @@ router.get('/issue/:issueId/view', requireAuth, async (req, res) => {
   const owns = db.prepare(`
     SELECT 1 FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
     WHERE b.user_id = ? AND pu.product_id = ? AND pu.payment_status = 'paid'
+      AND COALESCE(pu.fulfillment_status, '') != 'refunded'
   `).get(req.user.id, issue.product_id);
   if (!owns) return res.status(403).send("You don't have access to this issue.");
 

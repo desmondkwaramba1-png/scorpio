@@ -13,7 +13,7 @@ function MarkPaidRow({ creator, onPaid }) {
     setSubmitting(true);
     setError(null);
     try {
-      await adminPost(`/api/admin/payouts/${creator.id}/mark-paid`, { amount_minor: creator.available_minor });
+      await adminPost(`/api/admin/payouts/${creator.id}/mark-paid`, { amount_minor: creator.available_minor, currency: creator.currency });
       onPaid(creator.id);
     } catch (err) {
       setError(err.message);
@@ -32,13 +32,13 @@ function MarkPaidRow({ creator, onPaid }) {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
         <span className="mono" style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--green-glow)' }}>
-          {formatMoney(creator.available_minor, 'USD')}
+          {formatMoney(creator.available_minor, creator.currency)}
         </span>
         {confirming ? (
           <>
             <button className="btn btn--ghost btn--sm" onClick={() => setConfirming(false)} disabled={submitting}>Cancel</button>
             <button className="btn btn--gold btn--sm" onClick={confirm} disabled={submitting}>
-              {submitting ? 'Saving...' : `Confirm sent ${formatMoney(creator.available_minor, 'USD')}`}
+              {submitting ? 'Saving...' : `Confirm sent ${formatMoney(creator.available_minor, creator.currency)}`}
             </button>
           </>
         ) : (
@@ -77,8 +77,25 @@ export default function Payouts() {
     <div>
       <div className="card card--pad" style={{ marginBottom: 24, borderTop: '3px solid var(--gold)' }}>
         <p className="muted" style={{ fontSize: '.85rem', marginBottom: 4 }}>Total due this cycle</p>
-        <p className="mono" style={{ fontWeight: 700, fontSize: '1.6rem' }}>{formatMoney(data.total_due_minor, 'USD')}</p>
+        <div className="admin-payout-totals">
+          {Object.entries(Object.keys(data.total_due_by_currency || {}).length ? data.total_due_by_currency : { USD: 0 }).map(([currency, amount]) => (
+            <p key={currency} className="mono" style={{ fontWeight: 700, fontSize: '1.25rem' }}>{formatMoney(amount, currency)}</p>
+          ))}
+        </div>
       </div>
+
+      {(Object.values(data.total_order_escrow_by_currency || {}).some(Boolean) || Object.values(data.total_product_hold_by_currency || {}).some(Boolean)) && (
+        <div className="admin-fund-hold admin-fund-hold--summary">
+          <div>
+            <strong>Funds not available for payout</strong>
+            <p>Open order disputes and serious product reviews remain held until an admin resolves them.</p>
+          </div>
+          <div className="admin-fund-hold__totals">
+            {Object.entries(data.total_order_escrow_by_currency || {}).filter(([, amount]) => amount > 0).map(([currency, amount]) => <span key={`order-${currency}`}>Order holds <b>{formatMoney(amount, currency)}</b></span>)}
+            {Object.entries(data.total_product_hold_by_currency || {}).filter(([, amount]) => amount > 0).map(([currency, amount]) => <span key={`product-${currency}`}>Product reserves <b>{formatMoney(amount, currency)}</b></span>)}
+          </div>
+        </div>
+      )}
 
       {data.blocked.length > 0 && (
         <div style={{ marginBottom: 24 }}>
@@ -87,12 +104,12 @@ export default function Payouts() {
           </h2>
           <div style={{ display: 'grid', gap: 10 }}>
             {data.blocked.map(c => (
-              <div key={c.id} className="card card--pad" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div key={`${c.id}-${c.currency}`} className="card card--pad" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                 <div>
                   <p style={{ fontWeight: 600 }}>{c.name}</p>
                   <p className="muted" style={{ fontSize: '.85rem' }}>{c.email} &middot; no EcoCash number on file</p>
                 </div>
-                <span className="mono" style={{ fontWeight: 700 }}>{formatMoney(c.available_minor, 'USD')}</span>
+                <span className="mono" style={{ fontWeight: 700 }}>{formatMoney(c.available_minor, c.currency)}</span>
               </div>
             ))}
           </div>
@@ -104,7 +121,7 @@ export default function Payouts() {
         <p className="muted" style={{ fontSize: '.88rem' }}>Nothing owed right now.</p>
       ) : (
         <div style={{ display: 'grid', gap: 10 }}>
-          {data.ready.map(c => <MarkPaidRow key={c.id} creator={c} onPaid={handlePaid} />)}
+          {data.ready.map(c => <MarkPaidRow key={`${c.id}-${c.currency}`} creator={c} onPaid={handlePaid} />)}
         </div>
       )}
     </div>

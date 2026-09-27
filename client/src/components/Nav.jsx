@@ -9,9 +9,9 @@ import { useCart } from '../context/CartContext.jsx';
 // one ("Dashboard" replaced "Account" outright the moment a creator profile
 // existed), so a seller who also buys things had no visible way back to
 // their own orders. This folds both into one dropdown instead of picking a
-// winner. A plain buyer has exactly one destination, so they keep the
-// simple direct link, no dropdown needed for the common case.
-function AccountMenu({ creator, logout }) {
+// winner. Buyers use the same identity menu so sign-out stays discoverable
+// on compact/mobile navigation too.
+function AccountMenu({ user, creator, logout }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -23,7 +23,8 @@ function AccountMenu({ creator, logout }) {
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, []);
 
-  const initial = creator.name ? creator.name.charAt(0).toUpperCase() : 'A';
+  const accountName = creator?.name || user?.name || user?.username || 'Your account';
+  const initial = accountName.charAt(0).toUpperCase();
 
   return (
     <div className="nav__account" ref={ref}>
@@ -35,9 +36,9 @@ function AccountMenu({ creator, logout }) {
       >
         <span
           className="nav__account-avatar"
-          style={creator.avatar_path ? { backgroundImage: `url(${creator.avatar_path})` } : undefined}
+          style={creator?.avatar_path ? { backgroundImage: `url(${creator.avatar_path})` } : user?.avatar_url ? { backgroundImage: `url(${user.avatar_url})` } : undefined}
         >
-          {!creator.avatar_path && initial}
+          {!creator?.avatar_path && !user?.avatar_url && initial}
         </span>
         <span className="nav__account-trigger__label">Account</span>
         <FiChevronDown size={13} className="nav__account-trigger__chevron" style={{ transform: open ? 'rotate(180deg)' : 'none' }} />
@@ -47,21 +48,25 @@ function AccountMenu({ creator, logout }) {
           <div className="nav__account-menu__header">
             <span
               className="nav__account-avatar nav__account-avatar--lg"
-              style={creator.avatar_path ? { backgroundImage: `url(${creator.avatar_path})` } : undefined}
+              style={creator?.avatar_path ? { backgroundImage: `url(${creator.avatar_path})` } : user?.avatar_url ? { backgroundImage: `url(${user.avatar_url})` } : undefined}
             >
-              {!creator.avatar_path && initial}
+              {!creator?.avatar_path && !user?.avatar_url && initial}
             </span>
             <div className="nav__account-menu__who">
-              <p className="nav__account-menu__name">{creator.name || 'Your storefront'}</p>
-              {creator.handle && <p className="nav__account-menu__handle">@{creator.handle}</p>}
+              <p className="nav__account-menu__name">{accountName}</p>
+              {creator?.handle
+                ? <p className="nav__account-menu__handle">@{creator.handle}</p>
+                : user?.email && <p className="nav__account-menu__handle">{user.email}</p>}
             </div>
           </div>
           <div className="nav__account-menu__divider" />
-          <Link to="/dashboard" onClick={() => setOpen(false)} className="nav__account-menu__item">
-            <FiGrid size={15} /> Dashboard
-          </Link>
+          {creator && (
+            <Link to="/dashboard" onClick={() => setOpen(false)} className="nav__account-menu__item">
+              <FiGrid size={15} /> Dashboard
+            </Link>
+          )}
           <Link to="/account" onClick={() => setOpen(false)} className="nav__account-menu__item">
-            <FiPackage size={15} /> My orders
+            <FiPackage size={15} /> {creator ? 'My orders' : 'My account and orders'}
           </Link>
           <div className="nav__account-menu__divider" />
           <button type="button" onClick={() => { setOpen(false); logout(); }} className="nav__account-menu__item nav__account-menu__item--danger">
@@ -134,17 +139,7 @@ export default function Nav() {
               {count > 0 && <span className="nav__cart-badge">{count}</span>}
             </NavLink>
           )}
-          {!loading && user && creator && <AccountMenu creator={creator} logout={logout} />}
-          {!loading && user && !creator && (
-            <NavLink to="/account" className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')}>
-              <FiUser /> <span>Account</span>
-            </NavLink>
-          )}
-          {!loading && user && !creator && (
-            <button onClick={logout} className="nav__icon-link" style={{ border: 'none', background: 'none', cursor: 'pointer' }}>
-              <FiLogOut /> <span>Log out</span>
-            </button>
-          )}
+          {!loading && user && <AccountMenu user={user} creator={creator} logout={logout} />}
           {!loading && !user && (
             <NavLink to="/login" className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')}>
               <FiLogIn /> <span>Login</span>

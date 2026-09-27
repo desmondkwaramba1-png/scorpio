@@ -1,6 +1,5 @@
-// Buyer or seller reporting a problem with an ordinary order, see
-// migrations/027_reports.sql for why this exists alongside the older
-// service-order dispute system rather than folding into it.
+// Product-only and general reports. Paid-order concerns use the held-funds
+// dispute flow at POST /api/purchases/:id/dispute.
 const express = require('express');
 const db = require('../db/schema');
 const { requireAuth } = require('../middleware/auth');
@@ -59,6 +58,7 @@ router.post('/', requireAuth, (req, res) => {
 router.post('/product', requireAuth, (req, res) => {
   const productId = Number(req.body.product_id);
   const reason = (req.body.reason || '').trim();
+  const seriousClaim = req.body.serious_claim === true || req.body.serious_claim === 'true';
   if (!productId) return res.status(400).json({ error: 'product_id is required.' });
   if (!reason) return res.status(400).json({ error: 'Describe the problem.' });
   if (reason.length > 2000) return res.status(400).json({ error: 'Keep it under 2000 characters.' });
@@ -79,9 +79,9 @@ router.post('/product', requireAuth, (req, res) => {
 
   const reporterRole = req.creator ? 'creator' : 'buyer';
   const result = db.prepare(`
-    INSERT INTO reports (product_id, reporter_user_id, reporter_role, reason)
-    VALUES (?, ?, ?, ?)
-  `).run(productId, req.user.id, reporterRole, reason);
+    INSERT INTO reports (product_id, reporter_user_id, reporter_role, reason, serious_claim)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(productId, req.user.id, reporterRole, reason, seriousClaim ? 1 : 0);
 
   res.status(201).json({ id: result.lastInsertRowid, status: 'open' });
 });

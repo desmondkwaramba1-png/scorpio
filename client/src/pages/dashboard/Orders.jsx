@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiTrendingUp, FiMail, FiMessageCircle, FiShield, FiAlertTriangle } from 'react-icons/fi';
+import { FiTrendingUp, FiShield, FiAlertTriangle } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
@@ -10,15 +10,6 @@ import DisputeThread from '../../components/DisputeThread.jsx';
 function formatDate(sqliteDatetime) {
   const d = new Date(sqliteDatetime.replace(' ', 'T'));
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-// wa.me needs digits only, country code first, no leading zero on the
-// trunk digit, Zimbabwean numbers arrive as 07..., 2637..., or +2637...
-function whatsappLink(phone) {
-  if (!phone) return null;
-  const digits = phone.replace(/\D/g, '');
-  const withCountryCode = digits.startsWith('263') ? digits : `263${digits.replace(/^0/, '')}`;
-  return `https://wa.me/${withCountryCode}`;
 }
 
 const FULFILLMENT_LABEL = {
@@ -87,7 +78,6 @@ function DeliverForm({ purchaseId, onDelivered }) {
 function OrderRow({ o, creator, currentUserId, onUpdate }) {
   const [delivering, setDelivering] = useState(false);
   const fulfillment = o.fulfillment_status;
-  const wa = whatsappLink(o.buyer_phone);
   const label = fulfillment ? FULFILLMENT_LABEL[fulfillment] : null;
 
   return (
@@ -95,7 +85,7 @@ function OrderRow({ o, creator, currentUserId, onUpdate }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <div style={{ minWidth: 0 }}>
           <p style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {o.buyer_name || o.buyer_email}
+            {o.buyer_name || 'Buyer'}
           </p>
           <p className="muted" style={{ fontSize: '.85rem' }}>
             Bought <Link to={`/@${creator.handle}/${o.product_slug}`}>{o.product_title}</Link> &middot; {formatDate(o.created_at)}
@@ -104,14 +94,6 @@ function OrderRow({ o, creator, currentUserId, onUpdate }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '100%' }}>
           {label && <span className={`badge ${label.className}`}>{label.text}</span>}
           <span className="mono" style={{ fontWeight: 600, fontSize: '.9rem' }}>{formatMoney(o.amount_minor, o.currency)}</span>
-          <a href={`mailto:${o.buyer_email}`} className="btn btn--ghost btn--sm" title="Email this buyer">
-            <FiMail size={13} />
-          </a>
-          {wa && (
-            <a href={wa} target="_blank" rel="noopener noreferrer" className="btn btn--ghost btn--sm" title="Message on WhatsApp">
-              <FiMessageCircle size={13} />
-            </a>
-          )}
           {fulfillment === 'awaiting_delivery' && (
             <button className="btn btn--gold btn--sm" onClick={() => setDelivering(d => !d)}>
               {delivering ? 'Cancel' : 'Mark delivered'}
@@ -134,13 +116,16 @@ function OrderRow({ o, creator, currentUserId, onUpdate }) {
         <DeliverForm purchaseId={o.id} onDelivered={() => { onUpdate(o.id, { fulfillment_status: 'delivered' }); setDelivering(false); }} />
       )}
 
-      {/* Service orders already surface problems through the dispute flow
-          above (buyer-initiated, held payment), this covers everything
-          else, and gives sellers a way to flag something too (an abusive
-          buyer, a chargeback threat), which nothing did before. */}
-      {!fulfillment && (
+        {/* Only paid orders that have not already entered a case can start a
+          buyer/seller dispute from here. */}
+      {fulfillment !== 'disputed' && (!fulfillment || ['awaiting_delivery', 'delivered'].includes(fulfillment)) && (
         <div style={{ marginTop: 10 }}>
-          <ReportProblem purchaseId={o.id} hasOpenReport={o.has_open_report} />
+          <ReportProblem
+            purchaseId={o.id}
+            hasOpenReport={o.has_open_report}
+            label="Open order case"
+            onReported={reason => onUpdate(o.id, { fulfillment_status: 'disputed', dispute_status: 'open', dispute_reason: reason })}
+          />
         </div>
       )}
     </div>

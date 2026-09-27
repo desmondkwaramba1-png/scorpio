@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiImage, FiDollarSign, FiPackage, FiBriefcase, FiFilePlus, FiCheckCircle, FiSend } from 'react-icons/fi';
+import { FiImage, FiDollarSign, FiPackage, FiBriefcase, FiFilePlus, FiCheckCircle, FiSend, FiCopy, FiExternalLink, FiArrowRight } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
@@ -26,6 +26,8 @@ export default function NewProduct() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
+  const [publishedProduct, setPublishedProduct] = useState(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const update = (key) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -57,9 +59,15 @@ export default function NewProduct() {
   const isSoftware = form.category === 'software';
   const isCourse = form.category === 'courses';
   const hasDeliverable = isService || hasIssues || !!file || form.license_keys.trim().length > 0;
+  const detailsReady = !!form.title.trim() && !!form.category && form.price !== '';
+  const publishReady = detailsReady && hasDeliverable && !!cover;
 
   async function submit(status) {
     setError(null);
+    if (!form.title.trim() || !form.category || form.price === '') {
+      setError('Add a title, choose a category, and set a price before continuing.');
+      return;
+    }
     if (!cover) {
       setError("A cover image is required. It's the first thing buyers see.");
       return;
@@ -96,7 +104,8 @@ export default function NewProduct() {
       // (see lib/api.js's uploadWithProgress) is what turns that wait from
       // "is this broken?" into something visibly, honestly working.
       const data = await api.uploadWithProgress('/api/products', 'POST', body, setUploadProgress, 180000);
-      navigate(creator ? `/@${creator.handle}/${data.slug}` : '/dashboard/products');
+      if (status === 'published') setPublishedProduct(data);
+      else navigate('/dashboard/products');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -109,20 +118,63 @@ export default function NewProduct() {
     : parseFloat(form.price) === 0 ? 'Free'
     : formatMoney(Math.round(parseFloat(form.price || '0') * 100), form.currency);
 
+  async function copyProductLink() {
+    const productUrl = `${window.location.origin}/@${creator.handle}/${publishedProduct.slug}`;
+    await navigator.clipboard.writeText(productUrl);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  }
+
+  if (publishedProduct) {
+    const productUrl = `/@${creator.handle}/${publishedProduct.slug}`;
+    return (
+      <section className="publish-success" aria-labelledby="publish-success-title">
+        <div className="publish-success__mark"><FiCheckCircle size={30} /></div>
+        <p className="section__eyebrow mono">YOUR PRODUCT IS LIVE</p>
+        <h1 id="publish-success-title">You just put your work out there.</h1>
+        <p className="publish-success__intro">{publishedProduct.title} is now published on your storefront. Share it with the people who need it.</p>
+
+        <div className="publish-success__preview">
+          <div className="publish-success__cover" style={coverPreview ? { backgroundImage: `url(${coverPreview})` } : undefined}>
+            {!coverPreview && form.title.charAt(0).toUpperCase()}
+          </div>
+          <div className="publish-success__details">
+            <span className="badge badge--green">Published</span>
+            <h2>{publishedProduct.title}</h2>
+            <p>{price || 'Free'} <span>on your storefront</span></p>
+          </div>
+        </div>
+
+        <div className="publish-success__actions">
+          <Link to={productUrl} className="btn btn--primary"><FiExternalLink size={15} /> View live listing</Link>
+          <button type="button" className="btn btn--ghost" onClick={copyProductLink}>
+            {linkCopied ? <FiCheckCircle size={15} /> : <FiCopy size={15} />}
+            {linkCopied ? 'Link copied' : 'Copy product link'}
+          </button>
+        </div>
+        <div className="publish-success__next">
+          <Link to={`/dashboard/products/${publishedProduct.id}/edit`}>Manage listing <FiArrowRight size={14} /></Link>
+          <Link to="/dashboard/products/new">Publish another product <FiArrowRight size={14} /></Link>
+          <Link to="/dashboard">Back to dashboard <FiArrowRight size={14} /></Link>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <div>
       <div className="product-editor-intro">
         <div>
-          <p className="section__eyebrow mono">CREATE A LISTING</p>
-          <h1 style={{ fontSize: '1.5rem', marginBottom: 6 }}>New product</h1>
-          <p className="muted">Set up the listing, add what buyers receive, then publish when the checks are ready.</p>
+          <p className="section__eyebrow mono">YOUR NEXT BIG IDEA</p>
+          <h1 style={{ fontSize: '1.65rem', marginBottom: 6 }}>Create your product</h1>
+          <p className="muted">Give it a great first impression, set a fair price, and show buyers exactly what they’ll get.</p>
         </div>
         <div className="publish-steps" aria-label="Product publishing steps">
-          <span className="publish-step publish-step--active"><b>1</b> Details</span>
+          <span className={`publish-step${detailsReady ? ' publish-step--complete' : ' publish-step--active'}`}><b>{detailsReady ? <FiCheckCircle size={12} /> : '1'}</b> Details</span>
           <span className="publish-step__line" />
-          <span className="publish-step"><b>2</b> Deliverable</span>
+          <span className={`publish-step${detailsReady && hasDeliverable ? ' publish-step--complete' : detailsReady ? ' publish-step--active' : ''}`}><b>{detailsReady && hasDeliverable ? <FiCheckCircle size={12} /> : '2'}</b> Buyer value</span>
           <span className="publish-step__line" />
-          <span className="publish-step"><b>3</b> Publish</span>
+          <span className={`publish-step${publishReady ? ' publish-step--active' : ''}`}><b>3</b> Publish</span>
         </div>
       </div>
 
@@ -330,10 +382,11 @@ export default function NewProduct() {
           </div>
           <div className="publish-readiness">
             <p className="publish-readiness__title">Ready to publish when:</p>
-            <p className={`publish-readiness__item${cover ? ' is-ready' : ''}`}><FiCheckCircle size={14} /> Cover image added</p>
-            <p className={`publish-readiness__item${form.title && form.category ? ' is-ready' : ''}`}><FiCheckCircle size={14} /> Title and category chosen</p>
+              <p className={`publish-readiness__item${cover ? ' is-ready' : ''}`}><FiCheckCircle size={14} /> Cover image added</p>
+              <p className={`publish-readiness__item${form.title.trim() && form.category ? ' is-ready' : ''}`}><FiCheckCircle size={14} /> Title and category chosen</p>
             <p className={`publish-readiness__item${price !== null ? ' is-ready' : ''}`}><FiCheckCircle size={14} /> Price set</p>
             <p className={`publish-readiness__item${hasDeliverable ? ' is-ready' : ''}`}><FiCheckCircle size={14} /> Buyer deliverable ready</p>
+              <p className="publish-readiness__note">{publishReady ? 'You’re ready to publish.' : 'Your checklist updates as you build your listing.'}</p>
           </div>
         </div>
       </div>

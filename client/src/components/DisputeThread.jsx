@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { FiPaperclip, FiSend, FiFile, FiLock } from 'react-icons/fi';
+import { useState, useEffect, useRef } from 'react';
+import { FiPaperclip, FiSend, FiFile, FiLock, FiAlertTriangle } from 'react-icons/fi';
 import { api } from '../lib/api';
 
 export default function DisputeThread({ purchaseId, currentUserId, disputeStatus, disputeReason }) {
@@ -10,6 +10,7 @@ export default function DisputeThread({ purchaseId, currentUserId, disputeStatus
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [seriousClaim, setSeriousClaim] = useState(false);
   
   const bottomRef = useRef(null);
 
@@ -18,6 +19,7 @@ export default function DisputeThread({ purchaseId, currentUserId, disputeStatus
       const data = await api.get(`/api/disputes/purchases/${purchaseId}`);
       setTimeline(data.timeline);
       setCaseReason(data.reason || disputeReason || '');
+      setSeriousClaim(!!data.serious_claim);
     } catch (err) {
       console.error(err);
     }
@@ -36,6 +38,10 @@ export default function DisputeThread({ purchaseId, currentUserId, disputeStatus
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!message && !file) return;
+    if (seriousClaim && !message.trim()) {
+      setError('Explain why you believe the product is stolen, illegal, counterfeit, or fundamentally misleading.');
+      return;
+    }
     setSubmitting(true);
     setError('');
 
@@ -47,7 +53,7 @@ export default function DisputeThread({ purchaseId, currentUserId, disputeStatus
         setFile(null);
       }
       if (message) {
-        await api.post('/api/disputes/purchases/' + purchaseId + '/messages', { body: message });
+        await api.post('/api/disputes/purchases/' + purchaseId + (seriousClaim ? '/serious-claim' : '/messages'), { body: message });
         setMessage('');
       }
       await fetchTimeline();
@@ -60,37 +66,31 @@ export default function DisputeThread({ purchaseId, currentUserId, disputeStatus
   };
 
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: 400 }}>
-      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-raised)' }}>
-        <h3 style={{ margin: 0, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div className="card dispute-thread">
+      <div className="dispute-thread__header">
+        <h3 className="dispute-thread__title">
           <FiLock size={16} /> Case Chat
-          <span className={"badge " + (disputeStatus === 'open' ? 'badge--red' : 'badge--neutral')} style={{ marginLeft: 'auto' }}>
+          <span className={`badge ${disputeStatus === 'open' ? 'badge--red' : 'badge--neutral'}`}>
             {disputeStatus}
           </span>
         </h3>
-        <p className="muted" style={{ fontSize: '.85rem', marginTop: 4, marginBottom: 0 }}>Reason: {caseReason}</p>
+        <p className="dispute-thread__reason">Reason: {caseReason}</p>
+        <p className="dispute-thread__policy">Keep contact on SCORPIO. Phone numbers, email addresses, and links are blocked. Use attachments only as case evidence.</p>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="dispute-thread__timeline">
         {timeline.map((item, idx) => {
           const isMine = item.user_id === currentUserId;
           return (
-            <div key={idx} style={{ alignSelf: isMine ? 'flex-end' : 'flex-start', maxWidth: '80%' }}>
-              <div style={{ fontSize: '.75rem', marginBottom: 2, color: 'var(--text-muted)', textAlign: isMine ? 'right' : 'left' }}>
+            <div key={idx} className={`dispute-thread__item${isMine ? ' is-mine' : ''}`}>
+              <div className="dispute-thread__author">
                 {item.author_role.charAt(0).toUpperCase() + item.author_role.slice(1)}
               </div>
-              <div style={{
-                background: isMine ? 'var(--green)' : 'var(--surface-raised)',
-                color: isMine ? '#fff' : 'var(--text)',
-                padding: '8px 12px',
-                borderRadius: 8,
-                borderBottomRightRadius: isMine ? 2 : 8,
-                borderBottomLeftRadius: isMine ? 8 : 2
-              }}>
+              <div className="dispute-thread__bubble">
                 {item.type === 'message' ? (
-                  <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '.9rem' }}>{item.body}</div>
+                  <div>{item.body}</div>
                 ) : (
-                  <a href={item.storage_path} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+                  <a href={item.storage_path} target="_blank" rel="noopener noreferrer" className="dispute-thread__evidence">
                     <FiFile /> {item.original_filename}
                   </a>
                 )}
@@ -102,22 +102,30 @@ export default function DisputeThread({ purchaseId, currentUserId, disputeStatus
       </div>
 
       {disputeStatus === 'open' && (
-        <form onSubmit={handleSubmit} style={{ padding: 12, borderTop: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', gap: 8, alignItems: 'center' }}>
-          {error && <div className="error-text" style={{ position: 'absolute', top: -30 }}>{error}</div>}
-          <label style={{ cursor: 'pointer', padding: 8, color: file ? 'var(--green)' : 'var(--text-muted)' }}>
+        <form onSubmit={handleSubmit} className="dispute-thread__composer">
+          {error && <div className="error-text dispute-thread__error">{error}</div>}
+          <label className="dispute-thread__attach" title="Attach case evidence" aria-label="Attach case evidence">
             <FiPaperclip size={20} />
             <input type="file" style={{ display: 'none' }} onChange={e => setFile(e.target.files[0])} />
           </label>
           <input 
             type="text" 
-            placeholder={file ? file.name : "Type a message..."} 
+            placeholder={file ? file.name : 'Reply in your case...'}
             value={message} 
             onChange={e => setMessage(e.target.value)}
-            style={{ flex: 1, border: 'none', background: 'var(--surface-raised)', borderRadius: 20, padding: '8px 16px' }}
+            maxLength={2000}
+            className="dispute-thread__input"
+            aria-label={seriousClaim ? 'Explain the serious product claim' : 'Reply in the case chat'}
           />
-          <button type="submit" disabled={submitting || (!message && !file)} className="btn btn--primary" style={{ padding: '8px 16px', borderRadius: 20 }}>
+          <button type="submit" disabled={submitting || (!message && !file)} className="btn btn--primary dispute-thread__send" aria-label="Send case message">
             {submitting ? (uploadProgress > 0 ? `${uploadProgress}%` : '...') : <FiSend />}
           </button>
+          {!seriousClaim && (
+            <label className="dispute-thread__serious">
+              <input type="checkbox" checked={seriousClaim} onChange={e => setSeriousClaim(e.target.checked)} />
+              <span><FiAlertTriangle size={13} /> Flag a serious product claim</span>
+            </label>
+          )}
         </form>
       )}
     </div>

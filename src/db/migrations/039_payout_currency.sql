@@ -1,0 +1,1 @@
+ALTER TABLE payouts ADD COLUMN currency TEXT NOT NULL DEFAULT 'USD' CHECK(currency IN ('USD', 'ZWG'));

@@ -56,12 +56,12 @@ function confirmDelivery(purchaseId) {
   db.prepare("UPDATE purchases SET fulfillment_status = 'released' WHERE id = ? AND fulfillment_status = 'delivered'").run(purchaseId);
 }
 
-function openDispute(purchaseId, reason, openedByUserId = null) {
+function openDispute(purchaseId, reason, openedByUserId = null, seriousClaim = false) {
   const existing = db.prepare("SELECT * FROM service_disputes WHERE purchase_id = ? AND status = 'open'").get(purchaseId);
   if (existing) return existing;
 
-  db.prepare('INSERT INTO service_disputes (purchase_id, reason, opened_by_user_id) VALUES (?, ?, ?)')
-    .run(purchaseId, reason, openedByUserId || null);
+  db.prepare('INSERT INTO service_disputes (purchase_id, reason, opened_by_user_id, serious_claim) VALUES (?, ?, ?, ?)')
+    .run(purchaseId, reason, openedByUserId || null, seriousClaim ? 1 : 0);
   db.prepare("UPDATE purchases SET fulfillment_status = 'disputed' WHERE id = ?").run(purchaseId);
   return disputeFor(purchaseId);
 }

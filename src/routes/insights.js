@@ -73,12 +73,7 @@ router.get('/me', requireAuth, requireCreator, (req, res) => {
   });
 });
 
-// GET /api/insights/orders — the buyer-relationship view: who bought what,
-// with contact info a creator can actually message ("launched something
-// new? here's who already trusts you enough to have bought before"). Phone
-// comes from the buyer's own account (users.phone), not the one-off
-// checkout-time sender number, which is never stored — a buyer's real
-// account phone is the one worth messaging.
+// GET /api/insights/orders — the creator's order list and dispute context.
 router.get('/orders', requireAuth, requireCreator, (req, res) => {
   sweepAutoReleases();
   const creatorId = req.creator.id;
@@ -87,14 +82,13 @@ router.get('/orders', requireAuth, requireCreator, (req, res) => {
     SELECT pu.id, pu.amount_minor, pu.currency, pu.created_at,
            pu.fulfillment_status, pu.delivered_at,
            p.id AS product_id, p.title AS product_title, p.slug AS product_slug, p.type AS product_type,
-           b.id AS buyer_id, b.name AS buyer_name, b.email AS buyer_email, u.phone AS buyer_phone,
+           b.id AS buyer_id, b.name AS buyer_name,
               d.id AS dispute_id, d.reason AS dispute_reason, d.status AS dispute_status,
            EXISTS(SELECT 1 FROM reports r WHERE r.purchase_id = pu.id AND r.status = 'open') AS has_open_report
     FROM purchases pu
     JOIN products p ON p.id = pu.product_id
     JOIN buyers b ON b.id = pu.buyer_id
-    LEFT JOIN users u ON u.id = b.user_id
-            LEFT JOIN service_disputes d ON d.purchase_id = pu.id AND d.status = 'open'
+    LEFT JOIN service_disputes d ON d.purchase_id = pu.id AND d.status = 'open'
     WHERE p.creator_id = ? AND pu.payment_status = 'paid'
     ORDER BY pu.created_at DESC
   `).all(creatorId);

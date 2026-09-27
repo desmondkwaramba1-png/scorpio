@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiUsers, FiPackage } from 'react-icons/fi';
+import { FiUsers, FiPackage, FiArrowUpRight, FiCheck } from 'react-icons/fi';
 
 // No text Seal badge here on purpose, at this card's width there's no
 // room for "Verified" without shoving the name itself into truncation
@@ -24,6 +24,10 @@ function CreatorCard({ creator }) {
       <p className="creator-card__count">
         <FiPackage size={11} /> {creator.product_count} product{creator.product_count === 1 ? '' : 's'}
       </p>
+      <span className="creator-card__visit">
+        {creator.verified && <span className="creator-card__verified"><FiCheck size={11} /> Verified</span>}
+        <span>View storefront <FiArrowUpRight size={14} /></span>
+      </span>
     </Link>
   );
 }

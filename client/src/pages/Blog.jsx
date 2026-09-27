@@ -27,6 +27,12 @@ function BlogCard({ post }) {
             <div className="blog-card__cover-image" style={{ backgroundImage: `url(${post.cover_path})` }} />
           </>
         )}
+        {!post.cover_path && (
+          <div className="blog-card__cover-empty">
+            <FiBookOpen size={34} />
+            <span>SCORPIO FIELD NOTES</span>
+          </div>
+        )}
         <span className="blog-card__read-badge"><FiBookOpen size={11} /> Read</span>
       </div>
       <div className="blog-card__body">
@@ -41,6 +47,7 @@ function BlogCard({ post }) {
         </div>
         <h2 className="blog-card__title">{post.title}</h2>
         {post.excerpt && <p className="blog-card__excerpt">{post.excerpt}</p>}
+        <span className="blog-card__open">Read the article <FiArrowUpRight size={15} /></span>
       </div>
     </Link>
   );

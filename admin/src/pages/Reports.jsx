@@ -55,7 +55,25 @@ function ReportCard({ report, onResolve }) {
           {report.reporter_email ? ` (${report.reporter_email})` : ''}
         </p>
         <p style={{ fontSize: '.9rem', lineHeight: 1.5 }}>{report.reason}</p>
+        {report.serious_claim === 1 && (
+          <p className="badge badge--red" style={{ display: 'inline-flex', marginTop: 10 }}>
+            Serious product claim
+          </p>
+        )}
       </div>
+
+      {report.serious_claim === 1 && report.product_id && (
+        <div className="admin-fund-hold">
+          <div>
+            <strong>Product review reserve</strong>
+            <p>Only unpaid proceeds from this product are held. Resolving the report releases the reserve.</p>
+          </div>
+          <span className="mono">{formatMoney(report.held_funds_minor || 0, report.product_currency || report.currency || 'USD')}</span>
+        </div>
+      )}
+      {report.open_product_disputes > 1 && (
+        <p className="dispute-repeat-warning">{report.open_product_disputes} open disputes relate to this product.</p>
+      )}
 
       <div className="field" style={{ marginBottom: 10 }}>
         <label htmlFor={`note-${report.report_id}`}>Note (optional, kept on record)</label>

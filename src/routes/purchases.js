@@ -14,6 +14,7 @@ const { sweepAutoReleases, deliveryFor, disputeFor, markDelivered, confirmDelive
 const { sendEmail } = require('../lib/notify');
 const { markPurchasePaid, markPurchaseFailed } = require('../lib/purchaseCompletion');
 const storage = require('../lib/storage');
+const { hasOffPlatformContact } = require('../lib/disputeMessagePolicy');
 
 const router = express.Router();
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -104,23 +105,19 @@ function serviceStatusFor(purchase) {
   };
 }
 
-// GET /api/purchases/mine — a logged-in buyer's own order history. Includes
-// the seller's contact info (email always; phone when their account has
-// one) — a buyer who's actually paid has standing to follow up directly,
-// not just wait silently on a service order.
+// GET /api/purchases/mine — a logged-in buyer's own order history.
 router.get('/mine', requireAuth, (req, res) => {
   sweepAutoReleases();
 
   const purchases = db.prepare(`
     SELECT pu.*, p.title AS product_title, p.slug AS product_slug, p.cover_path AS product_cover_path,
            p.delivery_days AS delivery_days, p.type AS product_type,
-           c.name AS creator_name, c.handle AS creator_handle, u.email AS creator_email, u.phone AS creator_phone,
+           c.name AS creator_name, c.handle AS creator_handle,
            EXISTS(SELECT 1 FROM reports r WHERE r.purchase_id = pu.id AND r.status = 'open') AS has_open_report
     FROM purchases pu
     JOIN buyers b ON b.id = pu.buyer_id
     JOIN products p ON p.id = pu.product_id
     JOIN creators c ON c.id = p.creator_id
-    LEFT JOIN users u ON u.id = c.user_id
     WHERE b.user_id = ?
     ORDER BY pu.created_at DESC
   `).all(req.user.id);
@@ -215,45 +212,62 @@ router.post('/:id/confirm', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// POST /api/purchases/:id/dispute — buyer reports a problem: never
-// delivered, or delivered but not what was promised. Holds the money —
-// resolution is manual for now (see escrow.js resolveDispute).
+// POST /api/purchases/:id/dispute — either order party opens a case. The
+// order's funds stay held until an admin resolves it.
 router.post('/:id/dispute', requireAuth, (req, res) => {
+  sweepAutoReleases();
   const purchase = db.prepare(`
-    SELECT pu.* FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
-    WHERE pu.id = ? AND b.user_id = ?
-  `).get(req.params.id, req.user.id);
+    SELECT pu.*, b.user_id AS buyer_user_id, c.user_id AS seller_user_id,
+           p.title AS product_title
+    FROM purchases pu
+    JOIN buyers b ON b.id = pu.buyer_id
+    JOIN products p ON p.id = pu.product_id
+    JOIN creators c ON c.id = p.creator_id
+    WHERE pu.id = ?
+  `).get(req.params.id);
 
   if (!purchase) return res.status(404).json({ error: 'Order not found.' });
+  if (purchase.payment_status !== 'paid') return res.status(409).json({ error: 'Only paid orders can be disputed.' });
+  const role = purchase.buyer_user_id === req.user.id ? 'buyer'
+    : purchase.seller_user_id === req.user.id ? 'seller' : null;
+  if (!role) return res.status(403).json({ error: "You're not part of this order." });
   if (!['awaiting_delivery', 'delivered'].includes(purchase.fulfillment_status)) {
     return res.status(409).json({ error: 'This order can\'t be disputed right now.' });
   }
   const reason = (req.body.reason || '').trim();
   if (!reason) return res.status(400).json({ error: 'Describe what went wrong.' });
+  if (hasOffPlatformContact(reason)) {
+    return res.status(400).json({ error: 'Keep dispute details on SCORPIO. Phone numbers, email addresses, and external links are not allowed.' });
+  }
 
   const existing = disputeFor(purchase.id);
   if (existing && existing.status === 'open') {
     return res.status(409).json({ error: 'This order already has an open dispute. Use the case chat to continue it.' });
   }
 
-  const dispute = openDispute(purchase.id, reason, req.user.id);
+  const seriousClaim = req.body.serious_claim === true || req.body.serious_claim === 'true';
+  const dispute = openDispute(purchase.id, reason, req.user.id, seriousClaim);
   db.prepare(`
     INSERT INTO dispute_messages (dispute_id, user_id, author_role, body)
-    VALUES (?, ?, 'buyer', ?)
-  `).run(dispute.id, req.user.id, reason);
+    VALUES (?, ?, ?, ?)
+  `).run(dispute.id, req.user.id, role, reason);
 
-  const seller = db.prepare(`
-    SELECT u.email, p.title FROM purchases pu
+  const parties = db.prepare(`
+    SELECT buyer.email AS buyer_email, seller.email AS seller_email, p.title
+    FROM purchases pu
     JOIN products p ON p.id = pu.product_id
     JOIN creators c ON c.id = p.creator_id
-    LEFT JOIN users u ON u.id = c.user_id
+    LEFT JOIN users seller ON seller.id = c.user_id
+    JOIN buyers b ON b.id = pu.buyer_id
+    LEFT JOIN users buyer ON buyer.id = b.user_id
     WHERE pu.id = ?
   `).get(purchase.id);
-  if (seller?.email) {
+  const notifyEmail = role === 'buyer' ? parties?.seller_email : parties?.buyer_email;
+  if (notifyEmail) {
     sendEmail(
-      seller.email,
-      `Dispute opened: ${seller.title}`,
-      `A buyer opened a dispute on this order. The 5-day payout timer is paused and the money stays on hold until it's decided. Reply with your side (and any screenshots) from your orders page: ${FRONTEND_URL}/dashboard/orders`
+      notifyEmail,
+      `Dispute opened: ${parties.title}`,
+      `A ${role} opened a dispute on this order. The order's funds remain held until SCORPIO reviews the case. Reply in the case chat from your account.`
     );
   }
 

@@ -3,6 +3,21 @@ const DEFAULT_TIMEOUT_MS = 15000;
 // a few seconds, not masking a server that's actually down.
 const RETRY_DELAYS_MS = [500, 1500, 3000];
 
+function notifyConnectionError() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('scorpio:connection-error'));
+}
+
+function notifyConnectionRestored() {
+  if (typeof window !== 'undefined' && navigator.onLine) window.dispatchEvent(new Event('scorpio:connection-restored'));
+}
+
+function connectionError() {
+  notifyConnectionError();
+  return new Error(navigator.onLine
+    ? "We couldn't reach SCORPIO. Your internet may still be working; please try again."
+    : "You're offline right now. Reconnect to continue.");
+}
+
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -53,15 +68,11 @@ async function request(path, { method = 'GET', body, timeoutMs = DEFAULT_TIMEOUT
       // is never retried — retrying won't change a wrong password or a
       // sold-out product.
       if (attempt < maxAttempts - 1) { await sleep(RETRY_DELAYS_MS[attempt]); continue; }
-      // Real feedback, from earlier this session: "cant reach the server,
-      // users dont even know what a server is." Whatever actually failed
-      // (a dropped connection, a timeout, DNS), the one thing every user
-      // can act on is "check your own connection" — that's the message,
-      // not the technical cause.
-      throw new Error("You're offline, or your connection is too weak right now. Check it and try again.");
+      throw connectionError();
     }
     const data = await res.json().catch(() => null);
     if (!res.ok) throw new Error(data?.error || 'Something went wrong.');
+    notifyConnectionRestored();
     return data;
   }
 }
@@ -111,10 +122,13 @@ function uploadWithProgress(path, method, formData, onProgress, timeoutMs = 1200
     xhr.onload = () => {
       let data = null;
       try { data = JSON.parse(xhr.responseText); } catch { /* non-JSON error page, data stays null */ }
-      if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+      if (xhr.status >= 200 && xhr.status < 300) {
+        notifyConnectionRestored();
+        resolve(data);
+      }
       else reject(new Error(data?.error || 'Something went wrong.'));
     };
-    xhr.onerror = () => reject(new Error("You're offline, or your connection is too weak right now. Check it and try again."));
+    xhr.onerror = () => reject(connectionError());
     xhr.ontimeout = () => reject(new Error("That's taking too long. Check your connection and try again."));
     xhr.send(formData);
   });

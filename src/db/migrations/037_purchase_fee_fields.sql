@@ -1,0 +1,2 @@
+ALTER TABLE purchases ADD COLUMN fee_minor INTEGER;
+ALTER TABLE purchases ADD COLUMN net_minor INTEGER;

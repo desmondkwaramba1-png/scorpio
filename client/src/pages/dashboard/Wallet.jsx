@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FiDollarSign, FiMinusCircle, FiCreditCard, FiClock, FiCalendar } from 'react-icons/fi';
+import { FiDollarSign, FiMinusCircle, FiCreditCard, FiClock, FiCalendar, FiAlertTriangle } from 'react-icons/fi';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
 
@@ -33,24 +33,26 @@ export default function Wallet() {
     <div>
       <h1 style={{ fontSize: '1.5rem', marginBottom: 24 }}>Wallet</h1>
 
-      <div className="stat-grid">
-        <div className="card stat-tile">
-          <span className="stat-tile__label"><FiDollarSign size={13} /> Gross</span>
-          <span className="mono stat-tile__value">{formatMoney(data.gross_minor, data.currency)}</span>
-        </div>
-        <div className="card stat-tile">
-          <span className="stat-tile__label"><FiMinusCircle size={13} /> Fee</span>
-          <span className="mono stat-tile__value">{formatMoney(data.fee_minor, data.currency)}</span>
-        </div>
-        <div className="card stat-tile">
-          <span className="stat-tile__label"><FiCreditCard size={13} /> Available</span>
-          <span className="mono stat-tile__value" style={{ color: 'var(--green-glow)' }}>{formatMoney(data.available_minor, data.currency)}</span>
-        </div>
-        <div className="card stat-tile">
-          <span className="stat-tile__label"><FiClock size={13} /> Pending (5-day hold)</span>
-          <span className="mono stat-tile__value">{formatMoney(data.escrowed_minor, data.currency)}</span>
-        </div>
-      </div>
+      {Object.values(data.balances_by_currency || { USD: data }).map(balance => (
+        <section key={balance.currency} className="wallet-currency-section">
+          <h2>{balance.currency} balance</h2>
+          <div className="stat-grid">
+            <div className="card stat-tile"><span className="stat-tile__label"><FiDollarSign size={13} /> Gross</span><span className="mono stat-tile__value">{formatMoney(balance.gross_minor, balance.currency)}</span></div>
+            <div className="card stat-tile"><span className="stat-tile__label"><FiMinusCircle size={13} /> Fee</span><span className="mono stat-tile__value">{formatMoney(balance.fee_minor, balance.currency)}</span></div>
+            <div className="card stat-tile"><span className="stat-tile__label"><FiCreditCard size={13} /> Available</span><span className="mono stat-tile__value" style={{ color: 'var(--green-glow)' }}>{formatMoney(balance.available_minor, balance.currency)}</span></div>
+            <div className="card stat-tile"><span className="stat-tile__label"><FiClock size={13} /> Order holds</span><span className="mono stat-tile__value">{formatMoney(balance.escrowed_minor, balance.currency)}</span></div>
+            {balance.product_hold_minor > 0 && <div className="card stat-tile"><span className="stat-tile__label"><FiAlertTriangle size={13} /> Product review hold</span><span className="mono stat-tile__value">{formatMoney(balance.product_hold_minor, balance.currency)}</span></div>}
+          </div>
+
+          {balance.product_holds?.length > 0 && (
+            <div className="wallet-product-holds">
+              <p className="wallet-product-holds__title">Held during product review</p>
+              {balance.product_holds.map(hold => <div key={hold.product_id} className="wallet-product-holds__row"><span>{hold.product_title}</span><strong>{formatMoney(hold.amount_minor, hold.currency)}</strong></div>)}
+              <p className="wallet-product-holds__note">These unpaid proceeds remain unavailable until SCORPIO resolves the serious product report.</p>
+            </div>
+          )}
+        </section>
+      ))}
 
       <p className="muted" style={{ fontSize: '.85rem', marginBottom: 24 }}>Fee policy: {data.fee_policy}.</p>
 

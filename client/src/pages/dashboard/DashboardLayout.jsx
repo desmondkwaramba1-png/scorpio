@@ -42,8 +42,12 @@ export default function DashboardLayout() {
   const [runGuide, setRunGuide] = useState(false);
 
   useEffect(() => {
-    if (!localStorage.getItem('scorpio_tour_completed')) setRunGuide(true);
-  }, []);
+    if (!creator?.id) return;
+    const guideKey = `scorpio_dashboard_tour_seen_${creator.id}`;
+    if (localStorage.getItem(guideKey)) return;
+    localStorage.setItem(guideKey, 'true');
+    setRunGuide(true);
+  }, [creator?.id]);
 
   // A buyer with no creator profile has no business seeing the seller
   // dashboard shell (tabs, products, wallet) at all, not even a broken/

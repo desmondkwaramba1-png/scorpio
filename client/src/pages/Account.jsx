@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiDownload, FiRefreshCw, FiUser, FiPackage, FiCompass, FiPlay, FiX, FiCamera, FiKey, FiCopy, FiCheck, FiShield, FiAlertTriangle, FiExternalLink, FiMail, FiMessageCircle, FiClock, FiDollarSign, FiRepeat, FiPhone, FiBookOpen } from 'react-icons/fi';
+import { FiDownload, FiRefreshCw, FiUser, FiPackage, FiCompass, FiPlay, FiX, FiCamera, FiKey, FiCopy, FiCheck, FiShield, FiAlertTriangle, FiExternalLink, FiClock, FiDollarSign, FiRepeat, FiBookOpen } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api';
 import { formatMoney } from '../lib/money';
@@ -22,15 +22,6 @@ const FULFILLMENT_LABEL = {
   refunded: { text: 'Refunded', className: 'badge--neutral' }
 };
 
-// wa.me needs digits only, country code first, no leading zero on the
-// trunk digit, Zimbabwean numbers arrive as 07..., 2637..., or +2637...
-function whatsappLink(phone) {
-  if (!phone) return null;
-  const digits = phone.replace(/\D/g, '');
-  const withCountryCode = digits.startsWith('263') ? digits : `263${digits.replace(/^0/, '')}`;
-  return `https://wa.me/${withCountryCode}`;
-}
-
 // onUpdate tells the actual purchases list (owned by Account, two
 // components up) about the change, not just this component's own local
 // service state. Without it, confirming (or disputing) updated what this
@@ -38,10 +29,11 @@ function whatsappLink(phone) {
 // unchanged, so "Needs your attention" kept listing an order the buyer
 // had already confirmed, it wasn't lying about anything stale, it
 // genuinely never found out.
-function ServiceStatus({ purchaseId, service: initial, sellerName, sellerEmail, sellerPhone, productTitle, currentUserId, onUpdate }) {
+function ServiceStatus({ purchaseId, service: initial, currentUserId, onUpdate }) {
   const [service, setService] = useState(initial);
   const [disputing, setDisputing] = useState(false);
   const [reason, setReason] = useState('');
+  const [seriousClaim, setSeriousClaim] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState(null);
 
@@ -66,7 +58,7 @@ function ServiceStatus({ purchaseId, service: initial, sellerName, sellerEmail, 
     setSubmitting(true);
     setActionError(null);
     try {
-      await api.post(`/api/purchases/${purchaseId}/dispute`, { reason });
+      await api.post(`/api/purchases/${purchaseId}/dispute`, { reason, serious_claim: seriousClaim });
       setService(s => ({ ...s, fulfillment_status: 'disputed' }));
       onUpdate?.({ fulfillment_status: 'disputed' });
       setDisputing(false);
@@ -82,8 +74,6 @@ function ServiceStatus({ purchaseId, service: initial, sellerName, sellerEmail, 
   const stillWaiting = service.fulfillment_status === 'awaiting_delivery' || service.fulfillment_status === 'delivered';
   const expectedBy = service.expected_by ? new Date(service.expected_by) : null;
   const isLate = expectedBy && stillWaiting && expectedBy < new Date();
-  const wa = whatsappLink(sellerPhone);
-
   return (
     <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }} onClick={e => e.stopPropagation()}>
       {service.fulfillment_status === 'awaiting_delivery' && (
@@ -126,24 +116,6 @@ function ServiceStatus({ purchaseId, service: initial, sellerName, sellerEmail, 
         </div>
       )}
 
-      {stillWaiting && (sellerEmail || wa) && (
-        <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-          {sellerEmail && (
-            <a
-              href={`mailto:${sellerEmail}?subject=${encodeURIComponent(`Order: ${productTitle}`)}`}
-              onClick={e => e.stopPropagation()} className="btn btn--ghost btn--sm"
-            >
-              <FiMail size={13} /> Email {sellerName || 'seller'}
-            </a>
-          )}
-          {wa && (
-            <a href={wa} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="btn btn--ghost btn--sm">
-              <FiMessageCircle size={13} /> WhatsApp
-            </a>
-          )}
-        </div>
-      )}
-
       {stillWaiting && (
         <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
           {service.fulfillment_status === 'delivered' && (
@@ -164,6 +136,10 @@ function ServiceStatus({ purchaseId, service: initial, sellerName, sellerEmail, 
             <textarea required value={reason} onChange={e => setReason(e.target.value)}
               placeholder="What went wrong?" style={{ minHeight: 60 }} />
           </div>
+          <label className="report-serious-claim">
+            <input type="checkbox" checked={seriousClaim} onChange={e => setSeriousClaim(e.target.checked)} />
+            <span>This alleges stolen, illegal, counterfeit, or fundamentally fake/misleading content. This will also reserve unpaid proceeds from the product.</span>
+          </label>
           <button className="btn btn--sm" style={{ background: 'var(--red)', color: 'var(--ink-contrast)' }} disabled={submitting} type="submit">
             Submit report
           </button>
@@ -334,7 +310,7 @@ function SubscriptionRow({ subscription, onUpdate, onRenewed }) {
 // reaches the platform operator for manual review (there's no
 // automated refund/escrow for a pay-once purchase, same honesty as the
 // rest of this app's money handling).
-function SeriesRow({ purchase }) {
+function SeriesRow({ purchase, currentUserId, onUpdate }) {
   const productUrl = `/@${purchase.creator_handle}/${purchase.product_slug}`;
   return (
     <div className="card card--pad">
@@ -362,9 +338,19 @@ function SeriesRow({ purchase }) {
           : 'No issues published yet, check back soon.'}
       </p>
 
-      <div style={{ marginTop: 10 }}>
-        <ReportProblem purchaseId={purchase.id} hasOpenReport={purchase.has_open_report} label="Report a problem" />
-      </div>
+      {purchase.service?.fulfillment_status === 'disputed' ? (
+        <DisputeThread purchaseId={purchase.id} currentUserId={currentUserId}
+          disputeStatus={purchase.service.dispute?.status || 'open'} disputeReason={purchase.service.dispute?.reason || ''} />
+      ) : purchase.service && ['awaiting_delivery', 'delivered'].includes(purchase.service.fulfillment_status) && (
+        <div style={{ marginTop: 10 }}>
+          <ReportProblem
+            purchaseId={purchase.id}
+            hasOpenReport={purchase.has_open_report}
+            label="Report a problem"
+            onReported={reason => onUpdate(purchase.id, { fulfillment_status: 'disputed', dispute: { status: 'open', reason } })}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -479,8 +465,7 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId }) {
       {purchase.service && (
         <ServiceStatus
           purchaseId={purchase.id} service={purchase.service}
-          sellerName={purchase.creator_name} sellerEmail={purchase.creator_email} sellerPhone={purchase.creator_phone}
-          productTitle={purchase.product_title} currentUserId={currentUserId}
+          currentUserId={currentUserId}
           onUpdate={patch => onServiceUpdate?.(purchase.id, patch)}
         />
       )}
@@ -490,7 +475,11 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId }) {
           problem at all. */}
       {!purchase.service && purchase.payment_status === 'paid' && (
         <div style={{ marginTop: 12 }} onClick={e => e.stopPropagation()}>
-          <ReportProblem purchaseId={purchase.id} hasOpenReport={purchase.has_open_report} />
+          <ReportProblem
+            purchaseId={purchase.id}
+            hasOpenReport={purchase.has_open_report}
+            onReported={reason => onServiceUpdate?.(purchase.id, { fulfillment_status: 'disputed', dispute: { status: 'open', reason } })}
+          />
         </div>
       )}
       {resendError && <p className="error-text" style={{ marginTop: 10 }}>{resendError}</p>}
@@ -664,7 +653,7 @@ export default function Account() {
             Pay-once series you've bought into. New issues arrive here automatically, no repurchase needed.
           </p>
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-            {seriesPurchases.map(p => <SeriesRow key={p.id} purchase={p} />)}
+            {seriesPurchases.map(p => <SeriesRow key={p.id} purchase={p} currentUserId={user?.id} onUpdate={handleServiceUpdate} />)}
           </div>
         </div>
       )}

@@ -2,18 +2,14 @@ import { useState } from 'react';
 import { FiFlag, FiCheck } from 'react-icons/fi';
 import { api } from '../lib/api';
 
-// Buyer or seller flagging a problem, either about a specific order
-// (purchaseId, the original case: see migrations/027_reports.sql) or
-// about a product with no order behind it at all (productId, a seller
-// flagging another seller's listing as a copy, added in 028; see
-// routes/reports.js's POST /product). Exactly one of purchaseId/productId
-// is expected. Deliberately plain: no escrow, no resolution flow in the
-// UI, this just gets a human (the platform operator) looking at it, same
-// honesty as the wallet payout stub elsewhere in the app.
-export default function ReportProblem({ purchaseId, productId, hasOpenReport, stopPropagation, label }) {
+// An order report opens the buyer/seller case chat and holds that order's
+// proceeds. A product-only report goes to the admin review queue; selecting
+// a serious claim reserves the product's unpaid proceeds until resolution.
+export default function ReportProblem({ purchaseId, productId, hasOpenReport, stopPropagation, label, onReported }) {
   const [reported, setReported] = useState(!!hasOpenReport);
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');
+  const [seriousClaim, setSeriousClaim] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -29,12 +25,13 @@ export default function ReportProblem({ purchaseId, productId, hasOpenReport, st
     setError(null);
     try {
       if (productId) {
-        await api.post('/api/reports/product', { product_id: productId, reason: reason.trim() });
+        await api.post('/api/reports/product', { product_id: productId, reason: reason.trim(), serious_claim: seriousClaim });
       } else {
-        await api.post('/api/reports', { purchase_id: purchaseId, reason: reason.trim() });
+        await api.post(`/api/purchases/${purchaseId}/dispute`, { reason: reason.trim(), serious_claim: seriousClaim });
       }
       setReported(true);
       setOpen(false);
+      onReported?.(reason.trim());
     } catch (err) {
       setError(err.message);
     } finally {
@@ -67,10 +64,16 @@ export default function ReportProblem({ purchaseId, productId, hasOpenReport, st
       <div className="field" style={{ marginBottom: 8 }}>
         <textarea
           autoFocus rows={3} value={reason} onChange={e => setReason(e.target.value)}
-          placeholder="What went wrong? Be specific, this goes straight to the platform operator."
+          placeholder={productId
+            ? 'What is wrong with this listing? Be specific so SCORPIO can review it.'
+            : 'What went wrong with this order? The other party can reply in the case chat.'}
           maxLength={2000}
         />
       </div>
+      <label className="report-serious-claim">
+        <input type="checkbox" checked={seriousClaim} onChange={e => setSeriousClaim(e.target.checked)} />
+        <span>This alleges stolen, illegal, counterfeit, or fundamentally fake/misleading content. Unpaid proceeds from this product will be held while SCORPIO reviews it.</span>
+      </label>
       {error && <p className="error-text" style={{ marginBottom: 8 }}>{error}</p>}
       <div className="btn-row">
         <button type="submit" className="btn btn--primary btn--sm" disabled={submitting || !reason.trim()}>

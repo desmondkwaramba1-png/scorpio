@@ -2,7 +2,7 @@ const express = require('express');
 const { timingSafeEqual } = require('crypto');
 const db = require('../db/schema');
 const { resolveDispute, sweepAutoReleases } = require('../lib/escrow');
-const { balancesFor } = require('../lib/walletBalances');
+const { balancesFor, remainingNetByPurchaseFor } = require('../lib/walletBalances');
 const { netOf } = require('../lib/fees');
 const { adminLimiter } = require('../middleware/rateLimit');
 const { sendRenewalReminders } = require('../lib/subscriptions');
@@ -41,11 +41,13 @@ function requireAdmin(req, res, next) {
 // they delivered (if anything).
 router.get('/disputes', requireAdmin, (req, res) => {
   const disputes = db.prepare(`
-    SELECT d.id AS dispute_id, d.reason, d.status AS dispute_status, d.created_at AS disputed_at,
+    SELECT d.id AS dispute_id, d.reason, d.serious_claim, d.status AS dispute_status, d.created_at AS disputed_at,
            pu.id AS purchase_id, pu.amount_minor, pu.currency, pu.created_at AS purchased_at,
-           p.title AS product_title, p.slug AS product_slug,
+           p.id AS product_id, p.title AS product_title, p.slug AS product_slug,
+           (SELECT COUNT(*) FROM service_disputes rd JOIN purchases rp ON rp.id = rd.purchase_id WHERE rp.product_id = p.id AND rd.status = 'open') AS open_product_disputes,
            buyer.name AS buyer_name, buyer.email AS buyer_email,
-           c.name AS seller_name, c.handle AS seller_handle, cu.email AS seller_email
+           CASE WHEN d.opened_by_user_id = buyer.user_id THEN 'buyer' ELSE 'seller' END AS opened_by_role,
+           c.id AS creator_id, c.name AS seller_name, c.handle AS seller_handle, cu.email AS seller_email
     FROM service_disputes d
     JOIN purchases pu ON pu.id = d.purchase_id
     JOIN products p ON p.id = pu.product_id
@@ -56,7 +58,13 @@ router.get('/disputes', requireAdmin, (req, res) => {
     ORDER BY d.created_at ASC
   `).all();
 
+  const creatorBalances = new Map();
   for (const d of disputes) {
+    d.order_funds_held_minor = netOf(d.amount_minor).net_minor;
+    if (!creatorBalances.has(d.creator_id)) creatorBalances.set(d.creator_id, balancesFor(d.creator_id));
+    const productHold = creatorBalances.get(d.creator_id).balances_by_currency[d.currency]?.product_holds
+      .find(hold => hold.product_id === d.product_id);
+    d.product_funds_held_minor = productHold?.amount_minor || 0;
     d.delivery = db.prepare('SELECT message, external_url, storage_path FROM service_deliveries WHERE purchase_id = ? ORDER BY id DESC LIMIT 1').get(d.purchase_id) || null;
     d.timeline = [
       ...db.prepare('SELECT id, author_role, body, created_at FROM dispute_messages WHERE dispute_id = ?').all(d.dispute_id)
@@ -100,9 +108,10 @@ router.post('/disputes/:id/resolve', requireAdmin, (req, res) => {
 // context to show — only reason/subject/reporter_email are guaranteed.
 router.get('/reports', requireAdmin, (req, res) => {
   const reports = db.prepare(`
-    SELECT rp.id AS report_id, rp.subject, rp.reason, rp.status AS report_status, rp.reporter_role, rp.created_at AS reported_at,
+        SELECT rp.id AS report_id, rp.subject, rp.reason, rp.serious_claim, rp.status AS report_status, rp.reporter_role, rp.created_at AS reported_at,
            pu.id AS purchase_id, pu.amount_minor, pu.currency, pu.created_at AS purchased_at,
-           p.title AS product_title, p.slug AS product_slug,
+           p.id AS product_id, p.title AS product_title, p.slug AS product_slug, p.currency AS product_currency, c.id AS creator_id,
+           (SELECT COUNT(*) FROM service_disputes rd JOIN purchases rp ON rp.id = rd.purchase_id WHERE rp.product_id = p.id AND rd.status = 'open') AS open_product_disputes,
            buyer.name AS buyer_name, buyer.email AS buyer_email,
            c.name AS seller_name, c.handle AS seller_handle, cu.email AS seller_email,
            COALESCE(rp.reporter_email, reporter.email) AS reporter_email
@@ -117,13 +126,23 @@ router.get('/reports', requireAdmin, (req, res) => {
     ORDER BY rp.created_at ASC
   `).all();
 
-  res.json(reports);
+  const creatorBalances = new Map();
+  res.json(reports.map(report => {
+    if (!report.serious_claim || !report.product_id || !report.creator_id) {
+      return { ...report, held_funds_minor: 0 };
+    }
+    if (!creatorBalances.has(report.creator_id)) {
+      creatorBalances.set(report.creator_id, balancesFor(report.creator_id));
+    }
+    const hold = creatorBalances.get(report.creator_id).balances_by_currency[report.product_currency]?.product_holds
+      .find(item => item.product_id === report.product_id);
+    return { ...report, held_funds_minor: hold?.amount_minor || 0 };
+  }));
 });
 
-// POST /api/admin/reports/:id/resolve — { note }. This queue doesn't hold
-// or move any money (unlike /disputes, which sits on top of the escrow
-// system) — resolving just records that a human looked at it and closes
-// it out of the open queue.
+// POST /api/admin/reports/:id/resolve — { note }. Resolving a serious
+// product report also releases its product-specific reserve because the
+// wallet only holds proceeds while that report remains open.
 router.post('/reports/:id/resolve', requireAdmin, (req, res) => {
   const note = (req.body.note || '').trim();
   const result = db.prepare(`
@@ -273,13 +292,25 @@ router.get('/payouts', requireAdmin, (req, res) => {
   sweepAutoReleases();
 
   const creators = db.prepare('SELECT id, name, handle, email, payout_ecocash_number FROM creators').all();
-  const owed = creators
-    .map(c => ({ ...c, ...balancesFor(c.id) }))
+  const creatorBalances = creators.map(c => ({ ...c, ...balancesFor(c.id) }));
+  const owed = creatorBalances.flatMap(creator => Object.values(creator.balances_by_currency)
+    .map(balance => ({ ...creator, ...balance })))
     .filter(c => c.available_minor > 0)
     .sort((a, b) => b.available_minor - a.available_minor);
+  const totalsByCurrency = (key) => creatorBalances.reduce((totals, creator) => {
+    for (const [currency, balance] of Object.entries(creator.balances_by_currency)) {
+      totals[currency] = (totals[currency] || 0) + balance[key];
+    }
+    return totals;
+  }, {});
+  const totalDueByCurrency = {};
+  for (const creator of owed) totalDueByCurrency[creator.currency] = (totalDueByCurrency[creator.currency] || 0) + creator.available_minor;
 
   res.json({
-    total_due_minor: owed.reduce((sum, c) => sum + c.available_minor, 0),
+    total_due_by_currency: totalDueByCurrency,
+    total_due_minor: totalDueByCurrency.USD || 0,
+    total_order_escrow_by_currency: totalsByCurrency('escrowed_minor'),
+    total_product_hold_by_currency: totalsByCurrency('product_hold_minor'),
     ready: owed.filter(c => c.payout_ecocash_number),
     blocked: owed.filter(c => !c.payout_ecocash_number)
   });
@@ -295,17 +326,60 @@ router.post('/payouts/:creatorId/mark-paid', requireAdmin, (req, res) => {
   if (!creator) return res.status(404).json({ error: 'Creator not found.' });
 
   const amountMinor = Number(req.body?.amount_minor);
+  const currency = req.body?.currency || 'USD';
+  if (!['USD', 'ZWG'].includes(currency)) return res.status(400).json({ error: 'currency must be USD or ZWG.' });
   if (!Number.isInteger(amountMinor) || amountMinor <= 0) {
     return res.status(400).json({ error: 'amount_minor must be a positive integer.' });
   }
 
-  const { available_minor: availableMinor } = balancesFor(creator.id);
-  if (amountMinor > availableMinor) {
-    return res.status(400).json({ error: `That's more than this creator's available balance (${availableMinor} minor units).` });
-  }
+  try {
+    db.transaction(() => {
+      const availableMinor = balancesFor(creator.id).balances_by_currency[currency]?.available_minor || 0;
+      if (amountMinor > availableMinor) {
+        throw new Error(`That's more than this creator's ${currency} available balance (${availableMinor} minor units).`);
+      }
 
-  db.prepare('INSERT INTO payouts (creator_id, amount_minor, note) VALUES (?, ?, ?)')
-    .run(creator.id, amountMinor, (req.body?.note || '').trim() || null);
+      const paidRows = db.prepare(`
+        SELECT pu.id, pu.amount_minor, pu.currency, pu.created_at, pu.fulfillment_status,
+               p.id AS product_id
+        FROM purchases pu JOIN products p ON p.id = pu.product_id
+        WHERE p.creator_id = ? AND pu.payment_status = 'paid'
+      `).all(creator.id);
+      const remainingByPurchase = remainingNetByPurchaseFor(creator.id, paidRows);
+      const eligible = db.prepare(`
+        SELECT pu.id, pu.amount_minor, pu.currency, pu.created_at, pu.fulfillment_status,
+               p.id AS product_id
+        FROM purchases pu JOIN products p ON p.id = pu.product_id
+        WHERE p.creator_id = ? AND pu.payment_status = 'paid' AND pu.currency = ?
+          AND (pu.fulfillment_status IS NULL OR pu.fulfillment_status = 'released')
+          AND NOT EXISTS (
+            SELECT 1 FROM reports r WHERE r.product_id = p.id AND r.status = 'open' AND r.serious_claim = 1
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM service_disputes d JOIN purchases dp ON dp.id = d.purchase_id
+            WHERE dp.product_id = p.id AND d.status = 'open' AND d.serious_claim = 1
+          )
+        ORDER BY pu.created_at, pu.id
+      `).all(creator.id, currency);
+
+      let remainingToAllocate = amountMinor;
+      const allocations = [];
+      for (const purchase of eligible) {
+        const amount = Math.min(remainingByPurchase.get(purchase.id) || 0, remainingToAllocate);
+        if (amount > 0) allocations.push({ purchase_id: purchase.id, amount_minor: amount });
+        remainingToAllocate -= amount;
+        if (!remainingToAllocate) break;
+      }
+      if (remainingToAllocate > 0) throw new Error('Could not allocate this payout to eligible product sales. Refresh the payout list and try again.');
+
+      const result = db.prepare('INSERT INTO payouts (creator_id, amount_minor, note, currency) VALUES (?, ?, ?, ?)')
+        .run(creator.id, amountMinor, (req.body?.note || '').trim() || null, currency);
+      const insertAllocation = db.prepare('INSERT INTO payout_allocations (payout_id, purchase_id, amount_minor) VALUES (?, ?, ?)');
+      for (const allocation of allocations) insertAllocation.run(result.lastInsertRowid, allocation.purchase_id, allocation.amount_minor);
+    })();
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
 
   res.status(201).json({ ok: true, ...balancesFor(creator.id) });
 });
@@ -314,7 +388,7 @@ router.post('/payouts/:creatorId/mark-paid', requireAdmin, (req, res) => {
 // recent first, for "did we actually pay X last week" questions.
 router.get('/payouts/history', requireAdmin, (req, res) => {
   const history = db.prepare(`
-    SELECT po.id, po.amount_minor, po.note, po.paid_at, c.id AS creator_id, c.name AS creator_name, c.handle AS creator_handle
+    SELECT po.id, po.amount_minor, po.currency, po.note, po.paid_at, c.id AS creator_id, c.name AS creator_name, c.handle AS creator_handle
     FROM payouts po JOIN creators c ON c.id = po.creator_id
     ORDER BY po.paid_at DESC
     LIMIT 100

@@ -49,11 +49,14 @@ export default function Terms() {
         </Section>
 
         <Section icon={FiShieldOff} title="Buyer protection">
-          Every purchase, digital or service, carries a 5-day window from delivery to report a problem
-          for a refund, reviewed by the SCORPIO team. Money isn't released to the seller until that
-          window passes without a report, or the buyer actively confirms they're satisfied. This holds
-          for downloads and license keys too, not only services, getting the file doesn't start the
-          seller's clock any earlier.
+          Every paid order has a 5-day protection window. For downloads, courses, and license keys it
+          starts when the purchase first becomes available; for services it starts when the seller marks
+          the work delivered. Open a case within those 5 days to keep that order's unpaid proceeds held
+          while SCORPIO reviews it. After the window, the order normally releases to the seller. A serious
+          allegation that a listing is stolen, illegal, counterfeit, or fundamentally fake or misleading
+          can also reserve that product's remaining unpaid proceeds while it is reviewed. Funds from the
+          seller's unrelated products are not included. An admin records the decision to release or mark
+          an order refunded; any EcoCash refund is processed manually outside the platform.
         </Section>
 
         <Section icon={FiUser} title="Your account">
@@ -100,8 +103,18 @@ export default function Terms() {
         </Section>
 
         <Section icon={FiCalendar} title="When creators get paid">
-          Once an order clears its 5-day buyer-protection window (above), it's added to your available
-          balance and paid out to your EcoCash number on file every Friday.
+          Once an order clears its 5-day buyer-protection window (above), its proceeds are added to your
+          available balance and paid out to your EcoCash number on file every Friday. Open disputes and
+          serious product reviews keep the affected unpaid proceeds out of the available balance until
+          an admin resolves the case.
+        </Section>
+
+        <Section icon={FiDatabase} title="Lifetime purchase access">
+          A valid paid purchase gives you ongoing access to its files, license keys, and published serial
+          issues from your account. Download links can be refreshed and do not expire or have a download
+          cap. Access is revoked if the order is refunded, or if the content must be removed for a legal
+          or safety reason. If an order is refunded after a buyer has downloaded a copy, SCORPIO cannot
+          remotely remove it from that buyer's device.
         </Section>
 
         <Section icon={FiUserCheck} title="What creators are responsible for">

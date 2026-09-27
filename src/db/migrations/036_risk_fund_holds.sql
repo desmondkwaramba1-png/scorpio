@@ -1,0 +1,2 @@
+ALTER TABLE reports ADD COLUMN serious_claim INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE service_disputes ADD COLUMN serious_claim INTEGER NOT NULL DEFAULT 0;

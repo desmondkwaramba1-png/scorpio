@@ -1,10 +1,11 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Nav from './components/Nav.jsx';
 import Footer from './components/Footer.jsx';
 import SplashScreen from './components/SplashScreen.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
+import OfflineScreen from './components/OfflineScreen.jsx';
 import Marketplace from './pages/Marketplace.jsx';
 
 // Route-based code splitting, on a slow connection, shipping the entire
@@ -57,6 +58,40 @@ function RouteFallback() {
 }
 
 export default function App() {
+  const [connectionStatus, setConnectionStatus] = useState(() => navigator.onLine ? null : 'offline');
+  const [checkingConnection, setCheckingConnection] = useState(false);
+
+  useEffect(() => {
+    const handleOffline = () => setConnectionStatus('offline');
+    const handleOnline = () => setConnectionStatus(null);
+    const handleConnectionError = () => setConnectionStatus(navigator.onLine ? 'unreachable' : 'offline');
+    const handleConnectionRestored = () => setConnectionStatus(null);
+
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('scorpio:connection-error', handleConnectionError);
+    window.addEventListener('scorpio:connection-restored', handleConnectionRestored);
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('scorpio:connection-error', handleConnectionError);
+      window.removeEventListener('scorpio:connection-restored', handleConnectionRestored);
+    };
+  }, []);
+
+  async function retryConnection() {
+    setCheckingConnection(true);
+    try {
+      const response = await fetch('/api/health', { cache: 'no-store' });
+      if (!response.ok) throw new Error('API is unavailable');
+      setConnectionStatus(null);
+    } catch {
+      setConnectionStatus(navigator.onLine ? 'unreachable' : 'offline');
+    } finally {
+      setCheckingConnection(false);
+    }
+  }
+
   return (
     <>
       <SplashScreen />
@@ -125,6 +160,12 @@ export default function App() {
       </ErrorBoundary>
       </main>
       <Footer />
+      {connectionStatus && <OfflineScreen
+        status={connectionStatus}
+        checking={checkingConnection}
+        onRetry={retryConnection}
+        onContinue={() => setConnectionStatus(null)}
+      />}
     </>
   );
 }

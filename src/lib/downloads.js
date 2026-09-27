@@ -1,8 +1,7 @@
 const db = require('../db/schema');
 const { generateToken } = require('./tokens');
 
-const TTL_DAYS = 7;
-const MAX_DOWNLOADS = 20;
+const LIFETIME_EXPIRY = '9999-12-31T23:59:59.999Z';
 
 // One product_files row per product for now (the primary deliverable —
 // serial-issue-level delivery is a separate, not-yet-built flow).
@@ -32,10 +31,9 @@ function isAudioFilename(name) {
 
 function createDownloadToken(purchaseId) {
   const token = generateToken();
-  const expiresAt = new Date(Date.now() + TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
   db.prepare(
     'INSERT INTO download_tokens (purchase_id, token, expires_at, max_downloads) VALUES (?, ?, ?, ?)'
-  ).run(purchaseId, token, expiresAt, MAX_DOWNLOADS);
+  ).run(purchaseId, token, LIFETIME_EXPIRY, null);
   return token;
 }
 
@@ -49,5 +47,5 @@ function getActiveTokenForPurchase(purchaseId) {
 
 module.exports = {
   createDownloadToken, getActiveTokenForPurchase, productHasFile, getProductFile, isVideoFilename, isAudioFilename,
-  TTL_DAYS, MAX_DOWNLOADS
+  LIFETIME_EXPIRY
 };

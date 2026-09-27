@@ -30,13 +30,19 @@ function DisputeCard({ dispute, onResolve }) {
           <p className="muted" style={{ fontSize: '.85rem' }}>
             {dispute.buyer_name || dispute.buyer_email} bought from {dispute.seller_name} ({dispute.seller_handle}) &middot; {formatMoney(dispute.amount_minor, dispute.currency)}
           </p>
+          <p className="dispute-hold-summary">
+            Order proceeds held: <strong>{formatMoney(dispute.order_funds_held_minor || 0, dispute.currency)}</strong>
+            {dispute.product_funds_held_minor > 0 && <> &middot; Product reserve: <strong>{formatMoney(dispute.product_funds_held_minor, dispute.currency)}</strong></>}
+          </p>
+          {dispute.open_product_disputes > 1 && <p className="dispute-repeat-warning">{dispute.open_product_disputes} open disputes relate to this product.</p>}
         </div>
         <span className="muted" style={{ fontSize: '.8rem' }}>Disputed {dispute.disputed_at}</span>
       </div>
 
       <div className="card card--pad" style={{ background: 'var(--field-bg)', marginBottom: 10 }}>
-        <p style={{ fontSize: '.82rem', fontWeight: 600, marginBottom: 4 }}>Buyer's report</p>
+        <p style={{ fontSize: '.82rem', fontWeight: 600, marginBottom: 4 }}>{dispute.opened_by_role === 'seller' ? "Seller's report" : "Buyer's report"}</p>
         <p style={{ fontSize: '.9rem', lineHeight: 1.5 }}>{dispute.reason}</p>
+        {dispute.serious_claim === 1 && <span className="badge badge--red" style={{ display: 'inline-flex', marginTop: 8 }}>Serious product claim</span>}
       </div>
 
       {dispute.delivery ? (

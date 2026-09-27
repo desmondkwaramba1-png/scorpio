@@ -54,7 +54,13 @@ const DashboardBlogEditor = lazy(() => import('./pages/dashboard/BlogEditor.jsx'
 const DashboardSettings = lazy(() => import('./pages/dashboard/Settings.jsx'));
 
 function RouteFallback() {
-  return <div className="wrap" style={{ padding: '80px 20px' }}><p style={{ color: 'var(--muted)' }}>Loading...</p></div>;
+  return (
+    <div className="route-loading" role="status" aria-live="polite">
+      <div className="route-loading__mark" aria-hidden="true"><span /><span /><span /></div>
+      <strong>Opening this page</strong>
+      <p>Just a moment while we get it ready.</p>
+    </div>
+  );
 }
 
 export default function App() {

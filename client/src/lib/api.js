@@ -2,6 +2,31 @@ const DEFAULT_TIMEOUT_MS = 15000;
 // Only a few retries, spaced out — this is riding out a bad connection for
 // a few seconds, not masking a server that's actually down.
 const RETRY_DELAYS_MS = [500, 1500, 3000];
+let csrfTokenPromise = null;
+
+function invalidateCsrfToken() {
+  csrfTokenPromise = null;
+}
+
+function getCsrfToken() {
+  if (!csrfTokenPromise) {
+    csrfTokenPromise = fetchWithTimeout('/api/csrf-token', {
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store'
+    }, DEFAULT_TIMEOUT_MS)
+      .then(async response => {
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data?.csrfToken) throw new Error(data?.error || 'Could not prepare this request.');
+        return data.csrfToken;
+      })
+      .catch(error => {
+        invalidateCsrfToken();
+        throw error;
+      });
+  }
+  return csrfTokenPromise;
+}
 
 function notifyConnectionError() {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('scorpio:connection-error'));
@@ -37,6 +62,7 @@ async function fetchWithTimeout(path, options, timeoutMs) {
 
 async function request(path, { method = 'GET', body, timeoutMs = DEFAULT_TIMEOUT_MS, headers } = {}) {
   const isForm = body instanceof FormData;
+  const mutating = !['GET', 'HEAD', 'OPTIONS'].includes(method);
   const options = {
     method,
     credentials: 'include',
@@ -45,9 +71,11 @@ async function request(path, { method = 'GET', body, timeoutMs = DEFAULT_TIMEOUT
     // sending a plain object body still gets Content-Type: application/json
     // for free, and every existing call site (which never passes headers)
     // is completely unaffected by this.
-    headers: isForm ? headers : { ...(headers), 'Content-Type': 'application/json' },
+    headers: isForm ? { ...(headers) } : { ...(headers), 'Content-Type': 'application/json' },
     body: isForm ? body : body !== undefined ? JSON.stringify(body) : undefined
   };
+
+  if (mutating) options.headers['X-CSRF-Token'] = await getCsrfToken();
 
   // Only GET is safe to silently retry. A dropped POST/PATCH/DELETE might
   // already have succeeded server-side before the response made it back —
@@ -55,9 +83,12 @@ async function request(path, { method = 'GET', body, timeoutMs = DEFAULT_TIMEOUT
   // a second file uploaded), not just a harmless repeated read. A flaky
   // connection is exactly the case this needs to survive rather than fail
   // fast on, but only where retrying is actually safe.
-  const maxAttempts = method === 'GET' ? RETRY_DELAYS_MS.length + 1 : 1;
+  const maxNetworkAttempts = method === 'GET' ? RETRY_DELAYS_MS.length + 1 : 1;
+  let networkAttempt = 0;
+  let csrfRetried = false;
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+  while (true) {
+    networkAttempt++;
     let res;
     try {
       res = await fetchWithTimeout(path, options, timeoutMs);
@@ -67,10 +98,19 @@ async function request(path, { method = 'GET', body, timeoutMs = DEFAULT_TIMEOUT
       // the server DID respond with (handled below, outside this catch)
       // is never retried — retrying won't change a wrong password or a
       // sold-out product.
-      if (attempt < maxAttempts - 1) { await sleep(RETRY_DELAYS_MS[attempt]); continue; }
+      if (method === 'GET' && networkAttempt < maxNetworkAttempts) {
+        await sleep(RETRY_DELAYS_MS[networkAttempt - 1]);
+        continue;
+      }
       throw connectionError();
     }
     const data = await res.json().catch(() => null);
+    if (mutating && res.status === 403 && data?.error === 'That request expired. Refresh the page and try again.' && !csrfRetried) {
+      csrfRetried = true;
+      invalidateCsrfToken();
+      options.headers['X-CSRF-Token'] = await getCsrfToken();
+      continue;
+    }
     if (!res.ok) throw new Error(data?.error || 'Something went wrong.');
     notifyConnectionRestored();
     return data;
@@ -130,6 +170,11 @@ function uploadWithProgress(path, method, formData, onProgress, timeoutMs = 1200
     };
     xhr.onerror = () => reject(connectionError());
     xhr.ontimeout = () => reject(new Error("That's taking too long. Check your connection and try again."));
-    xhr.send(formData);
+    getCsrfToken()
+      .then(token => {
+        xhr.setRequestHeader('X-CSRF-Token', token);
+        xhr.send(formData);
+      })
+      .catch(reject);
   });
 }

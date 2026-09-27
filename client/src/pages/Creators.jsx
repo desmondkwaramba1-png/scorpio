@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiUsers, FiPackage, FiArrowUpRight, FiCheck, FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
+import { FiUsers, FiPackage, FiArrowUpRight, FiCheck, FiStar, FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
 
 // No text Seal badge here on purpose, at this card's width there's no
 // room for "Verified" without shoving the name itself into truncation
@@ -17,16 +17,19 @@ function CreatorCard({ creator }) {
       >
         {!creator.avatar_path && creator.name.charAt(0).toUpperCase()}
       </div>
-      <div className="creator-card__name">
-        <span>{creator.name}</span>
+      <div className="creator-card__info">
+        <div className="creator-card__name">
+          <span>{creator.name}</span>
+          {creator.verified && <FiCheck className="creator-card__verified-icon" size={13} aria-label="Verified creator" />}
+        </div>
+        <p className="creator-card__handle">@{creator.handle}</p>
+        <div className="creator-card__stats">
+          <span><FiPackage size={12} /> {creator.product_count} product{creator.product_count === 1 ? '' : 's'}</span>
+          {creator.avg_rating && <span><FiStar size={12} /> {creator.avg_rating} <small>({creator.review_count})</small></span>}
+        </div>
       </div>
-      <p className="creator-card__handle">@{creator.handle}</p>
-      <p className="creator-card__count">
-        <FiPackage size={11} /> {creator.product_count} product{creator.product_count === 1 ? '' : 's'}
-      </p>
       <span className="creator-card__visit">
-        {creator.verified && <span className="creator-card__verified"><FiCheck size={11} /> Verified</span>}
-        <span>View storefront <FiArrowUpRight size={14} /></span>
+        <span>View <FiArrowUpRight size={14} /></span>
       </span>
     </Link>
   );

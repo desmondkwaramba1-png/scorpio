@@ -599,28 +599,27 @@ img{max-width:100%;display:block;}
 }
 
 /* ---- discovery page ---- */
-.discover-page{padding-top:40px;padding-bottom:80px;}
-.discover-heading{display:flex;align-items:flex-start;gap:14px;margin-bottom:28px;}
-.discover-heading__icon{display:flex;align-items:center;justify-content:center;flex:0 0 46px;height:46px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--green-glow);box-shadow:var(--shadow-1);}
-.discover-heading .section__eyebrow{margin:0 0 4px;font-size:.68rem;}
-.discover-heading h1{font-size:1.8rem;line-height:1.15;margin-bottom:6px;}
-.discover-heading__intro{max-width:58ch;color:var(--muted);font-size:.9rem;}
-.discover-toolbar{padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:var(--shadow-1);margin-bottom:24px;}
-.discover-filters{display:flex;gap:10px;margin-bottom:12px;}
-.discover-search{flex:1 1 220px;}
-.discover-sort{min-width:180px;}
-.discover-toolbar__bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;}
-.discover-toolbar .type-pills{margin:0;}
-.discover-count{flex-shrink:0;color:var(--muted);font-size:.78rem;font-weight:700;}
+.discover-page{padding-top:32px;padding-bottom:72px;}
+.discover-heading{margin-bottom:18px;}
+.discover-heading h1{font-size:1.75rem;line-height:1.2;margin-bottom:4px;}
+.discover-heading__intro{max-width:58ch;color:var(--muted);font-size:.88rem;}
+.discover-toolbar{padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);margin-bottom:24px;}
+.discover-filters{display:flex;align-items:center;gap:10px;margin:0;}
+.discover-search{flex:1 1 260px;min-width:0;}
+.discover-toolbar__selects{display:flex;gap:8px;}
+.discover-sort{min-width:160px;}
+.discover-toolbar__categories{margin-top:12px;padding-top:11px;border-top:1px solid var(--line);}
+.discover-toolbar__categories .category-chips{margin:0;padding:0;}
+.discover-count{margin-top:12px;padding-top:10px;border-top:1px solid var(--line);color:var(--muted);font-size:.76rem;font-weight:700;}
 @media (max-width:560px){
-  .discover-page{padding-top:28px;padding-bottom:56px;}
-  .discover-heading{gap:11px;margin-bottom:22px;}
-  .discover-heading__icon{flex-basis:40px;height:40px;}
-  .discover-heading h1{font-size:1.45rem;}
+  .discover-page{padding-top:24px;padding-bottom:52px;}
+  .discover-heading{margin-bottom:14px;}
+  .discover-heading h1{font-size:1.5rem;}
   .discover-heading__intro{font-size:.82rem;}
-  .discover-toolbar{padding:12px;margin-bottom:20px;}
-  .discover-filters{flex-direction:column;}
-  .discover-sort{width:100%;min-height:42px;}
+  .discover-toolbar{padding:11px;margin-bottom:18px;}
+  .discover-filters{align-items:stretch;flex-direction:column;}
+  .discover-toolbar__selects{display:grid;grid-template-columns:1fr 1fr;}
+  .discover-sort{min-width:0;width:100%;min-height:42px;padding-inline:8px;font-size:.82rem;}
 }
 
 /* ---- homepage: why-trust-us band ---- */

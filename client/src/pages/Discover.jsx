@@ -66,35 +66,11 @@ export default function Discover() {
   return (
     <div className="discover-page wrap">
       <header className="discover-heading">
-        <div className="discover-heading__icon"><FiCompass size={20} /></div>
-        <div>
-          <p className="section__eyebrow mono">THE SCORPIO MARKETPLACE</p>
-          <h1>Discover something useful.</h1>
-          <p className="discover-heading__intro">
-            {EBOOKS_ONLY ? 'Ebooks, guides, templates, and courses from people who actually know the subject.' : 'Products from creators across Zimbabwe.'}
-          </p>
-        </div>
+        <h1>Discover</h1>
+        <p className="discover-heading__intro">
+          {EBOOKS_ONLY ? 'Ebooks, guides, templates, and courses from people who actually know the subject.' : 'Products from creators across Zimbabwe.'}
+        </p>
       </header>
-
-      {ACTIVE_CATEGORIES.length > 1 && (
-        <div className="category-chips">
-          <button
-            onClick={() => updateParam('category', '')}
-            className={`category-chip${category === '' ? ' category-chip--active' : ''}`}
-          >
-            All
-          </button>
-          {ACTIVE_CATEGORIES.map(c => (
-            <button
-              key={c.value}
-              onClick={() => updateParam('category', c.value)}
-              className={`category-chip${category === c.value ? ' category-chip--active' : ''}`}
-            >
-              <c.icon size={13} /> {c.label}
-            </button>
-          ))}
-        </div>
-      )}
 
       <section className="discover-toolbar" aria-label="Filter products">
         <div className="discover-filters">
@@ -106,26 +82,40 @@ export default function Discover() {
               aria-label="Search products"
             />
           </label>
-          <select value={sort} onChange={e => updateParam('sort', e.target.value)} className="discover-sort" aria-label="Sort by">
-            <option value="">Newest first</option>
-            <option value="popular">Most popular</option>
-            <option value="bestselling">Bestselling</option>
-            <option value="price_asc">Price: low to high</option>
-            <option value="price_desc">Price: high to low</option>
-          </select>
+          <div className="discover-toolbar__selects">
+            <select value={sort} onChange={e => updateParam('sort', e.target.value)} className="discover-sort" aria-label="Sort by">
+              <option value="">Newest first</option>
+              <option value="popular">Most popular</option>
+              <option value="bestselling">Bestselling</option>
+              <option value="price_asc">Price: low to high</option>
+              <option value="price_desc">Price: high to low</option>
+            </select>
+            <select value={type} onChange={e => updateParam('type', e.target.value)} className="discover-sort" aria-label="Product format">
+              {TYPES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+          </div>
         </div>
 
-        <div className="discover-toolbar__bottom">
-          <div className="type-pills" aria-label="Product format">
-            {TYPES.map(t => (
-              <button key={t.value} onClick={() => updateParam('type', t.value)}
-                className={`type-pill${type === t.value ? ' type-pill--active' : ''}`}>
-                {t.label}
-              </button>
-            ))}
+        {ACTIVE_CATEGORIES.length > 1 && (
+          <div className="discover-toolbar__categories">
+            <div className="category-chips" aria-label="Product category">
+              <button
+                onClick={() => updateParam('category', '')}
+                className={`category-chip${category === '' ? ' category-chip--active' : ''}`}
+              >All</button>
+              {ACTIVE_CATEGORIES.map(item => (
+                <button
+                  key={item.value}
+                  onClick={() => updateParam('category', item.value)}
+                  className={`category-chip${category === item.value ? ' category-chip--active' : ''}`}
+                >
+                  <item.icon size={13} /> {item.label}
+                </button>
+              ))}
+            </div>
           </div>
-          {products && !error && <p className="discover-count">{products.length} {products.length === 1 ? 'product' : 'products'}</p>}
-        </div>
+        )}
+        {products && !error && <p className="discover-count">{products.length} {products.length === 1 ? 'product' : 'products'}</p>}
       </section>
 
       {error && <p className="error-text">{error}</p>}

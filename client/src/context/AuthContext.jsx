@@ -8,7 +8,13 @@ export function AuthProvider({ children }) {
   const [creator, setCreator] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (knownData = null) => {
+    if (knownData?.user) {
+      setUser(knownData.user);
+      setCreator(knownData.creator || null);
+      setLoading(false);
+      return knownData;
+    }
     try {
       const data = await api.get('/api/auth/me');
       setUser(data.user);
@@ -23,7 +29,10 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+    api.warmup().catch(() => {});
+  }, [refresh]);
 
   async function logout() {
     try {

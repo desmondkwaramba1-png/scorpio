@@ -119,6 +119,7 @@ async function request(path, { method = 'GET', body, timeoutMs = DEFAULT_TIMEOUT
 
 export const api = {
   get: (path) => request(path),
+  warmup: () => getCsrfToken(),
   // timeoutMs is optional and only worth overriding for a request that's
   // genuinely expected to take longer than the 15s default — e.g. a
   // checkout POST that waits on Dischub triggering a real EcoCash prompt,

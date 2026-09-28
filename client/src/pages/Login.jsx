@@ -166,7 +166,7 @@ export default function Login() {
     setSubmitting(true);
     try {
       const data = await api.post('/api/auth/login', { identifier: form.identifier, password: form.password });
-      await refresh();
+      await refresh(data);
       afterAuth(data);
     } catch (err) {
       setError(err.message);
@@ -188,7 +188,7 @@ export default function Login() {
         username: form.username, email: form.email, phone: form.phone, password: form.password,
         terms_accepted: form.terms
       });
-      await refresh();
+      await refresh(data);
       afterAuth(data);
     } catch (err) {
       setError(err.message);

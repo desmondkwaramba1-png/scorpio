@@ -49,7 +49,7 @@ export default function Checkout() {
         // markPurchasePaid already ran synchronously server-side (see
         // purchases.js), the download is ready right now. Straight to the
         // library where it's waiting.
-        navigate('/account?got=1');
+        navigate(`/account?got=${data.purchase_id}`);
         return;
       }
       // Non-redirecting flow: an EcoCash prompt was just pushed straight to

@@ -7,7 +7,7 @@ const POLL_INTERVAL_MS = 3000;
 const MAX_POLLS = 20; // ~1 minute of polling before giving up and asking the buyer to check again later
 
 function ItemRow({ item }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!!item.view_url && !item.is_external);
   const [keyCopied, setKeyCopied] = useState(false);
   const price = formatMoney(item.amount_minor, item.currency);
   const productUrl = `/@${item.creator_handle}/${item.product_slug}`;
@@ -160,6 +160,7 @@ export default function PaymentReturn() {
         <FiCheckCircle size={40} color="var(--green)" style={{ marginBottom: 14 }} />
         <h1 style={{ fontSize: '1.4rem', marginBottom: 8 }}>Payment confirmed</h1>
         <p className="muted" style={{ marginBottom: 24 }}>{summary} &middot; {totalPrice}</p>
+        <p className="muted" style={{ marginBottom: 16 }}>Your content is ready below. Read or watch it here, or download a copy.</p>
 
         <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
           {data.items.map(item => <ItemRow key={item.product_slug} item={item} />)}

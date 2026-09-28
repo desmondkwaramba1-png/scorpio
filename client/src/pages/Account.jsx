@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { FiDownload, FiRefreshCw, FiUser, FiPackage, FiCompass, FiPlay, FiX, FiCamera, FiKey, FiCopy, FiCheck, FiShield, FiAlertTriangle, FiExternalLink, FiClock, FiDollarSign, FiRepeat, FiBookOpen } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api';
@@ -355,15 +355,23 @@ function SeriesRow({ purchase, currentUserId, onUpdate }) {
   );
 }
 
-function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId }) {
+function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId, autoOpen = false }) {
   const navigate = useNavigate();
+  const orderRef = useRef(null);
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
   const [resendError, setResendError] = useState(null);
-  const [watching, setWatching] = useState(false);
+  const [watching, setWatching] = useState(autoOpen && !!purchase.view_url && !purchase.is_external);
   const [showReport, setShowReport] = useState(!!purchase.has_open_report);
   const [keyCopied, setKeyCopied] = useState(false);
   const productUrl = `/@${purchase.creator_handle}/${purchase.product_slug}`;
+
+  useEffect(() => {
+    if (!autoOpen) return;
+    if (purchase.view_url && !purchase.is_external) setWatching(true);
+    const frame = requestAnimationFrame(() => orderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+    return () => cancelAnimationFrame(frame);
+  }, [autoOpen, purchase.view_url, purchase.is_external]);
 
   function openPurchase() {
     if (purchase.view_url && purchase.is_external) {
@@ -404,7 +412,7 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId }) {
   }
 
   return (
-    <div className="card card--pad">
+    <div ref={orderRef} className="card card--pad">
       <div
         role="button"
         tabIndex={0}
@@ -529,6 +537,8 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId }) {
 
 export default function Account() {
   const { user, creator, refresh } = useAuth();
+  const [searchParams] = useSearchParams();
+  const acquiredPurchaseId = Number(searchParams.get('got')) || null;
   const [purchases, setPurchases] = useState(null);
   const [error, setError] = useState(null);
   const [subscriptions, setSubscriptions] = useState(null);
@@ -592,9 +602,16 @@ export default function Account() {
     (p.service.expected_by && new Date(p.service.expected_by) < new Date())
   );
   const rest = purchases?.filter(p => !needsAttention.includes(p)) || [];
+  const acquiredPurchase = acquiredPurchaseId ? purchases?.find(p => p.id === acquiredPurchaseId) : null;
 
   return (
     <div className="wrap" style={{ padding: '40px 20px 80px', maxWidth: 760 }}>
+      {acquiredPurchase && (
+        <div className="card card--pad" style={{ marginBottom: 20, borderColor: 'var(--green-glow)' }} role="status">
+          <strong>Your product is ready.</strong>
+          <p className="muted" style={{ marginTop: 4 }}>It is opened below. You can read, watch, or download it from your library.</p>
+        </div>
+      )}
       {avatarError && <p className="error-text" style={{ marginBottom: 12 }}>{avatarError}</p>}
       <div className="card card--pad" style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
         <label htmlFor="avatar-upload" style={{ position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
@@ -663,7 +680,7 @@ export default function Account() {
             A seller delivered and is waiting on your OK, or an order is running past when it was promised.
           </p>
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-            {needsAttention.map(p => <OrderRow key={p.id} purchase={p} onResend={resend} onServiceUpdate={handleServiceUpdate} currentUserId={user?.id} />)}
+            {needsAttention.map(p => <OrderRow key={p.id} purchase={p} onResend={resend} onServiceUpdate={handleServiceUpdate} currentUserId={user?.id} autoOpen={p.id === acquiredPurchaseId} />)}
           </div>
         </div>
       )}
@@ -714,7 +731,7 @@ export default function Account() {
             Everything you've bought stays here: downloads, license keys, and services you're waiting on.
           </p>
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-            {rest.map(p => <OrderRow key={p.id} purchase={p} onResend={resend} onServiceUpdate={handleServiceUpdate} currentUserId={user?.id} />)}
+            {rest.map(p => <OrderRow key={p.id} purchase={p} onResend={resend} onServiceUpdate={handleServiceUpdate} currentUserId={user?.id} autoOpen={p.id === acquiredPurchaseId} />)}
           </div>
         </>
       )}

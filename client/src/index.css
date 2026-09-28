@@ -112,6 +112,7 @@
 :root[data-theme="dark"] .btn--ghost,
 :root[data-theme="dark"] .page-state,
 :root[data-theme="dark"] .card,
+:root[data-theme="dark"] .product-card,
 :root[data-theme="dark"] .feature-card,
 :root[data-theme="dark"] .getting-started__card,
 :root[data-theme="dark"] .category-feature-card,
@@ -121,6 +122,8 @@
   box-shadow:var(--shadow-1);
 }
 :root[data-theme="dark"] .card:hover{box-shadow:var(--shadow-2);}
+:root[data-theme="dark"] .product-card:hover{box-shadow:var(--shadow-2);}
+:root[data-theme="dark"] .product-card__cover--empty{background-image:linear-gradient(135deg,var(--green-tint),var(--gold-tint));}
 :root[data-theme="dark"] .category-feature-card__icon,
 :root[data-theme="dark"] .getting-started__icon{background:var(--green-tint);}
 :root[data-theme="dark"] .page-state p,

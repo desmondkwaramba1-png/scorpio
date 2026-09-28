@@ -75,6 +75,7 @@ export default function DisputeThread({ purchaseId, currentUserId, disputeStatus
           </span>
         </h3>
         <p className="dispute-thread__reason">Reason: {caseReason}</p>
+        <p className="dispute-thread__how"><strong>How this works:</strong> You, the creator, and SCORPIO can read this case. Reply here while it is open; the chat becomes read-only after SCORPIO resolves the dispute.</p>
         <p className="dispute-thread__policy">Keep contact on SCORPIO. Phone numbers, email addresses, and links are blocked. Use attachments only as case evidence.</p>
       </div>
 

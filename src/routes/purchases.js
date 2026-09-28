@@ -7,7 +7,7 @@ const { createOrder, checkOrderStatus, isValidSenderPhone } = require('../servic
 const { toMinor } = require('../lib/money');
 const { isPromoActive, applyDiscount } = require('../lib/promotions');
 const { checkoutLimiter, orderLookupLimiter } = require('../middleware/rateLimit');
-const { requireAuth, requireCreator } = require('../middleware/auth');
+const { requireVerified, requireAuth, requireCreator } = require('../middleware/auth');
 const { createDownloadToken, getActiveTokenForPurchase, productHasFile, getProductFile, isVideoFilename, isAudioFilename } = require('../lib/downloads');
 const { productHasKeys, unclaimedCount, keyForPurchase } = require('../lib/licenseKeys');
 const { sweepAutoReleases, deliveryFor, disputeFor, markDelivered, confirmDelivery, openDispute } = require('../lib/escrow');
@@ -301,7 +301,7 @@ router.post('/:id/resend-download', requireAuth, (req, res) => {
 // post-payment page, nothing. Requiring an account here is what makes the
 // "your purchases are always there" promise actually true, not just a page
 // that happens to work once right after paying.
-router.post('/', checkoutLimiter, requireAuth, async (req, res) => {
+router.post('/', checkoutLimiter, requireVerified, async (req, res) => {
   const { email, name, phone, product_slug, amount } = req.body;
 
   if (!email || !product_slug) {

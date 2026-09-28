@@ -138,6 +138,11 @@ export default function Login() {
   // creator" every single login, and it's also what makes a buyer who
   // later opens a storefront (see Account.jsx) land correctly from then on.
   function afterAuth(data) {
+    if (!data.user?.email_verified_at) {
+      const destination = next || (tab === 'signup' && signupRole === 'creator' ? '/onboarding' : '/');
+      navigate(`/check-email?next=${encodeURIComponent(destination)}`);
+      return;
+    }
     if (next) { navigate(next); return; }
     if (data.creator) { navigate('/dashboard'); return; }
     if (tab === 'signup' && signupRole === 'creator') { navigate('/onboarding'); return; }

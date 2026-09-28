@@ -21,9 +21,16 @@ export function CartProvider({ children }) {
   useEffect(() => { refreshCount(); }, [refreshCount]);
 
   async function addToCart(productSlug) {
-    const data = await api.post('/api/cart', { product_slug: productSlug });
-    setCount(data.cart_count);
-    return data;
+    const previousCount = count;
+    setCount(value => value + 1);
+    try {
+      const data = await api.post('/api/cart', { product_slug: productSlug });
+      setCount(data.cart_count);
+      return data;
+    } catch (error) {
+      setCount(previousCount);
+      throw error;
+    }
   }
 
   async function removeFromCart(productId) {

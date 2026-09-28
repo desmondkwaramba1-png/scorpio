@@ -21,9 +21,17 @@ function requireAuth(req, res, next) {
   next();
 }
 
+function requireVerified(req, res, next) {
+  if (!req.user) return res.status(401).json({ error: 'Log in to continue.' });
+  if (!req.user.email_verified_at) {
+    return res.status(403).json({ error: 'Verify your email before buying or paying.' });
+  }
+  next();
+}
+
 function requireCreator(req, res, next) {
   if (!req.creator) return res.status(403).json({ error: 'Complete your creator profile first.' });
   next();
 }
 
-module.exports = { attachUser, requireAuth, requireCreator, COOKIE_NAME };
+module.exports = { attachUser, requireAuth, requireVerified, requireCreator, COOKIE_NAME };

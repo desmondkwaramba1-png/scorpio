@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { FiMail, FiRefreshCw } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api';
@@ -13,6 +13,7 @@ import AuthShell from '../components/AuthShell.jsx';
 // email in a new tab, click the link there, come back here and click once.
 export default function CheckEmail() {
   const { user, loading, refresh } = useAuth();
+  const [searchParams] = useSearchParams();
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -20,7 +21,7 @@ export default function CheckEmail() {
 
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (user.email_verified_at) return <Navigate to="/dashboard" replace />;
+  if (user.email_verified_at) return <Navigate to={searchParams.get('next') || '/'} replace />;
 
   async function resend() {
     setResending(true);

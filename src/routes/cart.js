@@ -1,7 +1,7 @@
 const express = require('express');
 const { randomBytes } = require('crypto');
 const db = require('../db/schema');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireVerified } = require('../middleware/auth');
 const { isPromoActive, applyDiscount } = require('../lib/promotions');
 const { createOrder, isValidSenderPhone } = require('../services/payment');
 const { checkoutLimiter } = require('../middleware/rateLimit');
@@ -109,7 +109,7 @@ router.delete('/:productId', requireAuth, (req, res) => {
 // already settles to the platform's single Dischub recipient account
 // (see services/payment.js RECIPIENT); a cart spanning multiple sellers
 // costs nothing extra here, it's the same one-recipient charge either way.
-router.post('/checkout', checkoutLimiter, requireAuth, async (req, res) => {
+router.post('/checkout', checkoutLimiter, requireVerified, async (req, res) => {
   const { email, name, phone } = req.body;
   if (!email || !phone) return res.status(400).json({ error: 'email and phone are required.' });
   if (!isValidSenderPhone(phone)) {

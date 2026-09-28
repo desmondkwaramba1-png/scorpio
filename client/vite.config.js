@@ -74,6 +74,20 @@ export default defineConfig({
         // cover the separate NavigationRoute above, which is why the
         // downloads bug existed despite it.)
         runtimeCaching: [
+            {
+              // Always prefer the current deployed app shell on navigation.
+              // The old cache-first navigation fallback made a new deployment
+              // appear only after a manual refresh, because the service worker
+              // served yesterday's index.html before it checked for updates.
+              urlPattern: ({ request }) => request.mode === 'navigate',
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'app-shell',
+                networkTimeoutSeconds: 3,
+                expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 },
+                cacheableResponse: { statuses: [0, 200] }
+              }
+            },
           {
             // Product/creator listings: try the network first (prices and
             // stock need to be real), but don't make someone on a

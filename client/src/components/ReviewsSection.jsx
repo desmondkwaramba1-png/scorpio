@@ -96,7 +96,7 @@ const ReviewsSection = forwardRef(function ReviewsSection({ productSlug }, ref) 
 
   if (!data) return null;
 
-  const showForm = user && (data.eligible_to_review || (data.my_review && editing));
+  const showForm = user && editing;
 
   return (
     <div ref={ref} className="card card--pad" style={{ marginTop: 20 }}>
@@ -152,8 +152,15 @@ const ReviewsSection = forwardRef(function ReviewsSection({ productSlug }, ref) 
         <p className="muted" style={{ fontSize: '.85rem' }}>Only buyers who've completed a purchase can leave a review.</p>
       )}
 
+      {user && data.eligible_to_review && !data.my_review && !editing && (
+        <button type="button" className="btn btn--ghost btn--sm" onClick={() => setEditing(true)}>
+          Leave an optional review
+        </button>
+      )}
+
       {showForm && (
         <form onSubmit={submit} style={{ marginTop: data.my_review ? 14 : 0, display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+          {!data.my_review && <p className="muted" style={{ fontSize: '.82rem' }}>Only if you’ve had a chance to use the product. Your review is optional.</p>}
           <StarInput value={rating} onChange={setRating} />
           <textarea
             value={body} onChange={e => setBody(e.target.value)}

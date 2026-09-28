@@ -88,7 +88,7 @@ function isSoldOut(product) {
 // awaiting_delivery order any time — see POST /:id/dispute), just surfaced
 // so a buyer knows when they're reasonably justified in doing so.
 function serviceStatusFor(purchase) {
-  if (!purchase.fulfillment_status) return null;
+  if (purchase.product_type !== 'service' || !purchase.fulfillment_status) return null;
   const delivery = deliveryFor(purchase.id);
   const dispute = disputeFor(purchase.id);
   let expectedBy = null;
@@ -211,11 +211,17 @@ router.post('/:id/deliver', requireAuth, requireCreator, deliveryUpload.single('
 // auto-release window.
 router.post('/:id/confirm', requireAuth, (req, res) => {
   const purchase = db.prepare(`
-    SELECT pu.* FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
+    SELECT pu.*, p.type AS product_type
+    FROM purchases pu
+    JOIN buyers b ON b.id = pu.buyer_id
+    JOIN products p ON p.id = pu.product_id
     WHERE pu.id = ? AND b.user_id = ?
   `).get(req.params.id, req.user.id);
 
   if (!purchase) return res.status(404).json({ error: 'Order not found.' });
+  if (purchase.product_type !== 'service') {
+    return res.status(409).json({ error: 'Only a delivered service order can be confirmed here.' });
+  }
   if (purchase.fulfillment_status !== 'delivered') {
     return res.status(409).json({ error: 'This order has nothing pending confirmation.' });
   }
@@ -423,7 +429,8 @@ router.post('/', checkoutLimiter, requireVerified, async (req, res) => {
 // one-item case of the same shape, not a separate code path.
 router.get('/status/:orderId', orderLookupLimiter, async (req, res) => {
   const purchases = db.prepare(`
-    SELECT pu.*, p.title AS product_title, p.slug AS product_slug, c.handle AS creator_handle
+        SELECT pu.*, p.title AS product_title, p.slug AS product_slug, p.type AS product_type,
+          c.handle AS creator_handle
     FROM purchases pu
     JOIN products p ON p.id = pu.product_id
     JOIN creators c ON c.id = p.creator_id

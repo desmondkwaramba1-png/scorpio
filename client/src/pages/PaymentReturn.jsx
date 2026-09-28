@@ -44,7 +44,7 @@ function ItemRow({ item }) {
             )}
             {item.download_url && (
               <a href={item.download_url} className="btn btn--gold btn--sm">
-                <FiDownload size={14} /> Download
+                <FiDownload size={14} /> Download now
               </a>
             )}
           </div>

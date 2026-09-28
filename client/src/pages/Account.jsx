@@ -32,6 +32,7 @@ const FULFILLMENT_LABEL = {
 function ServiceStatus({ purchaseId, service: initial, currentUserId, onUpdate }) {
   const [service, setService] = useState(initial);
   const [disputing, setDisputing] = useState(false);
+  const [deliveryChecked, setDeliveryChecked] = useState(false);
   const [reason, setReason] = useState('');
   const [seriousClaim, setSeriousClaim] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -113,12 +114,23 @@ function ServiceStatus({ purchaseId, service: initial, currentUserId, onUpdate }
               </a>
             )}
           </div>
+          {service.fulfillment_status === 'delivered' && (
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 12, color: 'var(--ink-dim)', fontSize: '.82rem', lineHeight: 1.45 }}>
+              <input type="checkbox" checked={deliveryChecked} onChange={e => setDeliveryChecked(e.target.checked)} style={{ marginTop: 2 }} />
+              <span>I’ve opened and checked the seller’s delivery. I’ll only confirm when I’m satisfied with it.</span>
+            </label>
+          )}
         </div>
       )}
 
       {stillWaiting && (
         <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-          {service.fulfillment_status === 'delivered' && (
+          {service.fulfillment_status === 'delivered' && service.delivery && deliveryChecked && (
+            <button onClick={confirm} disabled={submitting} className="btn btn--gold btn--sm">
+              <FiCheck size={13} /> Confirm, all good
+            </button>
+          )}
+          {service.fulfillment_status === 'delivered' && !service.delivery && (
             <button onClick={confirm} disabled={submitting} className="btn btn--gold btn--sm">
               <FiCheck size={13} /> Confirm, all good
             </button>
@@ -461,8 +473,8 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId, autoOpen
           )}
           {purchase.download_url && (
             <>
-              <a href={purchase.download_url} onClick={e => e.stopPropagation()} className="btn btn--ghost btn--sm">
-                <FiDownload size={14} /> Download
+              <a href={purchase.download_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="btn btn--gold btn--sm">
+                <FiDownload size={14} /> Download now
               </a>
               <button onClick={resend} disabled={resending} className="btn btn--ghost btn--sm" title="Resend the link by email">
                 <FiRefreshCw size={14} /> {resent ? 'Sent' : 'Resend'}

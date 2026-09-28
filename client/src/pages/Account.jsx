@@ -414,10 +414,14 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId }) {
             on a narrow phone instead of wrapping, real horizontal overlap
             a stress test at 320px with all three present actually showed. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '100%' }}>
-          {(purchase.is_video || purchase.is_audio) && (
+          {purchase.view_url && purchase.is_external ? (
+            <a href={purchase.view_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="btn btn--gold btn--sm">
+              <FiExternalLink size={14} /> Open
+            </a>
+          ) : purchase.view_url && (
             <button onClick={e => { e.stopPropagation(); setWatching(w => !w); }} className="btn btn--gold btn--sm">
-              {watching ? <FiX size={14} /> : <FiPlay size={14} />}
-              {watching ? 'Close' : purchase.is_video ? 'Watch' : 'Play'}
+              {watching ? <FiX size={14} /> : purchase.is_video || purchase.is_audio ? <FiPlay size={14} /> : <FiBookOpen size={14} />}
+              {watching ? 'Close' : purchase.is_video ? 'Watch' : purchase.is_audio ? 'Play' : 'Read / View'}
             </button>
           )}
           {purchase.download_url && (
@@ -448,6 +452,9 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId }) {
       )}
       {watching && purchase.is_audio && (
         <audio src={purchase.view_url} controls autoPlay style={{ width: '100%', marginTop: 16 }} />
+      )}
+      {watching && purchase.view_url && !purchase.is_video && !purchase.is_audio && !purchase.is_external && (
+        <iframe src={purchase.view_url} title={purchase.product_title} className="library-file-viewer" />
       )}
       {purchase.license_key && (
         <div style={{

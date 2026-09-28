@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { FiCheckCircle, FiXCircle, FiLoader, FiDownload, FiPlay, FiX, FiKey, FiCopy, FiCheck, FiShield } from 'react-icons/fi';
+import { FiCheckCircle, FiXCircle, FiLoader, FiDownload, FiPlay, FiX, FiKey, FiCopy, FiCheck, FiShield, FiBookOpen, FiExternalLink } from 'react-icons/fi';
 import { formatMoney } from '../lib/money';
 
 const POLL_INTERVAL_MS = 3000;
@@ -25,11 +25,21 @@ function ItemRow({ item }) {
           <Link to={productUrl} style={{ fontWeight: 600 }}>{item.product_title}</Link>
           <p className="mono muted" style={{ fontSize: '.85rem' }}>{price}</p>
         </div>
-        {item.download_url ? (
+        {item.download_url || item.view_url ? (
           <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '100%' }}>
-            {(item.is_video || item.is_audio) && (
+            {item.view_url && item.is_external && (
+              <a href={item.view_url} target="_blank" rel="noopener noreferrer" className="btn btn--gold btn--sm">
+                <FiExternalLink size={14} /> Open
+              </a>
+            )}
+            {item.view_url && (item.is_video || item.is_audio) && (
               <button className="btn btn--ghost btn--sm" onClick={() => setOpen(o => !o)}>
                 {open ? <><FiX size={14} /> Close</> : <><FiPlay size={14} /> {item.is_video ? 'Watch' : 'Play'}</>}
+              </button>
+            )}
+            {item.view_url && !item.is_video && !item.is_audio && !item.is_external && (
+              <button className="btn btn--ghost btn--sm" onClick={() => setOpen(o => !o)}>
+                {open ? <><FiX size={14} /> Close</> : <><FiBookOpen size={14} /> Read / View</>}
               </button>
             )}
             <a href={item.download_url} className="btn btn--gold btn--sm">
@@ -78,6 +88,9 @@ function ItemRow({ item }) {
       )}
       {open && item.view_url && item.is_audio && (
         <audio src={item.view_url} controls autoPlay style={{ width: '100%', marginTop: 14 }} />
+      )}
+      {open && item.view_url && !item.is_video && !item.is_audio && !item.is_external && (
+        <iframe src={item.view_url} title={item.product_title} className="library-file-viewer" />
       )}
     </div>
   );

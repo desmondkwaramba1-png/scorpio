@@ -42,21 +42,32 @@ const deliveryUpload = multer({
 
 function fileAccessFor(purchase) {
   if (purchase.payment_status !== 'paid' || purchase.fulfillment_status === 'refunded') {
-    return { download_url: null, view_url: null, is_video: false, is_audio: false, license_key: null };
+    return { download_url: null, view_url: null, is_video: false, is_audio: false, is_external: false, license_key: null };
   }
   const file = getProductFile(purchase.product_id);
   const keyRow = keyForPurchase(purchase.id);
 
   let downloadUrl = null, viewUrl = null, isVideo = false, isAudio = false;
   if (file) {
-    const token = getActiveTokenForPurchase(purchase.id) || { token: createDownloadToken(purchase.id) };
-    downloadUrl = `/api/downloads/${token.token}`;
-    viewUrl = file.kind === 'external_link' ? file.external_url : `/api/downloads/${token.token}/view`;
-    isVideo = file.kind === 'upload' && isVideoFilename(file.original_filename);
-    isAudio = file.kind === 'upload' && isAudioFilename(file.original_filename);
+    if (file.kind === 'external_link') {
+      viewUrl = file.external_url;
+    } else {
+      const token = getActiveTokenForPurchase(purchase.id) || { token: createDownloadToken(purchase.id) };
+      downloadUrl = `/api/downloads/${token.token}`;
+      viewUrl = `/api/downloads/${token.token}/view`;
+      isVideo = isVideoFilename(file.original_filename);
+      isAudio = isAudioFilename(file.original_filename);
+    }
   }
 
-  return { download_url: downloadUrl, view_url: viewUrl, is_video: isVideo, is_audio: isAudio, license_key: keyRow ? keyRow.key_value : null };
+  return {
+    download_url: downloadUrl,
+    view_url: viewUrl,
+    is_video: isVideo,
+    is_audio: isAudio,
+    is_external: file?.kind === 'external_link',
+    license_key: keyRow ? keyRow.key_value : null
+  };
 }
 
 // A product is "sold out" if either stock signal says so: an explicit

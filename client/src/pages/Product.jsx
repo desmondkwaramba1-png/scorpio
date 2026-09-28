@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { FiShield, FiCompass, FiShare2, FiCheck, FiEdit2, FiShoppingCart, FiLock, FiZap, FiFileText, FiPlay, FiDownload, FiPackage, FiBookOpen, FiExternalLink, FiKey, FiX } from 'react-icons/fi';
 import Seal from '../components/Seal.jsx';
 import EngagementBar from '../components/EngagementBar.jsx';
@@ -119,6 +119,8 @@ function IssueRow({ iss, focused }) {
 export default function Product() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const fromLibrary = searchParams.get('from') === 'library';
   const { user, creator } = useAuth();
   const { addToCart } = useCart();
   const [product, setProduct] = useState(null);
@@ -129,6 +131,7 @@ export default function Product() {
   const [cartError, setCartError] = useState(null);
   const [focusIssueId, setFocusIssueId] = useState(null);
   const [ownedContentOpen, setOwnedContentOpen] = useState(false);
+  const [ownershipLoading, setOwnershipLoading] = useState(false);
   const [moreFromCreator, setMoreFromCreator] = useState(null);
   const [productReel, setProductReel] = useState(null);
   const commentsRef = useRef(null);
@@ -166,6 +169,7 @@ export default function Product() {
     if (product.already_purchased && product.owned_access) return;
 
     let cancelled = false;
+    setOwnershipLoading(true);
     api.get('/api/purchases/mine').then(purchases => {
       const purchase = purchases.find(item =>
         item.product_id === product.id &&
@@ -186,7 +190,9 @@ export default function Product() {
           license_key: purchase.license_key
         }
       } : current);
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => {
+      if (!cancelled) setOwnershipLoading(false);
+    });
 
     return () => { cancelled = true; };
   }, [user?.id, creator?.id, product?.id, product?.creator_id, product?.type, product?.already_purchased]);
@@ -671,6 +677,16 @@ export default function Product() {
                 <FiEdit2 size={15} /> Edit this listing
               </Link>
             </>
+          ) : !isOwner && fromLibrary ? (
+            <div className="trust-line" role="status" style={{ margin: 0 }}>
+              <FiPackage size={16} />
+              <span>
+                {ownershipLoading
+                  ? 'Checking your library access…'
+                  : 'We could not match this product to an order on this account. Open your library or sign in with the account used at checkout.'}
+              </span>
+              {!ownershipLoading && <Link to="/account" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>Library</Link>}
+            </div>
           ) : (
             <>
               {soldOut ? (

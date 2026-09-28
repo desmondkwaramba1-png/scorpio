@@ -323,7 +323,7 @@ function SubscriptionRow({ subscription, onUpdate, onRenewed }) {
 // automated refund/escrow for a pay-once purchase, same honesty as the
 // rest of this app's money handling).
 function SeriesRow({ purchase, currentUserId, onUpdate }) {
-  const productUrl = `/@${purchase.creator_handle}/${purchase.product_slug}`;
+  const productUrl = `/@${purchase.creator_handle}/${purchase.product_slug}?from=library`;
   return (
     <div className="card card--pad">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>

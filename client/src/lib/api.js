@@ -2,14 +2,17 @@ const DEFAULT_TIMEOUT_MS = 15000;
 // Only a few retries, spaced out — this is riding out a bad connection for
 // a few seconds, not masking a server that's actually down.
 const RETRY_DELAYS_MS = [500, 1500, 3000];
+const CSRF_TOKEN_CACHE_MS = 5 * 60 * 1000;
 let csrfTokenPromise = null;
+let csrfTokenFetchedAt = 0;
 
 function invalidateCsrfToken() {
   csrfTokenPromise = null;
+  csrfTokenFetchedAt = 0;
 }
 
 function getCsrfToken() {
-  if (!csrfTokenPromise) {
+  if (!csrfTokenPromise || Date.now() - csrfTokenFetchedAt >= CSRF_TOKEN_CACHE_MS) {
     csrfTokenPromise = fetchWithTimeout('/api/csrf-token', {
       method: 'GET',
       credentials: 'include',
@@ -18,6 +21,7 @@ function getCsrfToken() {
       .then(async response => {
         const data = await response.json().catch(() => null);
         if (!response.ok || !data?.csrfToken) throw new Error(data?.error || 'Could not prepare this request.');
+        csrfTokenFetchedAt = Date.now();
         return data.csrfToken;
       })
       .catch(error => {

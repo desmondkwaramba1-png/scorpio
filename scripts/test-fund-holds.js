@@ -9,6 +9,7 @@ process.env.DATA_DIR = dataDir;
 const db = require('../src/db/schema');
 const { balancesFor } = require('../src/lib/walletBalances');
 const { createDownloadToken } = require('../src/lib/downloads');
+const { markPurchasePaid } = require('../src/lib/purchaseCompletion');
 
 try {
   const creatorId = db.prepare('INSERT INTO creators (name, email) VALUES (?, ?)')
@@ -69,7 +70,33 @@ try {
   assert.equal(tokenRow.expires_at, '9999-12-31T23:59:59.999Z');
   assert.equal(tokenRow.max_downloads, null);
 
-  console.log('Fund-hold, payout-currency, migration, and lifetime-token checks passed.');
+  const freeProduct = insertProduct.run(creatorId, 'Free PDF', 0, 'USD', 'fund-free-pdf').lastInsertRowid;
+  db.prepare(`
+    INSERT INTO product_files (product_id, kind, storage_path, original_filename)
+    VALUES (?, 'upload', 'product-files/free.pdf', 'free.pdf')
+  `).run(freeProduct);
+  const freePurchaseId = db.prepare(`
+    INSERT INTO purchases (buyer_id, product_id, amount_minor, currency, payment_status)
+    VALUES (?, ?, 0, 'USD', 'pending')
+  `).run(buyerId, freeProduct).lastInsertRowid;
+
+  const completed = markPurchasePaid(freePurchaseId);
+  assert.equal(completed.payment_status, 'paid');
+  assert.equal(completed.fulfillment_status, 'delivered');
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM download_tokens WHERE purchase_id = ?').get(freePurchaseId).n, 1);
+  markPurchasePaid(freePurchaseId);
+  assert.equal(db.prepare('SELECT quantity_sold FROM products WHERE id = ?').get(freeProduct).quantity_sold, 1);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM download_tokens WHERE purchase_id = ?').get(freePurchaseId).n, 1);
+
+  const legacyProduct = insertProduct.run(creatorId, 'Previously fulfilled product', 500, 'USD', 'fund-legacy').lastInsertRowid;
+  const legacyPurchaseId = db.prepare(`
+    INSERT INTO purchases (buyer_id, product_id, amount_minor, currency, payment_status, fulfillment_status)
+    VALUES (?, ?, 500, 'USD', 'pending', 'released')
+  `).run(buyerId, legacyProduct).lastInsertRowid;
+  db.exec(fs.readFileSync(path.join(__dirname, '../src/db/migrations/041_repair_fulfilled_purchase_status.sql'), 'utf8'));
+  assert.equal(db.prepare('SELECT payment_status FROM purchases WHERE id = ?').get(legacyPurchaseId).payment_status, 'paid');
+
+  console.log('Fund-hold, payout-currency, migration, lifetime-token, and free-purchase access checks passed.');
 } finally {
   db.close();
   fs.rmSync(dataDir, { recursive: true, force: true });

@@ -14,11 +14,17 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 // "already paid" here is the actual double-credit protection, not just a
 // nice-to-have: quantity_sold and download tokens must never be created twice.
 function markPurchasePaid(purchaseId) {
-  const purchase = db.prepare('SELECT * FROM purchases WHERE id = ?').get(purchaseId);
-  if (!purchase || purchase.payment_status === 'paid') return purchase;
+  let purchase = db.prepare('SELECT * FROM purchases WHERE id = ?').get(purchaseId);
+  if (!purchase || purchase.payment_status !== 'pending') return purchase;
 
   const { fee_minor, net_minor } = netOf(purchase.amount_minor);
-  db.prepare('UPDATE purchases SET fee_minor = ?, net_minor = ? WHERE id = ?').run(fee_minor, net_minor, purchaseId);
+  const paid = db.prepare(`
+    UPDATE purchases
+    SET payment_status = 'paid', fee_minor = ?, net_minor = ?
+    WHERE id = ? AND payment_status = 'pending'
+  `).run(fee_minor, net_minor, purchaseId);
+  if (paid.changes === 0) return db.prepare('SELECT * FROM purchases WHERE id = ?').get(purchaseId);
+  purchase = db.prepare('SELECT * FROM purchases WHERE id = ?').get(purchaseId);
   const product = db.prepare('SELECT * FROM products WHERE id = ?').get(purchase.product_id);
 
   // A subscription renewal is not a new sale the way every other paid

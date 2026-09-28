@@ -10,6 +10,7 @@ const { createSession, destroySession, TTL_DAYS } = require('../lib/session');
 const { requireAuth, COOKIE_NAME } = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimit');
 const { checkAndUpdateVerification } = require('../lib/verification');
+const { linkGuestPurchases } = require('../lib/linkGuestPurchases');
 const { optimizeImage } = require('../lib/imageProcessing');
 const storage = require('../lib/storage');
 
@@ -108,6 +109,7 @@ router.post('/signup', authLimiter, (req, res) => {
   );
 
   const session = createSession(user.id);
+  if (user.email_verified_at) linkGuestPurchases(user);
   res.cookie(COOKIE_NAME, session.id, cookieOptions());
   res.status(201).json({ user: publicUser(user), creator: null });
 });
@@ -154,6 +156,9 @@ router.post('/verify-email', (req, res) => {
 
   db.prepare("UPDATE users SET email_verified_at = datetime('now') WHERE id = ?").run(row.user_id);
   db.prepare("UPDATE email_verification_tokens SET consumed_at = datetime('now') WHERE id = ?").run(row.id);
+
+  const verifiedUser = db.prepare('SELECT id, email, email_verified_at FROM users WHERE id = ?').get(row.user_id);
+  linkGuestPurchases(verifiedUser);
 
   const creator = db.prepare('SELECT id FROM creators WHERE user_id = ?').get(row.user_id);
   if (creator) checkAndUpdateVerification(creator.id);

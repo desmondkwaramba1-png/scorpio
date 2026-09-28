@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { FiShield, FiCompass, FiShare2, FiCheck, FiEdit2, FiShoppingCart, FiLock, FiZap, FiFileText, FiPlay, FiDownload, FiPackage } from 'react-icons/fi';
+import { FiShield, FiCompass, FiShare2, FiCheck, FiEdit2, FiShoppingCart, FiLock, FiZap, FiFileText, FiPlay, FiDownload, FiPackage, FiBookOpen, FiExternalLink, FiKey, FiX } from 'react-icons/fi';
 import Seal from '../components/Seal.jsx';
 import EngagementBar from '../components/EngagementBar.jsx';
 import CommentsSection from '../components/CommentsSection.jsx';
@@ -128,6 +128,7 @@ export default function Product() {
   const [justAddedFresh, setJustAddedFresh] = useState(false);
   const [cartError, setCartError] = useState(null);
   const [focusIssueId, setFocusIssueId] = useState(null);
+  const [ownedContentOpen, setOwnedContentOpen] = useState(false);
   const [moreFromCreator, setMoreFromCreator] = useState(null);
   const [productReel, setProductReel] = useState(null);
   const commentsRef = useRef(null);
@@ -142,6 +143,7 @@ export default function Product() {
       .then(product => {
         setProduct(product);
         setAddedToCart(!!product.in_cart);
+        setOwnedContentOpen(!!product.already_purchased && !['serial', 'subscription', 'service'].includes(product.type));
         // /api/creators/:handle doesn't repeat creator_handle on each
         // product row (every item in that list is obviously the same
         // creator), CompactProductCard needs it to build a link, so it's
@@ -556,38 +558,77 @@ export default function Product() {
               for those. */}
           {!isOwner && product.already_purchased ? (
             <>
-              <div className="trust-line" style={{ color: 'var(--green-glow)', fontWeight: 600 }}>
-                <FiCheck size={16} />
-                <span>
-                  {['serial', 'subscription'].includes(product.type)
-                    ? 'You already own this.'
-                    : 'You already own this. Find it in your library to download or view it.'}
-                </span>
-              </div>
-              {['serial', 'subscription'].includes(product.type) ? (
-                product.issues && product.issues.length > 0 ? (
-                  <button
-                    type="button"
-                    className="btn btn--gold btn--block"
-                    onClick={() => {
-                      setFocusIssueId(product.issues[0].id);
-                      document.getElementById('issues-section')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                  >
-                    {product.issues[0].is_video || product.issues[0].is_audio
-                      ? <FiPlay size={15} /> : <FiFileText size={15} />}
-                    {product.issues[0].is_video ? 'Watch' : product.issues[0].is_audio ? 'Listen to' : 'Read'}
-                    {' '}"Issue {product.issues[0].issue_number}: {product.issues[0].title}"
-                  </button>
-                ) : (
-                  <p className="muted" style={{ fontSize: '.85rem' }}>
-                    No issues published yet — they'll show up here the moment the creator posts one.
-                  </p>
-                )
+              {product.type === 'service' ? (
+                <div className="trust-line" style={{ color: 'var(--ink-dim)' }}>
+                  <FiShield size={16} />
+                  <span>This is a service order, not an instant download. Track delivery and access delivered files in your library.</span>
+                  <Link to="/account" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>Open library</Link>
+                </div>
+              ) : ['serial', 'subscription'].includes(product.type) ? (
+                <>
+                  <div className="trust-line" style={{ color: 'var(--green-glow)', fontWeight: 600 }}>
+                    <FiCheck size={16} /><span>You already own this.</span>
+                  </div>
+                  {product.issues && product.issues.length > 0 ? (
+                    <button
+                      type="button"
+                      className="btn btn--gold btn--block"
+                      onClick={() => {
+                        setFocusIssueId(product.issues[0].id);
+                        document.getElementById('issues-section')?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                    >
+                      {product.issues[0].is_video || product.issues[0].is_audio
+                        ? <FiPlay size={15} /> : <FiFileText size={15} />}
+                      {product.issues[0].is_video ? 'Watch' : product.issues[0].is_audio ? 'Listen to' : 'Read'}
+                      {' '}"Issue {product.issues[0].issue_number}: {product.issues[0].title}"
+                    </button>
+                  ) : (
+                    <p className="muted" style={{ fontSize: '.85rem' }}>
+                      No issues published yet — they'll show up here the moment the creator posts one.
+                    </p>
+                  )}
+                </>
               ) : (
-                <Link to="/account" className="btn btn--gold btn--block">
-                  <FiPackage size={15} /> Go to your library
-                </Link>
+                <>
+                  <div className="trust-line" style={{ color: 'var(--green-glow)', fontWeight: 600 }}>
+                    <FiCheck size={16} /><span>You own this product. Access it here or download a copy.</span>
+                  </div>
+                  {product.owned_access?.is_external && product.owned_access.view_url && (
+                    <a href={product.owned_access.view_url} target="_blank" rel="noopener noreferrer" className="btn btn--gold btn--block">
+                      <FiExternalLink size={15} /> Open your content
+                    </a>
+                  )}
+                  {product.owned_access?.view_url && !product.owned_access.is_external && (
+                    <button type="button" className="btn btn--gold btn--block" onClick={() => setOwnedContentOpen(open => !open)}>
+                      {ownedContentOpen ? <FiX size={15} /> : product.owned_access.is_video || product.owned_access.is_audio ? <FiPlay size={15} /> : <FiBookOpen size={15} />}
+                      {ownedContentOpen ? 'Close content' : product.owned_access.is_video ? 'Watch now' : product.owned_access.is_audio ? 'Listen now' : 'Read now'}
+                    </button>
+                  )}
+                  {product.owned_access?.download_url && (
+                    <a href={product.owned_access.download_url} target="_blank" rel="noopener noreferrer" className="btn btn--ghost btn--block" style={{ marginTop: 8 }}>
+                      <FiDownload size={15} /> Download now
+                    </a>
+                  )}
+                  {product.owned_access?.license_key && (
+                    <p className="mono" style={{ marginTop: 12, padding: 10, borderRadius: 8, background: 'var(--field-bg)', overflowWrap: 'anywhere' }}>
+                      <FiKey size={14} /> {product.owned_access.license_key}
+                    </p>
+                  )}
+                  {ownedContentOpen && product.owned_access?.view_url && !product.owned_access.is_external && (
+                    product.owned_access.is_video ? (
+                      <video src={product.owned_access.view_url} controls playsInline style={{ width: '100%', marginTop: 12, borderRadius: 8, background: '#000' }} />
+                    ) : product.owned_access.is_audio ? (
+                      <audio src={product.owned_access.view_url} controls style={{ width: '100%', marginTop: 12 }} />
+                    ) : (
+                      <iframe src={product.owned_access.view_url} title={product.title} className="library-file-viewer" />
+                    )
+                  )}
+                  {!product.owned_access?.view_url && !product.owned_access?.download_url && !product.owned_access?.license_key && (
+                    <p className="muted" style={{ fontSize: '.84rem', marginTop: 10 }}>No file is attached to this product yet. Contact the creator from your order in the library.</p>
+                  )}
+                  <Link to="/account" className="buy-panel__browse-link"><FiPackage size={14} /> View your library order</Link>
+                </>
               )}
             </>
           ) : isOwner ? (

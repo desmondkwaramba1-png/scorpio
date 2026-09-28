@@ -9,13 +9,13 @@ const { checkAndUpdateVerification } = require('../lib/verification');
 const { CATEGORY_VALUES } = require('../lib/categories');
 const { EBOOKS_ONLY, ACTIVE_CATEGORY_VALUES } = require('../lib/launchScope');
 const { isPromoActive, applyDiscount } = require('../lib/promotions');
-const { addKeys, keyStats } = require('../lib/licenseKeys');
+const { addKeys, keyStats, keyForPurchase } = require('../lib/licenseKeys');
 const { runVerification } = require('../lib/contentVerification');
 const { optimizeImage } = require('../lib/imageProcessing');
 const storage = require('../lib/storage');
 const { sendEmail } = require('../lib/notify');
 const { syncSubscriptionStatuses } = require('../lib/subscriptions');
-const { isVideoFilename, isAudioFilename } = require('../lib/downloads');
+const { isVideoFilename, isAudioFilename, getActiveTokenForPurchase, createDownloadToken } = require('../lib/downloads');
 
 const router = express.Router();
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -276,6 +276,7 @@ router.get('/:slug', (req, res) => {
         unlocked = !!db.prepare(`
           SELECT 1 FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
           WHERE b.user_id = ? AND pu.product_id = ? AND pu.payment_status = 'paid'
+            AND COALESCE(pu.fulfillment_status, '') != 'refunded'
         `).get(req.user.id, product.id);
       } else {
         // Scoped to exactly this case, not called unconditionally the
@@ -331,10 +332,42 @@ router.get('/:slug', (req, res) => {
   // fileAccessFor, license keys, etc.) - this only tells the product
   // page whether to point them there instead of selling to them again.
   if (!['serial', 'subscription'].includes(product.type) && req.user && !isOwner) {
-    product.already_purchased = !!db.prepare(`
-      SELECT 1 FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
+    const purchase = db.prepare(`
+      SELECT pu.id, pu.fulfillment_status
+      FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
       WHERE b.user_id = ? AND pu.product_id = ? AND pu.payment_status = 'paid'
+        AND COALESCE(pu.fulfillment_status, '') != 'refunded'
+      ORDER BY pu.id DESC LIMIT 1
     `).get(req.user.id, product.id);
+    product.already_purchased = !!purchase;
+
+    if (purchase) {
+      const licenseKey = keyForPurchase(purchase.id);
+      let access = {
+        download_url: null,
+        view_url: null,
+        is_video: false,
+        is_audio: false,
+        is_external: false,
+        license_key: licenseKey?.key_value || null
+      };
+
+      if (product.type !== 'service') {
+        const file = db.prepare('SELECT * FROM product_files WHERE product_id = ? LIMIT 1').get(product.id);
+        if (file?.kind === 'external_link') {
+          access.view_url = file.external_url;
+          access.is_external = true;
+        } else if (file) {
+          const token = getActiveTokenForPurchase(purchase.id) || { token: createDownloadToken(purchase.id) };
+          access.download_url = `/api/downloads/${token.token}`;
+          access.view_url = `/api/downloads/${token.token}/view`;
+          access.is_video = isVideoFilename(file.original_filename);
+          access.is_audio = isAudioFilename(file.original_filename);
+        }
+      }
+
+      product.owned_access = access;
+    }
   }
 
   // The "Add to cart" button had no memory - clicking it on something

@@ -361,8 +361,25 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId }) {
   const [resent, setResent] = useState(false);
   const [resendError, setResendError] = useState(null);
   const [watching, setWatching] = useState(false);
+  const [showReport, setShowReport] = useState(!!purchase.has_open_report);
   const [keyCopied, setKeyCopied] = useState(false);
   const productUrl = `/@${purchase.creator_handle}/${purchase.product_slug}`;
+
+  function openPurchase() {
+    if (purchase.view_url && purchase.is_external) {
+      window.open(purchase.view_url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (purchase.view_url) {
+      setWatching(open => !open);
+      return;
+    }
+    if (purchase.download_url) {
+      window.open(purchase.download_url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    navigate(productUrl);
+  }
 
   async function copyKey(e) {
     e.stopPropagation();
@@ -389,10 +406,17 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId }) {
   return (
     <div className="card card--pad">
       <div
-        role="link"
+        role="button"
         tabIndex={0}
-        onClick={() => navigate(productUrl)}
-        onKeyDown={e => { if (e.key === 'Enter') navigate(productUrl); }}
+        aria-expanded={!!watching}
+        onClick={openPurchase}
+        onKeyDown={e => {
+          if (e.target !== e.currentTarget) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openPurchase();
+          }
+        }}
         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap', cursor: 'pointer' }}
       >
         <div style={{ display: 'flex', gap: 14, alignItems: 'center', minWidth: 0 }}>
@@ -403,6 +427,9 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId }) {
           <div style={{ minWidth: 0 }}>
             <p style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{purchase.product_title}</p>
             <p className="muted" style={{ fontSize: '.85rem' }}>{purchase.creator_name} &middot; {formatDate(purchase.created_at)}</p>
+            <Link to={productUrl} onClick={e => e.stopPropagation()} className="muted" style={{ fontSize: '.75rem', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+              Product details
+            </Link>
           </div>
         </div>
 
@@ -482,11 +509,17 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId }) {
           problem at all. */}
       {!purchase.service && purchase.payment_status === 'paid' && (
         <div style={{ marginTop: 12 }} onClick={e => e.stopPropagation()}>
-          <ReportProblem
-            purchaseId={purchase.id}
-            hasOpenReport={purchase.has_open_report}
-            onReported={reason => onServiceUpdate?.(purchase.id, { fulfillment_status: 'disputed', dispute: { status: 'open', reason } })}
-          />
+          {showReport ? (
+            <ReportProblem
+              purchaseId={purchase.id}
+              hasOpenReport={purchase.has_open_report}
+              onReported={reason => onServiceUpdate?.(purchase.id, { fulfillment_status: 'disputed', dispute: { status: 'open', reason } })}
+            />
+          ) : (
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setShowReport(true)}>
+              Need help with this order?
+            </button>
+          )}
         </div>
       )}
       {resendError && <p className="error-text" style={{ marginTop: 10 }}>{resendError}</p>}

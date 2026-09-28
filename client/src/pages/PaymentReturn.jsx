@@ -42,9 +42,11 @@ function ItemRow({ item }) {
                 {open ? <><FiX size={14} /> Close</> : <><FiBookOpen size={14} /> Read / View</>}
               </button>
             )}
-            <a href={item.download_url} className="btn btn--gold btn--sm">
-              <FiDownload size={14} /> Download
-            </a>
+            {item.download_url && (
+              <a href={item.download_url} className="btn btn--gold btn--sm">
+                <FiDownload size={14} /> Download
+              </a>
+            )}
           </div>
         ) : item.license_key || item.service ? null : (
           <span className="muted" style={{ fontSize: '.82rem' }}>No file attached. The creator will follow up.</span>

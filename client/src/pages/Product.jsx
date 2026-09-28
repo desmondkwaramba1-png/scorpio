@@ -160,6 +160,37 @@ export default function Product() {
       .catch(() => setError('This product could not be found. The link may be wrong or it may have been removed.'));
   }, [slug]);
 
+  useEffect(() => {
+    if (!user || !product || creator?.id === product.creator_id) return;
+    if (['serial', 'subscription'].includes(product.type)) return;
+    if (product.already_purchased && product.owned_access) return;
+
+    let cancelled = false;
+    api.get('/api/purchases/mine').then(purchases => {
+      const purchase = purchases.find(item =>
+        item.product_id === product.id &&
+        item.payment_status === 'paid' &&
+        item.fulfillment_status !== 'refunded'
+      );
+      if (!purchase || cancelled) return;
+
+      setProduct(current => current?.id === product.id ? {
+        ...current,
+        already_purchased: true,
+        owned_access: {
+          download_url: purchase.download_url,
+          view_url: purchase.view_url,
+          is_video: purchase.is_video,
+          is_audio: purchase.is_audio,
+          is_external: purchase.is_external,
+          license_key: purchase.license_key
+        }
+      } : current);
+    }).catch(() => {});
+
+    return () => { cancelled = true; };
+  }, [user?.id, creator?.id, product?.id, product?.creator_id, product?.type, product?.already_purchased]);
+
   // Called unconditionally, before the early returns below, a hook can
   // never sit after a return that only fires on some renders (the loading
   // skeleton fires on the very first render, before `product` exists, then

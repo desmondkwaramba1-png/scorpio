@@ -424,8 +424,9 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId, autoOpen
   }
 
   return (
-    <div ref={orderRef} className="card card--pad">
+    <div ref={orderRef} className="card card--pad order-card">
       <div
+        className="order-card__header"
         role="button"
         tabIndex={0}
         aria-expanded={!!watching}

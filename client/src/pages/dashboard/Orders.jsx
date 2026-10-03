@@ -81,8 +81,8 @@ function OrderRow({ o, creator, currentUserId, onUpdate }) {
   const label = fulfillment ? FULFILLMENT_LABEL[fulfillment] : null;
 
   return (
-    <div className="card card--pad">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+    <div className="card card--pad order-card">
+      <div className="order-card__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <div style={{ minWidth: 0 }}>
           <p style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {o.buyer_name || 'Buyer'}
@@ -91,7 +91,7 @@ function OrderRow({ o, creator, currentUserId, onUpdate }) {
             Bought <Link to={`/@${creator.handle}/${o.product_slug}`}>{o.product_title}</Link> &middot; {formatDate(o.created_at)}
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '100%' }}>
+        <div className="order-card__meta" style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '100%' }}>
           {label && <span className={`badge ${label.className}`}>{label.text}</span>}
           <span className="mono" style={{ fontWeight: 600, fontSize: '.9rem' }}>{formatMoney(o.amount_minor, o.currency)}</span>
           {fulfillment === 'awaiting_delivery' && (

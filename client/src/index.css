@@ -156,39 +156,39 @@ body{
     var(--paper);
   background-size:auto, auto, 32px 32px, 32px 32px, auto;
   color:var(--ink);font-family:'Inter',-apple-system,sans-serif;line-height:1.5;
-  -webkit-font-smoothing:antialiased;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
   overflow-x:clip;
 }
 /* Sticky footer: without this, any page shorter than the viewport (an
-   empty-state screen, a short auth form) left the footer sitting right
+      content:'';position:absolute;left:50%;top:44%;width:520px;height:520px;
    under the content with a dead gray gap below it instead of at the
-   bottom of the screen where it reads as intentional. #root, not body,
+      background:radial-gradient(circle, rgba(255,140,66,.14) 0%, rgba(255,140,66,.04) 45%, transparent 72%);
    is the flex container — App.jsx's <SplashScreen/><Nav/><main/><Footer/>
    are its direct children, and SplashScreen's own position:fixed already
+    .splash__floater{
+      position:absolute;color:var(--gold-dark);opacity:.4;pointer-events:none;
+      animation:splash-float ease-in-out infinite;
+    }
+    @keyframes splash-float{
+      0%,100%{transform:translateY(0) rotate(0deg);}
+      50%{transform:translateY(-14px) rotate(-6deg);}
+    }
+    @media (prefers-reduced-motion: reduce){.splash__floater{animation:none;}}
    takes it out of this flow entirely, so it's unaffected. main growing
    (flex:1) is what pushes Footer down on a short page while still
-   letting it sit naturally below on a tall one. */
-#root{display:flex;flex-direction:column;min-height:100vh;}
-main{flex:1 0 auto;}
+      filter:drop-shadow(0 2px 6px rgba(19,25,33,.1));transition:filter .6s ease;
 /* The sticky-footer fix above solved the footer floating with dead space
-   below it — it did nothing for a *different* version of the same "big
-   for nothing" complaint: a short message screen (log in to buy this,
-   an empty cart, log in to check out — five real instances across
-   Checkout/Cart/CartCheckout) that renders a handful of lines at the
+    .splash__scorpion.is-glowing{filter:drop-shadow(0 4px 14px rgba(19,25,33,.16));animation:splash-pulse 2.6s ease-in-out .5s infinite;}
    TOP of a now-tall main, leaving a real gap of empty gray page between
    the content and the footer instead of at the bottom of the screen.
-   Centering it in the available space (not just top-anchoring it) is
+      font-family:'Alex Brush',cursive;font-weight:400;font-size:3.2rem;line-height:1;color:var(--gold-dark);
+      margin:0;opacity:0;transform:translateY(8px);transition:opacity .4s ease .5s, transform .4s ease .5s;
    what makes it read as an intentional, designed screen rather than a
-   half-empty one. min-height, not height, real long content elsewhere
-   already reusing this class still grows the page normally. */
-/* :has(), scoped narrowly to only the pages using it - a min-height alone
-   left a real, visible gap below the centered block and above the
-   footer, confirmed live: min-height doesn't make a block fill a taller
-   flex parent, it only sets a floor, and main's own sticky-footer height
+    .splash__name.is-in{opacity:1;transform:translateY(0);}
    (flex:1 0 auto, see above) is usually taller than 56vh. Making main
    itself a flex column ONLY when it directly wraps a .center-page
-   (nowhere else, so no other page's layout is touched) is what lets
-   .center-page's own flex:1 genuinely fill the real remaining height and
+      0%,100%{filter:drop-shadow(0 2px 6px rgba(19,25,33,.1));}
+      50%{filter:drop-shadow(0 5px 16px rgba(19,25,33,.2));}
    center within all of it, not just its own fallback minimum. */
 main:has(> .center-page){display:flex;flex-direction:column;}
 .center-page{flex:1;min-height:56vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}

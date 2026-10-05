@@ -85,7 +85,7 @@ export default function SplashScreen() {
               <path ref={el => (pathRefs.current[7] = el)} strokeWidth="5" d="M136 174 L140 198" />
               <path ref={el => (pathRefs.current[8] = el)} strokeWidth="5" d="M154 164 L168 182" />
             </g>
-            <circle cx="100" cy="40" r="5" fill="var(--green)" opacity={ready ? 1 : 0} />
+            <circle cx="100" cy="40" r="5" fill="var(--gold-dark)" opacity={ready ? 1 : 0} />
           </svg>
         </div>
         <p className={`splash__name${ready ? ' is-in' : ''}`}>{NAME}</p>

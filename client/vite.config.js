@@ -46,24 +46,13 @@ export default defineConfig({
         ]
       },
       workbox: {
-        // generateSW's own default behavior, separate from runtimeCaching
-        // below and not mentioned by the comment that used to be here:
-        // every "navigate"-mode request (a real <a href> click or typed
-        // URL, not a fetch()) gets intercepted by an auto-installed
-        // NavigationRoute and handed the cached index.html shell instead
-        // of ever reaching the network. Necessary for real client-side
-        // routes (so /discover, /@handle/slug work on a direct load or
-        // refresh) — actively wrong for /api/downloads/:token, a plain
-        // <a href> in Account.jsx and Product.jsx that's a real server
-        // redirect to R2, not a route this SPA has any page for. Once the
-        // service worker had time to activate, clicking Download just
-        // reloaded the app shell, no error, nothing to download, silently.
-        // Confirmed live: a fresh signup through a full session (several
-        // page loads, real time for the worker to install) got exactly
-        // this, text/html back instead of a redirect to the file. Excluding
-        // /api/ here is what actually lets a real navigation to /api/downloads/:token
-        // reach the network instead of being treated as a client route.
-        navigateFallbackDenylist: [/^\/api\//],
+        // Disable generateSW's default NavigationRoute. It is registered
+        // before runtimeCaching, so a navigation could receive yesterday's
+        // precached index.html without reaching the network-first app-shell
+        // handler below. Vercel already serves index.html for SPA routes;
+        // the explicit runtime rule below also retains a cache fallback for
+        // a route the visitor has previously opened while offline.
+        navigateFallback: null,
         // Everything NOT matched by a rule below is a plain network
         // passthrough, never touched by the service worker — this is
         // deliberately an allowlist, not a blocklist, so anything
@@ -75,15 +64,13 @@ export default defineConfig({
         // downloads bug existed despite it.)
         runtimeCaching: [
             {
-              // Always prefer the current deployed app shell on navigation.
-              // The old cache-first navigation fallback made a new deployment
-              // appear only after a manual refresh, because the service worker
-              // served yesterday's index.html before it checked for updates.
+              // Fetch the current app shell before using a previously cached
+              // copy. Do not set networkTimeoutSeconds here: a slow first
+              // response must not be mistaken for an offline visit.
               urlPattern: ({ request }) => request.mode === 'navigate',
               handler: 'NetworkFirst',
               options: {
                 cacheName: 'app-shell',
-                networkTimeoutSeconds: 3,
                 expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 },
                 cacheableResponse: { statuses: [0, 200] }
               }

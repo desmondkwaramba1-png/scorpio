@@ -13,17 +13,27 @@ function invalidateCsrfToken() {
 
 function getCsrfToken() {
   if (!csrfTokenPromise || Date.now() - csrfTokenFetchedAt >= CSRF_TOKEN_CACHE_MS) {
-    csrfTokenPromise = fetchWithTimeout('/api/csrf-token', {
-      method: 'GET',
-      credentials: 'include',
-      cache: 'no-store'
-    }, DEFAULT_TIMEOUT_MS)
-      .then(async response => {
-        const data = await response.json().catch(() => null);
-        if (!response.ok || !data?.csrfToken) throw new Error(data?.error || 'Could not prepare this request.');
-        csrfTokenFetchedAt = Date.now();
-        return data.csrfToken;
-      })
+    csrfTokenPromise = (async () => {
+      let response;
+      for (let attempt = 0; ; attempt++) {
+        try {
+          response = await fetchWithTimeout('/api/csrf-token', {
+            method: 'GET',
+            credentials: 'include',
+            cache: 'no-store'
+          }, DEFAULT_TIMEOUT_MS);
+          break;
+        } catch (error) {
+          if (attempt >= RETRY_DELAYS_MS.length) throw connectionError();
+          await sleep(RETRY_DELAYS_MS[attempt]);
+        }
+      }
+
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.csrfToken) throw new Error(data?.error || 'Could not prepare this request.');
+      csrfTokenFetchedAt = Date.now();
+      return data.csrfToken;
+    })()
       .catch(error => {
         invalidateCsrfToken();
         throw error;
@@ -59,6 +69,13 @@ async function fetchWithTimeout(path, options, timeoutMs) {
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(path, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted) {
+      const timeoutError = new Error('The server took too long to respond. Please try again.');
+      timeoutError.name = 'TimeoutError';
+      throw timeoutError;
+    }
+    throw error;
   } finally {
     clearTimeout(timer);
   }

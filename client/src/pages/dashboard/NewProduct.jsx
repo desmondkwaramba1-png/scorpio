@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { FiImage, FiDollarSign, FiPackage, FiBriefcase, FiFilePlus, FiCheckCircle, FiSend, FiCopy, FiExternalLink, FiArrowRight } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
@@ -28,26 +28,32 @@ export default function NewProduct() {
   const [error, setError] = useState(null);
   const [publishedProduct, setPublishedProduct] = useState(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const submitLock = useRef(false);
+  const publishRequest = useRef(null);
 
   const update = (key) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    publishRequest.current = null;
     setForm(f => ({ ...f, [key]: value }));
   };
 
   function handleCover(e) {
     const f = e.target.files[0];
+    publishRequest.current = null;
     setCover(f);
     setCoverPreview(f ? URL.createObjectURL(f) : null);
   }
 
   function handleFile(e) {
     const f = e.target.files[0];
+    publishRequest.current = null;
     setFile(f);
     setFilePreview(f ? f.name : null);
   }
 
   function handlePreviewVideo(e) {
     const f = e.target.files[0];
+    publishRequest.current = null;
     setPreviewVideo(f);
     setPreviewVideoName(f ? f.name : null);
   }
@@ -63,6 +69,7 @@ export default function NewProduct() {
   const publishReady = detailsReady && hasDeliverable && !!cover;
 
   async function submit(status) {
+    if (submitLock.current) return;
     setError(null);
     if (!form.title.trim() || !form.category || form.price === '') {
       setError('Add a title, choose a category, and set a price before continuing.');
@@ -87,6 +94,7 @@ export default function NewProduct() {
         return;
       }
     }
+    submitLock.current = true;
     setSubmitting(true);
     setUploadProgress(0);
     const body = new FormData();
@@ -95,6 +103,9 @@ export default function NewProduct() {
     body.append('cover', cover);
     if (file) body.append('file', file);
     if (previewVideo) body.append('preview_video', previewVideo);
+    if (!publishRequest.current || publishRequest.current.status !== status) {
+      publishRequest.current = { key: crypto.randomUUID(), status };
+    }
 
     try {
       // A course video (or even just a real PDF) can be a genuinely large
@@ -103,12 +114,16 @@ export default function NewProduct() {
       // real connection is what can take real time. Real progress here
       // (see lib/api.js's uploadWithProgress) is what turns that wait from
       // "is this broken?" into something visibly, honestly working.
-      const data = await api.uploadWithProgress('/api/products', 'POST', body, setUploadProgress, 180000);
+      const data = await api.uploadWithProgress('/api/products', 'POST', body, setUploadProgress, 180000, {
+        'Idempotency-Key': publishRequest.current.key
+      });
+      publishRequest.current = null;
       if (status === 'published') setPublishedProduct(data);
       else navigate('/dashboard/products');
     } catch (err) {
       setError(err.message);
     } finally {
+      submitLock.current = false;
       setSubmitting(false);
       setUploadProgress(0);
     }

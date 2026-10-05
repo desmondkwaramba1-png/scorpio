@@ -614,7 +614,65 @@ router.delete('/:slug/reviews/mine', requireAuth, (req, res) => {
 // POST /api/products, creator_id always comes from the session, never the
 // client, so nobody can publish a product under someone else's storefront.
 // Cover image is required, enforced here and not just in the form.
-router.post('/', requireAuth, requireCreator, upload.fields([
+function sendExistingProductPublish(req, res, requestKey) {
+  const request = db.prepare(`
+    SELECT product_id FROM product_publish_requests
+    WHERE creator_id = ? AND request_key = ?
+  `).get(req.creator.id, requestKey);
+  if (!request?.product_id) return false;
+  const product = db.prepare('SELECT * FROM products WHERE id = ? AND creator_id = ?')
+    .get(request.product_id, req.creator.id);
+  if (!product) {
+    db.prepare('DELETE FROM product_publish_requests WHERE creator_id = ? AND request_key = ?')
+      .run(req.creator.id, requestKey);
+    return false;
+  }
+  res.status(201).json(withPromo(product));
+  return true;
+}
+
+function replayProductPublish(req, res, next) {
+  const requestKey = req.get('Idempotency-Key');
+  if (!requestKey) return next();
+  if (requestKey.length > 128) return res.status(400).json({ error: 'Invalid publish request key.' });
+
+  db.prepare(`
+    DELETE FROM product_publish_requests
+    WHERE product_id IS NULL AND created_at < datetime('now', '-30 minutes')
+  `).run();
+  req.productPublishRequestKey = requestKey;
+
+  const request = db.prepare(`
+    SELECT product_id FROM product_publish_requests
+    WHERE creator_id = ? AND request_key = ?
+  `).get(req.creator.id, requestKey);
+  if (!request) return next();
+  if (sendExistingProductPublish(req, res, requestKey)) return;
+  return res.status(409).json({ error: 'This publish is still processing. Wait a moment, then retry.' });
+}
+
+function reserveProductPublish(req, res) {
+  const requestKey = req.productPublishRequestKey;
+  if (!requestKey) return true;
+  const result = db.prepare(`
+    INSERT OR IGNORE INTO product_publish_requests (creator_id, request_key)
+    VALUES (?, ?)
+  `).run(req.creator.id, requestKey);
+  if (result.changes === 1) return true;
+  if (sendExistingProductPublish(req, res, requestKey)) return false;
+  res.status(409).json({ error: 'This publish is already processing. Wait a moment, then retry.' });
+  return false;
+}
+
+function releaseProductPublish(req) {
+  if (!req.productPublishRequestKey) return;
+  db.prepare(`
+    DELETE FROM product_publish_requests
+    WHERE creator_id = ? AND request_key = ? AND product_id IS NULL
+  `).run(req.creator.id, req.productPublishRequestKey);
+}
+
+router.post('/', requireAuth, requireCreator, replayProductPublish, upload.fields([
   { name: 'cover', maxCount: 1 },
   { name: 'file', maxCount: 1 },
   { name: 'preview_video', maxCount: 1 }
@@ -687,6 +745,7 @@ router.post('/', requireAuth, requireCreator, upload.fields([
   if (!storage.isConfigured()) {
     return res.status(503).json({ error: 'File storage is not configured yet. Try again shortly.' });
   }
+  if (!reserveProductPublish(req, res)) return;
 
   // Every validation above has passed, only now do the actual R2 uploads,
   // so a request that was going to be rejected anyway never wastes one.
@@ -726,12 +785,13 @@ router.post('/', requireAuth, requireCreator, upload.fields([
   // hypothetical) left the request hanging forever with no response ever
   // sent — Express 4 doesn't route a rejected promise to the error
   // middleware on its own.
-  let coverPath, previewVideoPath, fileKey;
-  try {
-    [coverPath, previewVideoPath, fileKey] = await Promise.all([uploadCover, uploadPreview, uploadFile]);
-  } catch (err) {
+  const uploadResults = await Promise.allSettled([uploadCover, uploadPreview, uploadFile]);
+  const uploadFailure = uploadResults.find(result => result.status === 'rejected');
+  if (uploadFailure) {
+    releaseProductPublish(req);
     return res.status(502).json({ error: 'Could not upload one of those files, try again.' });
   }
+  const [coverPath, previewVideoPath, fileKey] = uploadResults.map(result => result.value);
 
   const slug = slugify(title);
   const productCurrency = ['USD', 'ZWG'].includes(currency) ? currency : 'USD';
@@ -785,6 +845,13 @@ router.post('/', requireAuth, requireCreator, upload.fields([
   if (keyList.length > 0) addKeys(productId, keyList);
 
   if (productStatus === 'published') checkAndUpdateVerification(req.creator.id);
+
+  if (req.productPublishRequestKey) {
+    db.prepare(`
+      UPDATE product_publish_requests SET product_id = ?
+      WHERE creator_id = ? AND request_key = ?
+    `).run(productId, req.creator.id, req.productPublishRequestKey);
+  }
 
   const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId);
   res.status(201).json(withPromo(product));

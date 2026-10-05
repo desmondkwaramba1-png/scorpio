@@ -148,7 +148,7 @@ html{scroll-behavior:smooth;}
   *,*::before,*::after{animation-duration:.001ms !important;transition-duration:.001ms !important;}
 }
 body{
-  margin:0;background:
+  margin:0;min-height:100vh;background:
     radial-gradient(circle at top left, rgba(var(--gold-rgb),.11), transparent 34%),
     radial-gradient(circle at top right, rgba(var(--green-glow-rgb),.10), transparent 30%),
     linear-gradient(rgba(var(--green-glow-rgb),.025) 1px,transparent 1px),
@@ -156,40 +156,10 @@ body{
     var(--paper);
   background-size:auto, auto, 32px 32px, 32px 32px, auto;
   color:var(--ink);font-family:'Inter',-apple-system,sans-serif;line-height:1.5;
-      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
   overflow-x:clip;
 }
-/* Sticky footer: without this, any page shorter than the viewport (an
-      content:'';position:absolute;left:50%;top:44%;width:520px;height:520px;
-   under the content with a dead gray gap below it instead of at the
-      background:radial-gradient(circle, rgba(255,140,66,.14) 0%, rgba(255,140,66,.04) 45%, transparent 72%);
-   is the flex container — App.jsx's <SplashScreen/><Nav/><main/><Footer/>
-   are its direct children, and SplashScreen's own position:fixed already
-    .splash__floater{
-      position:absolute;color:var(--gold-dark);opacity:.4;pointer-events:none;
-      animation:splash-float ease-in-out infinite;
-    }
-    @keyframes splash-float{
-      0%,100%{transform:translateY(0) rotate(0deg);}
-      50%{transform:translateY(-14px) rotate(-6deg);}
-    }
-    @media (prefers-reduced-motion: reduce){.splash__floater{animation:none;}}
-   takes it out of this flow entirely, so it's unaffected. main growing
-   (flex:1) is what pushes Footer down on a short page while still
-      filter:drop-shadow(0 2px 6px rgba(19,25,33,.1));transition:filter .6s ease;
-/* The sticky-footer fix above solved the footer floating with dead space
-    .splash__scorpion.is-glowing{filter:drop-shadow(0 4px 14px rgba(19,25,33,.16));animation:splash-pulse 2.6s ease-in-out .5s infinite;}
-   TOP of a now-tall main, leaving a real gap of empty gray page between
-   the content and the footer instead of at the bottom of the screen.
-      font-family:'Alex Brush',cursive;font-weight:400;font-size:3.2rem;line-height:1;color:var(--gold-dark);
-      margin:0;opacity:0;transform:translateY(8px);transition:opacity .4s ease .5s, transform .4s ease .5s;
-   what makes it read as an intentional, designed screen rather than a
-    .splash__name.is-in{opacity:1;transform:translateY(0);}
-   (flex:1 0 auto, see above) is usually taller than 56vh. Making main
-   itself a flex column ONLY when it directly wraps a .center-page
-      0%,100%{filter:drop-shadow(0 2px 6px rgba(19,25,33,.1));}
-      50%{filter:drop-shadow(0 5px 16px rgba(19,25,33,.2));}
-   center within all of it, not just its own fallback minimum. */
+#root{width:100%;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;}
+main{width:100%;flex:1 0 auto;}
 main:has(> .center-page){display:flex;flex-direction:column;}
 .center-page{flex:1;min-height:56vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
 h1,h2,h3{font-family:'Cabinet Grotesk','Sora',sans-serif;font-weight:700;margin:0;letter-spacing:-0.02em;}
@@ -1027,6 +997,19 @@ img{max-width:100%;display:block;}
   .nav__icon-link span{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
   .nav__icon-link svg{font-size:1.4rem;}
   .nav__name{font-size:1.5rem;}
+}
+@media (max-width:480px){
+  .nav__inner{display:flex;justify-content:space-between;gap:6px;padding:6px 10px;}
+  .nav__icons{min-width:0;gap:0;}
+  .nav__icon-link{min-width:30px;padding:7px 4px;}
+  .nav__icon-link svg{font-size:1.25rem;}
+  .nav__name{font-size:1.35rem;}
+}
+@media (max-width:360px){
+  .nav__inner{gap:3px;padding-inline:8px;}
+  .nav__icon-link{min-width:27px;padding-inline:3px;}
+  .nav__icon-link svg{font-size:1.15rem;}
+  .nav__name{font-size:1.25rem;}
 }
 
 /* ---- nav: account dropdown (Dashboard + My orders, for a creator who

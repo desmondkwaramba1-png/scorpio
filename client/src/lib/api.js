@@ -153,12 +153,13 @@ export const api = {
 // it's working — this is what actually fixes that, not a faster server
 // (the server side of a product publish is already fast, confirmed
 // directly: single-digit milliseconds internally).
-function uploadWithProgress(path, method, formData, onProgress, timeoutMs = 120000) {
+function uploadWithProgress(path, method, formData, onProgress, timeoutMs = 120000, headers = {}) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open(method, path);
     xhr.withCredentials = true;
     xhr.timeout = timeoutMs;
+    Object.entries(headers).forEach(([name, value]) => xhr.setRequestHeader(name, value));
     if (onProgress) {
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));

@@ -5,10 +5,10 @@ const SEEN_KEY = 'scorpio_splash_seen';
 const NAME = 'Scorpio';
 
 const FLOATERS = [
-  { Icon: FiBookOpen, top: '20%', left: '14%', size: 22, duration: 6, delay: 0 },
-  { Icon: FiFileText, top: '74%', left: '18%', size: 18, duration: 7, delay: 0.9 },
-  { Icon: FiPlayCircle, top: '24%', left: '84%', size: 24, duration: 6.5, delay: 0.4 },
-  { Icon: 'scorpion', top: '76%', left: '82%', size: 20, duration: 7.5, delay: 1.3 },
+  { Icon: FiBookOpen, top: 'calc(50% - 98px)', left: 'calc(50% - 78px)', size: 22, duration: 6, delay: 0 },
+  { Icon: FiFileText, top: 'calc(50% + 94px)', left: 'calc(50% - 72px)', size: 18, duration: 7, delay: 0.9 },
+  { Icon: FiPlayCircle, top: 'calc(50% - 88px)', left: 'calc(50% + 80px)', size: 24, duration: 6.5, delay: 0.4 },
+  { Icon: 'scorpion', top: 'calc(50% + 80px)', left: 'calc(50% + 76px)', size: 20, duration: 7.5, delay: 1.3 },
 ];
 
 function MiniScorpion({ size }) {

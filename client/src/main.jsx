@@ -15,17 +15,17 @@ import './index.css';
 // vite.config.js's manifest comment. Without this the app shipped
 // updates that a tab already open would never see until fully closed.
 // immediate:true registers right away instead of waiting on window
-// 'load'. The interval + visibility check below is what actually
-// catches a new deploy in a tab that's just sitting open, the
-// browser's own background update check runs on its own schedule (not
-// on every deploy), too slow for an app that ships multiple times a day.
+// 'load'. Check once as soon as registration is ready, then every five
+// minutes while a tab is open; the browser's built-in update schedule can
+// otherwise leave a long-running tab on an older deployment.
 if ('serviceWorker' in navigator) {
   registerSW({
     immediate: true,
     onRegisteredSW(_url, registration) {
       if (!registration) return;
       const check = () => registration.update().catch(() => {});
-      setInterval(check, 30 * 60 * 1000);
+      check();
+      setInterval(check, 5 * 60 * 1000);
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') check();
       });

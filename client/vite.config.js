@@ -26,7 +26,7 @@ export default defineConfig({
       // this way too, so the earlier fix for registerSW.js being a
       // separate render-blocking request stays fixed either way.
       injectRegister: null,
-      includeAssets: ['brand/mark.svg', 'brand/apple-touch-icon.png'],
+      includeAssets: ['brand/mark.svg', 'brand/splash-scorpion.svg', 'brand/apple-touch-icon.png'],
       manifest: {
         name: 'SCORPIO — Create, Sell, Empower',
         short_name: 'SCORPIO',

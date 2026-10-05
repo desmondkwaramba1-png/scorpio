@@ -1745,13 +1745,12 @@ img{max-width:100%;display:block;}
 
 /* ---- reel viewer (full-screen) ---- */
 .reel-viewer{
-  position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.92);
-  display:flex;align-items:center;justify-content:center;padding:20px;
-  animation:fade-in-up .25s ease both;
+  position:fixed;inset:0;z-index:2000;background:#07080a;
+  display:flex;align-items:center;justify-content:center;padding:0;
 }
 .reel-viewer__stage{
-  position:relative;width:min(420px, 100%);height:min(100%, 760px);border-radius:var(--radius);
-  overflow:hidden;background:#000;box-shadow:var(--shadow-2);
+  position:relative;height:min(100dvh,920px);aspect-ratio:9/16;width:auto;max-width:100vw;border-radius:12px;
+  overflow:hidden;background:#000;box-shadow:0 18px 70px rgba(0,0,0,.4);
 }
 .reel-viewer__progress{position:absolute;top:10px;left:10px;right:10px;z-index:3;display:flex;gap:4px;}
 .reel-viewer__progress-bar{position:relative;flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.3);overflow:hidden;}
@@ -1772,6 +1771,12 @@ img{max-width:100%;display:block;}
 .reel-viewer__close{right:10px;}
 .reel-viewer__mute{right:52px;}
 .reel-viewer__video{width:100%;height:100%;object-fit:cover;display:block;}
+.reel-viewer__play{
+  position:absolute;left:50%;top:50%;z-index:4;display:grid;place-items:center;
+  width:62px;height:62px;transform:translate(-50%,-50%);border:1px solid rgba(255,255,255,.4);
+  border-radius:50%;background:rgba(0,0,0,.42);color:#fff;backdrop-filter:blur(8px);cursor:pointer;
+}
+.reel-viewer__play svg{margin-left:3px;}
 /* The real vertically-scrolling feed — every reel is its own full-bleed,
    snap-aligned slide, exactly like the format everyone already knows.
    Scrollbar hidden across browsers, this is a swipeable feed, not a
@@ -1794,7 +1799,7 @@ img{max-width:100%;display:block;}
   animation:fade-in-up .2s ease both;
 }
 .reel-viewer__overlay{
-  position:absolute;left:0;right:0;bottom:0;padding:20px 16px 96px;z-index:2;
+  position:absolute;left:0;right:0;bottom:74px;padding:20px 82px 18px 16px;z-index:2;
   background:linear-gradient(180deg, transparent, rgba(0,0,0,.75));color:#fff;
 }
 .reel-viewer__creator{display:flex;align-items:center;gap:8px;font-weight:700;font-size:.95rem;color:#fff;margin-bottom:8px;}
@@ -1822,6 +1827,34 @@ img{max-width:100%;display:block;}
 .reel-viewer__shop-cta{
   display:flex;align-items:center;gap:5px;flex-shrink:0;background:var(--gold);color:var(--green-dark);
   padding:8px 12px;border-radius:999px;font-size:.78rem;font-weight:700;
+}
+.reel-viewer__actions{
+  position:absolute;right:12px;bottom:126px;z-index:4;display:flex;flex-direction:column;align-items:center;gap:14px;
+}
+.reel-viewer__action{
+  min-width:44px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:0;border:0;
+  background:none;color:#fff;font-family:inherit;font-size:.68rem;font-weight:700;text-shadow:0 1px 8px rgba(0,0,0,.7);
+  cursor:pointer;
+}
+.reel-viewer__action-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;color:#fff;transition:transform .14s ease,color .14s ease,background .14s ease;}
+.reel-viewer__action:hover .reel-viewer__action-icon{transform:scale(1.08);background:rgba(255,255,255,.14);}
+.reel-viewer__action.is-liked .reel-viewer__action-icon{color:#ff5674;}
+.reel-viewer__action:disabled{opacity:.55;cursor:wait;}
+.reel-viewer__action--stat{cursor:default;}
+.reel-viewer__toast{
+  position:absolute;left:50%;bottom:96px;z-index:5;transform:translateX(-50%);max-width:calc(100% - 36px);
+  padding:9px 14px;border:1px solid rgba(255,255,255,.18);border-radius:999px;
+  background:rgba(10,12,16,.82);color:#fff;font-size:.8rem;text-align:center;backdrop-filter:blur(8px);
+}
+@media (max-width:600px){
+  .reel-viewer__stage{width:100vw;height:100dvh;aspect-ratio:auto;border-radius:0;box-shadow:none;}
+  .reel-viewer__progress{top:calc(10px + env(safe-area-inset-top));left:10px;right:10px;}
+  .reel-viewer__close,.reel-viewer__mute{top:calc(22px + env(safe-area-inset-top));}
+  .reel-viewer__overlay{bottom:calc(74px + env(safe-area-inset-bottom));padding-left:16px;padding-right:78px;}
+  .reel-viewer__shop{left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));}
+  .reel-viewer__actions{right:8px;bottom:calc(126px + env(safe-area-inset-bottom));gap:10px;}
+  .reel-viewer__action-icon{width:42px;height:42px;}
+  .reel-viewer__toast{bottom:calc(94px + env(safe-area-inset-bottom));}
 }
 
 /* ---- storefront reels entry card (CreatorProfile.jsx) ---- */
@@ -1871,12 +1904,39 @@ img{max-width:100%;display:block;}
 .blog-heading__copy > p:last-child{max-width:56ch;color:var(--muted);font-size:.9rem;line-height:1.55;}
 .blog-search{width:100%;}
 .blog-search input{height:48px;background:var(--surface);}
-.blog-results-count{margin:0 0 14px;color:var(--muted);font-size:.78rem;font-weight:700;}
 .blog-grid--loading{margin-top:16px;}
+.blog-featured{
+  display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);overflow:hidden;
+  margin:12px 0 42px;border:1px solid var(--line);border-radius:8px;background:var(--surface);
+  color:inherit;text-decoration:none;transition:border-color .2s ease,box-shadow .2s ease;
+}
+.blog-featured:hover{border-color:var(--line-strong);box-shadow:var(--shadow-2);}
+.blog-featured__media{position:relative;min-height:320px;overflow:hidden;background:var(--gold-tint);}
+.blog-featured__backdrop{position:absolute;inset:-14px;background-position:center;background-size:cover;filter:blur(26px) brightness(.82);transform:scale(1.1);}
+.blog-featured__image{position:absolute;inset:0;background-position:center;background-size:contain;background-repeat:no-repeat;transition:transform .5s ease;}
+.blog-featured:hover .blog-featured__image{transform:scale(1.035);}
+.blog-featured__empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:radial-gradient(ellipse at 70% 20%,rgba(var(--gold-rgb),.26),transparent 48%),linear-gradient(135deg,var(--green-dark),#283848);color:#fff;}
+.blog-featured__empty svg{color:var(--gold);}
+.blog-featured__empty span{font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.72);}
+.blog-featured__content{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:clamp(24px,4vw,48px);}
+.blog-featured__label{margin-bottom:14px;color:var(--green-glow);font-size:.72rem;font-weight:800;text-transform:uppercase;}
+.blog-featured__content h2{font-size:clamp(1.55rem,3vw,2.2rem);line-height:1.2;margin-bottom:12px;}
+.blog-featured__content > p{color:var(--muted);font-size:.98rem;line-height:1.65;margin-bottom:22px;}
+.blog-featured__byline{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.78rem;font-weight:600;}
+.blog-featured__read{display:inline-flex;align-items:center;gap:6px;margin-top:26px;color:var(--link-ink);font-size:.82rem;font-weight:800;}
+.blog-section-heading{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:16px;}
+.blog-section-heading h2{font-size:1.2rem;}
+.blog-section-heading span{color:var(--muted);font-size:.78rem;font-weight:700;}
+.blog-archive{margin-top:12px;}
 @media (max-width:720px){
   .blog-page{padding-top:26px;padding-bottom:56px;}
   .blog-heading{grid-template-columns:1fr;gap:16px;padding-top:4px;padding-bottom:18px;}
   .blog-heading h1{font-size:1.65rem;}
+  .blog-featured{grid-template-columns:1fr;margin-bottom:32px;}
+  .blog-featured__media{min-height:0;aspect-ratio:16/10;}
+  .blog-featured__content{padding:22px;}
+  .blog-featured__content h2{font-size:1.55rem;}
+  .blog-featured__read{margin-top:18px;}
 }
 /* auto-fill (like .product-grid uses) computes column tracks off the
    container width regardless of how many posts actually exist - fine for
@@ -1955,20 +2015,6 @@ img{max-width:100%;display:block;}
 .blog-card__open{display:inline-flex;align-items:center;gap:5px;margin-top:auto;padding-top:14px;color:var(--link-ink);font-size:.78rem;font-weight:800;}
 .blog-card__open svg{transition:transform .16s ease;}
 .blog-card:hover .blog-card__open svg{transform:translate(2px,-2px);}
-
-/* A grid that's usually just one or two real posts right now shouldn't
-   look unfinished, this tile fills out the row with an honest "more is
-   coming" instead of a lonely card or a big empty gap next to it. Never
-   shown during a search, "more coming soon" makes no sense as a search
-   result. */
-.blog-card--placeholder{
-  border-style:dashed;background:none;box-shadow:none;
-  align-items:center;justify-content:center;text-align:center;padding:32px 20px;
-  color:var(--muted);
-}
-.blog-card--placeholder:hover{transform:none;box-shadow:none;}
-.blog-card--placeholder svg{color:var(--line-strong);margin-bottom:10px;}
-.blog-card--placeholder p{font-size:.88rem;font-weight:600;}
 
 .blog-post__back{
   display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:.88rem;font-weight:600;margin-bottom:20px;

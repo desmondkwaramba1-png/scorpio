@@ -53,17 +53,33 @@ function BlogCard({ post }) {
   );
 }
 
-// Real content right now is thin (a brand-new section, a handful of
-// posts) — a two-card grid with a wide dead gap next to it reads as
-// unfinished. This fills the row out with an honest "more is coming"
-// instead, never shown mid-search (a "coming soon" tile makes no sense
-// as a search result someone actually asked for).
-function ComingSoonCard() {
+function FeaturedPost({ post }) {
+  const byline = post.creator_handle ? `@${post.creator_handle}` : post.author_name;
   return (
-    <div className="blog-card blog-card--placeholder">
-      <FiBookOpen size={26} />
-      <p>More guides on the way</p>
-    </div>
+    <Link to={`/blog/${post.slug}`} className="blog-featured">
+      <div className="blog-featured__media">
+        {post.cover_path ? (
+          <>
+            <div className="blog-featured__backdrop" style={{ backgroundImage: `url(${post.cover_path})` }} />
+            <div className="blog-featured__image" style={{ backgroundImage: `url(${post.cover_path})` }} />
+          </>
+        ) : (
+          <div className="blog-featured__empty"><FiBookOpen size={42} /><span>SCORPIO FIELD NOTES</span></div>
+        )}
+      </div>
+      <div className="blog-featured__content">
+        <span className="blog-featured__label">Featured story</span>
+        <h2>{post.title}</h2>
+        {post.excerpt && <p>{post.excerpt}</p>}
+        <span className="blog-featured__byline">
+          <span className="blog-card__avatar" style={post.creator_avatar ? { backgroundImage: `url(${post.creator_avatar})` } : undefined}>
+            {!post.creator_avatar && byline.replace('@', '').charAt(0).toUpperCase()}
+          </span>
+          {byline} <span aria-hidden="true">&middot;</span> {formatDate(post.published_at)}
+        </span>
+        <span className="blog-featured__read">Read the story <FiArrowUpRight size={16} /></span>
+      </div>
+    </Link>
   );
 }
 
@@ -81,9 +97,9 @@ export default function Blog() {
     setError(null);
     api.get(`/api/blog?${qs.toString()}`)
       .then(data => setPosts(Array.isArray(data) ? data : []))
-      .catch(() => {
+      .catch(err => {
         setPosts([]);
-        setError(null);
+        setError(err.message || 'Please check your connection and try again.');
       });
   }
 
@@ -105,12 +121,12 @@ export default function Blog() {
     url: `${SITE_ORIGIN}/blog`
   });
 
-  if (error && posts === null) {
+  if (error) {
     return (
       <div className="wrap center-page" style={{ padding: 20 }}>
         <div className="page-state page-state--error">
           <div className="page-state__icon"><FiAlertCircle size={28} /></div>
-          <h2>We couldn’t load the latest field notes.</h2>
+          <h2>We couldn’t load the latest stories.</h2>
           <p>{error}</p>
           <button className="btn btn--primary" onClick={loadBlog}>
             <FiRefreshCw size={15} /> Try again
@@ -124,9 +140,9 @@ export default function Blog() {
     <div className="blog-page wrap">
       <header className="blog-heading">
         <div className="blog-heading__copy">
-          <p className="section__eyebrow mono"><FiBookOpen size={13} /> FIELD NOTES</p>
-          <h1>Ideas for building something real.</h1>
-          <p>Practical lessons on starting, pricing, and growing a digital business in Zimbabwe.</p>
+          <p className="section__eyebrow mono"><FiBookOpen size={13} /> THE SCORPIO JOURNAL</p>
+          <h1>Ideas worth putting into practice.</h1>
+          <p>Stories, useful guides, and sharp ideas for Zimbabwe’s independent makers and digital businesses.</p>
         </div>
         <label className="input-icon blog-search">
           <FiSearch size={16} />
@@ -137,12 +153,6 @@ export default function Blog() {
           />
         </label>
       </header>
-
-      {posts && posts.length > 0 && (
-        <p className="blog-results-count">
-          {posts.length} post{posts.length === 1 ? '' : 's'}
-        </p>
-      )}
 
       {!posts && !error && (
         <div className="blog-grid blog-grid--loading">
@@ -160,16 +170,40 @@ export default function Blog() {
 
       {posts && posts.length === 0 && (
         <div className="empty-state">
-          <strong>{q ? `No posts match "${q}".` : 'Nothing published yet.'}</strong>
-          {q ? 'Try a different search.' : 'Check back soon, real guides are on the way.'}
+          <strong>{q ? `No stories match "${q}".` : 'Nothing published yet.'}</strong>
+          {q ? 'Try another search.' : 'New stories will appear here as they are published.'}
         </div>
       )}
 
       {posts && posts.length > 0 && (
-        <div className="blog-grid">
-          {posts.map(post => <BlogCard key={post.id} post={post} />)}
-          {!q && posts.length < 3 && <ComingSoonCard />}
-        </div>
+        q ? (
+          <section className="blog-archive" aria-label="Search results">
+            <div className="blog-section-heading">
+              <h2>Search results</h2>
+              <span>{posts.length} {posts.length === 1 ? 'story' : 'stories'}</span>
+            </div>
+            <div className="blog-grid">
+              {posts.map(post => <BlogCard key={post.id} post={post} />)}
+            </div>
+          </section>
+        ) : (
+          <>
+            <section aria-label="Featured story">
+              <FeaturedPost post={posts[0]} />
+            </section>
+            {posts.length > 1 && (
+              <section className="blog-archive" aria-label="Latest stories">
+                <div className="blog-section-heading">
+                  <h2>Latest stories</h2>
+                  <span>{posts.length - 1} {posts.length === 2 ? 'story' : 'stories'}</span>
+                </div>
+                <div className="blog-grid">
+                  {posts.slice(1).map(post => <BlogCard key={post.id} post={post} />)}
+                </div>
+              </section>
+            )}
+          </>
+        )
       )}
     </div>
   );

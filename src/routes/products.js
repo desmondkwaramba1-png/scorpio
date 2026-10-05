@@ -75,7 +75,7 @@ const upload = multer({
   // course video. One shared limit since multer applies it per-upload-
   // instance, not per-field, generous enough for a real 30-60 minute
   // course video at reasonable compression.
-  limits: { fileSize: 500 * 1024 * 1024 }
+  limits: { fileSize: 500 * 1024 * 1024, files: 3 }
 });
 
 // R2 object keys, prefix says which bucket "folder" and whether it's a

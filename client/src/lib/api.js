@@ -174,7 +174,13 @@ function uploadWithProgress(path, method, formData, onProgress, timeoutMs = 1200
       }
       else reject(new Error(data?.error || 'Something went wrong.'));
     };
-    xhr.onerror = () => reject(connectionError());
+    xhr.onerror = () => {
+      if (!navigator.onLine) {
+        reject(connectionError());
+        return;
+      }
+      reject(new Error('The upload connection was interrupted. The server or its proxy may have closed the connection; try again.'));
+    };
     xhr.ontimeout = () => reject(new Error("That's taking too long. Check your connection and try again."));
     getCsrfToken()
       .then(token => {

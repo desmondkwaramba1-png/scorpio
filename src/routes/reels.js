@@ -26,12 +26,26 @@ const upload = multer({
 
 const FEED_SELECT = `
   SELECT r.id, r.video_path, r.caption, r.view_count, r.created_at,
+         (SELECT COUNT(*) FROM reel_likes rl WHERE rl.reel_id = r.id) AS like_count,
          c.handle AS creator_handle, c.name AS creator_name, c.avatar_path AS creator_avatar, c.verified AS creator_verified,
          p.slug AS product_slug, p.title AS product_title, p.price_minor, p.currency, p.cover_path AS product_cover
   FROM reels r
   JOIN creators c ON c.id = r.creator_id
   LEFT JOIN products p ON p.id = r.product_id
 `;
+
+function withLikeState(reels, userId) {
+  const list = Array.isArray(reels) ? reels : [reels];
+  if (!userId || list.length === 0) {
+    return list.map(reel => ({ ...reel, liked_by_me: false }));
+  }
+  const ids = list.map(reel => reel.id);
+  const placeholders = ids.map(() => '?').join(',');
+  const likedIds = new Set(db.prepare(`
+    SELECT reel_id FROM reel_likes WHERE user_id = ? AND reel_id IN (${placeholders})
+  `).all(userId, ...ids).map(row => row.reel_id));
+  return list.map(reel => ({ ...reel, liked_by_me: likedIds.has(reel.id) }));
+}
 
 // GET /api/reels — the public discovery feed. ?creator=handle scopes it to
 // one storefront (how CreatorProfile.jsx embeds a creator's reels);
@@ -59,7 +73,7 @@ router.get('/', (req, res) => {
   if (capped > 0) params.push(capped);
 
   const reels = db.prepare(`${FEED_SELECT} ${where} ORDER BY r.created_at DESC${limitSql}`).all(...params);
-  res.json(reels);
+  res.json(withLikeState(reels, req.user?.id));
 });
 
 // POST /api/reels — creator_id always comes from the session. product_id
@@ -88,7 +102,25 @@ router.post('/', requireAuth, requireCreator, upload.single('video'), async (req
   `).run(req.creator.id, productId, storage.publicUrl(key), caption || null);
 
   const reel = db.prepare(`${FEED_SELECT} WHERE r.id = ?`).get(result.lastInsertRowid);
-  res.status(201).json(reel);
+  res.status(201).json(withLikeState([reel], req.user.id)[0]);
+});
+
+router.post('/:id/like', requireAuth, (req, res) => {
+  const reel = db.prepare('SELECT id FROM reels WHERE id = ?').get(req.params.id);
+  if (!reel) return res.status(404).json({ error: 'Reel not found.' });
+  db.prepare('INSERT OR IGNORE INTO reel_likes (reel_id, user_id) VALUES (?, ?)')
+    .run(reel.id, req.user.id);
+  const likeCount = db.prepare('SELECT COUNT(*) AS count FROM reel_likes WHERE reel_id = ?').get(reel.id).count;
+  res.json({ liked: true, like_count: likeCount });
+});
+
+router.delete('/:id/like', requireAuth, (req, res) => {
+  const reel = db.prepare('SELECT id FROM reels WHERE id = ?').get(req.params.id);
+  if (!reel) return res.status(404).json({ error: 'Reel not found.' });
+  db.prepare('DELETE FROM reel_likes WHERE reel_id = ? AND user_id = ?')
+    .run(reel.id, req.user.id);
+  const likeCount = db.prepare('SELECT COUNT(*) AS count FROM reel_likes WHERE reel_id = ?').get(reel.id).count;
+  res.json({ liked: false, like_count: likeCount });
 });
 
 // POST /api/reels/:id/view — a lightweight, honest view counter (no login

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import ReelViewer from '../components/ReelViewer.jsx';
 import { useSEO } from '../lib/seo';
 import { SITE_ORIGIN } from '../lib/site.js';
@@ -18,6 +18,7 @@ export default function CreatorReels() {
   // still has the leading "@" from the URL.
   const handle = rawHandle.replace(/^@/, '');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [reels, setReels] = useState(null);
 
   useEffect(() => {
@@ -45,5 +46,6 @@ export default function CreatorReels() {
     );
   }
 
-  return <ReelViewer reels={reels} startIndex={0} onClose={() => navigate(`/@${handle}`)} />;
+  const requestedIndex = reels.findIndex(item => String(item.id) === searchParams.get('reel'));
+  return <ReelViewer reels={reels} startIndex={requestedIndex < 0 ? 0 : requestedIndex} onClose={() => navigate(`/@${handle}`)} />;
 }

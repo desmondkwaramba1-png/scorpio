@@ -39,9 +39,8 @@ primary_region = "jnb"
 
 [[vm]]
   size = "shared-cpu-1x"
-  # 512, not 256: a cover/avatar upload runs the image through sharp, and
-  # 256MB was tight enough that a big upload under any concurrent load
-  # could OOM-kill the machine (a ~10-15s restart, seen by whoever was
-  # mid-request as "something went wrong"). Bumped after that risk was
-  # flagged on launch day.
-  memory = "512mb"
+  # Product uploads are buffered by multer before they are sent to R2.
+  # The route accepts files up to 500MB, so 512MB could OOM-kill the API
+  # while a creator was publishing. Leave room for the Node process,
+  # image processing, and the optional cover/preview alongside the file.
+  memory = "2gb"

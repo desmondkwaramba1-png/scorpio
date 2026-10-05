@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { FiX, FiShoppingBag, FiVolume2, FiVolumeX } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
+import { FiX, FiShoppingBag, FiVolume2, FiVolumeX, FiHeart, FiShare2, FiPlay, FiPause, FiEye } from 'react-icons/fi';
 import { api } from '../lib/api';
 import { formatMoney } from '../lib/money';
+import { useAuth } from '../context/AuthContext.jsx';
 import Seal from './Seal.jsx';
 
 // How long the "Next reel in Ns" countdown runs before auto-advancing.
@@ -11,7 +12,11 @@ import Seal from './Seal.jsx';
 // something's about to happen, not a real pause.
 const AUTO_ADVANCE_SECONDS = 3;
 
-function ReelSlide({ reel, index, active, muted, registerSlideRef, registerVideoRef, onEnded, onTimeUpdate, onClose }) {
+function formatCount(value = 0) {
+  return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+}
+
+function ReelSlide({ reel, index, active, muted, paused, liked, likeCount, likePending, actionMessage, registerSlideRef, registerVideoRef, onEnded, onTimeUpdate, onClose, onLike, onShare, onTogglePlayback }) {
   return (
     <div
       ref={el => registerSlideRef(index, el)}
@@ -27,7 +32,14 @@ function ReelSlide({ reel, index, active, muted, registerSlideRef, registerVideo
         preload={active ? 'auto' : 'none'}
         onEnded={active ? onEnded : undefined}
         onTimeUpdate={active ? onTimeUpdate : undefined}
+        onClick={onTogglePlayback}
       />
+
+      {paused && (
+        <button className="reel-viewer__play" type="button" onClick={onTogglePlayback} aria-label="Play reel">
+          <FiPlay size={26} fill="currentColor" />
+        </button>
+      )}
 
       <div className="reel-viewer__overlay">
         <Link to={`/@${reel.creator_handle}`} className="reel-viewer__creator" onClick={onClose}>
@@ -54,6 +66,33 @@ function ReelSlide({ reel, index, active, muted, registerSlideRef, registerVideo
           <span className="reel-viewer__shop-cta"><FiShoppingBag size={14} /> Shop this</span>
         </Link>
       )}
+
+      <aside className="reel-viewer__actions" aria-label="Reel actions">
+        <button
+          className={`reel-viewer__action${liked ? ' is-liked' : ''}`}
+          type="button"
+          onClick={() => onLike(reel)}
+          disabled={likePending}
+          aria-label={liked ? 'Unlike reel' : 'Like reel'}
+          aria-pressed={liked}
+        >
+          <span className="reel-viewer__action-icon"><FiHeart size={24} fill={liked ? 'currentColor' : 'none'} /></span>
+          <span>{formatCount(likeCount)}</span>
+        </button>
+        <span className="reel-viewer__action reel-viewer__action--stat" aria-label={`${formatCount(reel.view_count)} views`}>
+          <span className="reel-viewer__action-icon"><FiEye size={22} /></span>
+          <span>{formatCount(reel.view_count)}</span>
+        </span>
+        <button className="reel-viewer__action" type="button" onClick={() => onShare(reel)} aria-label="Share reel">
+          <span className="reel-viewer__action-icon"><FiShare2 size={22} /></span>
+          <span>Share</span>
+        </button>
+        <button className="reel-viewer__action" type="button" onClick={onTogglePlayback} aria-label={paused ? 'Play reel' : 'Pause reel'}>
+          <span className="reel-viewer__action-icon">{paused ? <FiPlay size={21} /> : <FiPause size={21} />}</span>
+          <span>{paused ? 'Play' : 'Pause'}</span>
+        </button>
+      </aside>
+      {actionMessage && <div className="reel-viewer__toast" role="status">{actionMessage}</div>}
     </div>
   );
 }
@@ -75,15 +114,25 @@ function ReelSlide({ reel, index, active, muted, registerSlideRef, registerVideo
 // the active slide's video plays; every other one is paused, so nothing
 // keeps eating bandwidth or making noise off-screen.
 export default function ReelViewer({ reels, startIndex = 0, onClose }) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [index, setIndex] = useState(startIndex);
   const [muted, setMuted] = useState(true);
+  const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState(0);
   const [countdown, setCountdown] = useState(null);
+  const [likeState, setLikeState] = useState(() => Object.fromEntries(reels.map(item => [item.id, {
+    liked: !!item.liked_by_me,
+    count: Number(item.like_count) || 0
+  }])));
+  const [likePending, setLikePending] = useState(null);
+  const [actionMessage, setActionMessage] = useState('');
   const containerRef = useRef(null);
   const slideRefs = useRef([]);
   const videoRefs = useRef([]);
   const viewedRef = useRef(new Set());
   const countdownTimerRef = useRef(null);
+  const messageTimerRef = useRef(null);
 
   const reel = reels[index];
   const isLast = index === reels.length - 1;
@@ -127,6 +176,7 @@ export default function ReelViewer({ reels, startIndex = 0, onClose }) {
   useEffect(() => {
     setProgress(0);
     setCountdown(null);
+    setPaused(false);
     videoRefs.current.forEach((v, i) => {
       if (!v) return;
       if (i === index) {
@@ -143,6 +193,72 @@ export default function ReelViewer({ reels, startIndex = 0, onClose }) {
       }
     };
   }, [index]);
+
+  useEffect(() => () => {
+    if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
+  }, []);
+
+  function showActionMessage(message) {
+    setActionMessage(message);
+    if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
+    messageTimerRef.current = setTimeout(() => setActionMessage(''), 2400);
+  }
+
+  async function toggleLike(targetReel) {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    if (likePending === targetReel.id) return;
+    const previous = likeState[targetReel.id] || { liked: false, count: Number(targetReel.like_count) || 0 };
+    const liked = !previous.liked;
+    setLikePending(targetReel.id);
+    setLikeState(state => ({
+      ...state,
+      [targetReel.id]: { liked, count: Math.max(0, previous.count + (liked ? 1 : -1)) }
+    }));
+    try {
+      const result = liked
+        ? await api.post(`/api/reels/${targetReel.id}/like`, {})
+        : await api.delete(`/api/reels/${targetReel.id}/like`);
+      setLikeState(state => ({
+        ...state,
+        [targetReel.id]: { liked: result.liked, count: result.like_count }
+      }));
+    } catch (error) {
+      setLikeState(state => ({ ...state, [targetReel.id]: previous }));
+      showActionMessage(error.message);
+    } finally {
+      setLikePending(null);
+    }
+  }
+
+  async function shareReel(targetReel) {
+    const url = `${window.location.origin}/@${targetReel.creator_handle}/reels?reel=${targetReel.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `${targetReel.creator_name}'s reel`, url });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        showActionMessage('Reel link copied');
+      } else {
+        throw new Error('Sharing is not available in this browser.');
+      }
+    } catch (error) {
+      if (error.name !== 'AbortError') showActionMessage(error.message || 'Could not share this reel.');
+    }
+  }
+
+  function togglePlayback() {
+    const video = videoRefs.current[index];
+    if (!video) return;
+    if (video.paused) {
+      video.play().then(() => setPaused(false)).catch(() => showActionMessage('This reel could not be played.'));
+    } else {
+      video.pause();
+      setPaused(true);
+    }
+  }
 
   function goTo(i) {
     const clamped = Math.max(0, Math.min(i, reels.length - 1));
@@ -227,11 +343,19 @@ export default function ReelViewer({ reels, startIndex = 0, onClose }) {
               index={i}
               active={i === index}
               muted={muted}
+              paused={i === index && paused}
+              liked={!!likeState[r.id]?.liked}
+              likeCount={likeState[r.id]?.count ?? Number(r.like_count) ?? 0}
+              likePending={likePending === r.id}
+              actionMessage={i === index ? actionMessage : ''}
               registerSlideRef={registerSlideRef}
               registerVideoRef={registerVideoRef}
               onEnded={handleEnded}
               onTimeUpdate={handleTimeUpdate}
               onClose={onClose}
+              onLike={toggleLike}
+              onShare={shareReel}
+              onTogglePlayback={togglePlayback}
             />
           ))}
         </div>

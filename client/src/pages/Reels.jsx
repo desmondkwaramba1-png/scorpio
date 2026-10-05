@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FiFilm } from 'react-icons/fi';
 import ReelViewer from '../components/ReelViewer.jsx';
 import { useSEO } from '../lib/seo';
@@ -18,6 +18,7 @@ import { api } from '../lib/api';
 export default function Reels() {
   const [reels, setReels] = useState(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     api.get('/api/reels?limit=50').then(setReels).catch(() => setReels([]));
@@ -50,5 +51,6 @@ export default function Reels() {
     );
   }
 
-  return <ReelViewer reels={reels} startIndex={0} onClose={() => navigate('/discover')} />;
+  const requestedIndex = reels.findIndex(item => String(item.id) === searchParams.get('reel'));
+  return <ReelViewer reels={reels} startIndex={requestedIndex < 0 ? 0 : requestedIndex} onClose={() => navigate('/discover')} />;
 }

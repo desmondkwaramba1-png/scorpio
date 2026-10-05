@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { FiTrash2, FiAlertTriangle, FiExternalLink, FiTag, FiKey, FiImage, FiBriefcase, FiPackage, FiFilePlus, FiArrowRight, FiCheckCircle, FiSend, FiEyeOff } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -33,6 +33,8 @@ export default function EditProduct() {
   const [newKeys, setNewKeys] = useState('');
   const [addingKeys, setAddingKeys] = useState(false);
   const [keysError, setKeysError] = useState(null);
+  const submitLock = useRef(false);
+  const publishRequest = useRef(null);
 
   useEffect(() => {
     api.get('/api/products/mine')
@@ -58,28 +60,33 @@ export default function EditProduct() {
 
   const update = (key) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    publishRequest.current = null;
     setForm(f => ({ ...f, [key]: value }));
   };
 
   function handleCover(e) {
     const f = e.target.files[0];
+    publishRequest.current = null;
     setCover(f);
     setCoverPreview(f ? URL.createObjectURL(f) : product.cover_path);
   }
 
   function handleFile(e) {
     const f = e.target.files[0];
+    publishRequest.current = null;
     setFile(f);
     setFilePreview(f ? f.name : null);
   }
 
   function handlePreviewVideo(e) {
     const f = e.target.files[0];
+    publishRequest.current = null;
     setPreviewVideo(f);
     setPreviewVideoName(f ? f.name : null);
   }
 
   async function submit(status) {
+    if (submitLock.current) return;
     setError(null);
     if (!form.category) {
       setError('Pick a category. It\'s how buyers find this when browsing.');
@@ -100,6 +107,7 @@ export default function EditProduct() {
         return;
       }
     }
+    submitLock.current = true;
     setSubmitting(true);
     setUploadProgress(0);
     const payload = { ...form };
@@ -115,16 +123,23 @@ export default function EditProduct() {
     if (cover) body.append('cover', cover);
     if (file) body.append('file', file);
     if (previewVideo) body.append('preview_video', previewVideo);
+    if (!publishRequest.current || publishRequest.current.status !== status) {
+      publishRequest.current = { key: crypto.randomUUID(), status };
+    }
 
     try {
       // Same reasoning as NewProduct.jsx: a replaced deliverable (a course
       // video especially) can be a genuinely large upload, real progress
       // is what keeps that from reading as broken.
-      await api.uploadWithProgress(`/api/products/${id}`, 'PATCH', body, setUploadProgress, 180000);
+      await api.uploadWithProgress(`/api/products/${id}`, 'PATCH', body, setUploadProgress, 180000, {
+        'Idempotency-Key': publishRequest.current.key
+      });
+      publishRequest.current = null;
       navigate('/dashboard/products');
     } catch (err) {
       setError(err.message);
     } finally {
+      submitLock.current = false;
       setSubmitting(false);
       setUploadProgress(0);
     }

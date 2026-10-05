@@ -627,7 +627,7 @@ function sendExistingProductPublish(req, res, requestKey) {
       .run(req.creator.id, requestKey);
     return false;
   }
-  res.status(201).json(withPromo(product));
+  res.status(req.method === 'POST' ? 201 : 200).json(withPromo(product));
   return true;
 }
 
@@ -760,7 +760,7 @@ router.post('/', requireAuth, requireCreator, replayProductPublish, upload.field
     try { coverBuffer = await optimizeImage(cover.buffer, { maxWidth: 1600, enhance: true }); } catch (err) { console.error('[image optimize]', err); }
     const coverKey = objectKey('covers', cover.originalname);
     await storage.uploadBuffer(coverKey, coverBuffer, cover.mimetype);
-    return storage.publicUrl(coverKey);
+    return { key: coverKey, value: storage.publicUrl(coverKey) };
   })();
 
   // Only meaningful for courses, but not restricted to them at the DB
@@ -769,8 +769,8 @@ router.post('/', requireAuth, requireCreator, replayProductPublish, upload.field
   const uploadPreview = previewVideo ? (async () => {
     const previewKey = objectKey('previews', previewVideo.originalname);
     await storage.uploadBuffer(previewKey, previewVideo.buffer, previewVideo.mimetype);
-    return storage.publicUrl(previewKey);
-  })() : Promise.resolve(null);
+    return { key: previewKey, value: storage.publicUrl(previewKey) };
+  })() : Promise.resolve({ key: null, value: null });
 
   // The main deliverable's R2 upload doesn't actually need productId ,
   // only the product_files row it feeds does, so it can run alongside
@@ -778,8 +778,8 @@ router.post('/', requireAuth, requireCreator, replayProductPublish, upload.field
   const uploadFile = file ? (async () => {
     const fileKey = objectKey('product-files', file.originalname);
     await storage.uploadBuffer(fileKey, file.buffer, file.mimetype);
-    return fileKey;
-  })() : Promise.resolve(null);
+    return { key: fileKey, value: fileKey };
+  })() : Promise.resolve({ key: null, value: null });
 
   // Unguarded, any one of these three rejecting (a real R2 hiccup, not
   // hypothetical) left the request hanging forever with no response ever
@@ -788,10 +788,20 @@ router.post('/', requireAuth, requireCreator, replayProductPublish, upload.field
   const uploadResults = await Promise.allSettled([uploadCover, uploadPreview, uploadFile]);
   const uploadFailure = uploadResults.find(result => result.status === 'rejected');
   if (uploadFailure) {
+    console.error('[product upload]', uploadFailure.reason);
+    const uploadedKeys = uploadResults
+      .filter(result => result.status === 'fulfilled' && result.value.key)
+      .map(result => result.value.key);
+    const cleanupResults = await Promise.allSettled(uploadedKeys.map(key => storage.deleteObject(key)));
+    cleanupResults.filter(result => result.status === 'rejected')
+      .forEach(result => console.error('[product upload cleanup]', result.reason));
     releaseProductPublish(req);
     return res.status(502).json({ error: 'Could not upload one of those files, try again.' });
   }
-  const [coverPath, previewVideoPath, fileKey] = uploadResults.map(result => result.value);
+  const [coverResult, previewResult, fileResult] = uploadResults.map(result => result.value);
+  const coverPath = coverResult.value;
+  const previewVideoPath = previewResult.value;
+  const fileKey = fileResult.value;
 
   const slug = slugify(title);
   const productCurrency = ['USD', 'ZWG'].includes(currency) ? currency : 'USD';
@@ -858,7 +868,7 @@ router.post('/', requireAuth, requireCreator, replayProductPublish, upload.field
 });
 
 // PATCH /api/products/:id, edit, publish, or unpublish. Owner only.
-router.patch('/:id', requireAuth, requireCreator, upload.fields([
+router.patch('/:id', requireAuth, requireCreator, replayProductPublish, upload.fields([
   { name: 'cover', maxCount: 1 },
   { name: 'file', maxCount: 1 },
   { name: 'preview_video', maxCount: 1 }
@@ -963,6 +973,7 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
       return res.status(400).json({ error: 'Attach a file, an external link, or add license keys before publishing. Buyers need something to actually receive.' });
     }
   }
+  if (!reserveProductPublish(req, res)) return;
 
   // All validation above has passed, only now do the actual R2 uploads.
   // Same reasoning as the POST handler above: whichever of these are
@@ -973,14 +984,14 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
     try { coverBuffer = await optimizeImage(cover.buffer, { maxWidth: 1600, enhance: true }); } catch (err) { console.error('[image optimize]', err); }
     const coverKey = objectKey('covers', cover.originalname);
     await storage.uploadBuffer(coverKey, coverBuffer, cover.mimetype);
-    return storage.publicUrl(coverKey);
-  })() : Promise.resolve(product.cover_path);
+    return { key: coverKey, value: storage.publicUrl(coverKey) };
+  })() : Promise.resolve({ key: null, value: product.cover_path });
 
   const uploadPreview = previewVideo ? (async () => {
     const previewKey = objectKey('previews', previewVideo.originalname);
     await storage.uploadBuffer(previewKey, previewVideo.buffer, previewVideo.mimetype);
-    return storage.publicUrl(previewKey);
-  })() : Promise.resolve(product.preview_video_path);
+    return { key: previewKey, value: storage.publicUrl(previewKey) };
+  })() : Promise.resolve({ key: null, value: product.preview_video_path });
 
   // The main deliverable's R2 upload doesn't need anything the DELETE/
   // INSERT below does, so it runs alongside cover/preview too instead of
@@ -988,17 +999,28 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
   const uploadFile = file ? (async () => {
     const fileKey = objectKey('product-files', file.originalname);
     await storage.uploadBuffer(fileKey, file.buffer, file.mimetype);
-    return fileKey;
-  })() : Promise.resolve(null);
+    return { key: fileKey, value: fileKey };
+  })() : Promise.resolve({ key: null, value: null });
 
   // Same reasoning as the POST handler above: unguarded, any one of these
   // rejecting used to hang the request forever with no response ever sent.
-  let coverPath, previewVideoPath, fileKey;
-  try {
-    [coverPath, previewVideoPath, fileKey] = await Promise.all([uploadCover, uploadPreview, uploadFile]);
-  } catch (err) {
+  const uploadResults = await Promise.allSettled([uploadCover, uploadPreview, uploadFile]);
+  const uploadFailure = uploadResults.find(result => result.status === 'rejected');
+  if (uploadFailure) {
+    console.error('[product edit upload]', uploadFailure.reason);
+    const uploadedKeys = uploadResults
+      .filter(result => result.status === 'fulfilled' && result.value.key)
+      .map(result => result.value.key);
+    const cleanupResults = await Promise.allSettled(uploadedKeys.map(key => storage.deleteObject(key)));
+    cleanupResults.filter(result => result.status === 'rejected')
+      .forEach(result => console.error('[product edit upload cleanup]', result.reason));
+    releaseProductPublish(req);
     return res.status(502).json({ error: 'Could not upload one of those files, try again.' });
   }
+  const [coverResult, previewResult, fileResult] = uploadResults.map(result => result.value);
+  const coverPath = coverResult.value;
+  const previewVideoPath = previewResult.value;
+  const fileKey = fileResult.value;
 
   db.prepare(`
     UPDATE products SET
@@ -1054,6 +1076,13 @@ router.patch('/:id', requireAuth, requireCreator, upload.fields([
   }
 
   if (status === 'published') checkAndUpdateVerification(req.creator.id);
+
+  if (req.productPublishRequestKey) {
+    db.prepare(`
+      UPDATE product_publish_requests SET product_id = ?
+      WHERE creator_id = ? AND request_key = ?
+    `).run(product.id, req.creator.id, req.productPublishRequestKey);
+  }
 
   res.json(withPromo(db.prepare('SELECT * FROM products WHERE id = ?').get(product.id)));
 });

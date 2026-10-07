@@ -3,8 +3,10 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { FiCheckCircle, FiXCircle, FiLoader, FiDownload, FiPlay, FiX, FiKey, FiCopy, FiCheck, FiShield, FiBookOpen, FiExternalLink } from 'react-icons/fi';
 import { formatMoney } from '../lib/money';
 
-const POLL_INTERVAL_MS = 3000;
-const MAX_POLLS = 20; // ~1 minute of polling before giving up and asking the buyer to check again later
+const FAST_POLL_INTERVAL_MS = 3000;
+const SLOW_POLL_INTERVAL_MS = 20000;
+const FAST_POLL_COUNT = 20;
+const MAX_POLLS = 45; // Keep checking for several minutes without exhausting the status-route rate limit.
 
 function ItemRow({ item }) {
   const [open, setOpen] = useState(!!item.view_url && !item.is_external);
@@ -25,8 +27,13 @@ function ItemRow({ item }) {
           <Link to={productUrl} style={{ fontWeight: 600 }}>{item.product_title}</Link>
           <p className="mono muted" style={{ fontSize: '.85rem' }}>{price}</p>
         </div>
-        {item.download_url || item.view_url ? (
+        {item.download_url || item.view_url || ['serial', 'subscription'].includes(item.product_type) ? (
           <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '100%' }}>
+            {['serial', 'subscription'].includes(item.product_type) && (
+              <Link to={`${productUrl}#issues-section`} className="btn btn--gold btn--sm">
+                <FiBookOpen size={14} /> View issues
+              </Link>
+            )}
             {item.view_url && item.is_external && (
               <a href={item.view_url} target="_blank" rel="noopener noreferrer" className="btn btn--gold btn--sm">
                 <FiExternalLink size={14} /> Open
@@ -101,14 +108,20 @@ function ItemRow({ item }) {
 export default function PaymentReturn() {
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get('order_id');
+  const checkingPrompt = searchParams.get('checking') === '1';
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [pollError, setPollError] = useState(null);
   const pollCount = useRef(0);
 
   useEffect(() => {
     if (!orderId) { setError('No order to check.'); return; }
     let cancelled = false;
     let timer;
+    pollCount.current = 0;
+    setData(null);
+    setError(null);
+    setPollError(null);
 
     async function poll() {
       try {
@@ -117,13 +130,23 @@ export default function PaymentReturn() {
         if (!res.ok) throw new Error(json.error || 'Could not check payment status.');
         if (cancelled) return;
         setData(json);
+        setPollError(null);
 
         if (json.status === 'pending' && pollCount.current < MAX_POLLS) {
           pollCount.current += 1;
-          timer = setTimeout(poll, POLL_INTERVAL_MS);
+          const interval = pollCount.current < FAST_POLL_COUNT
+            ? FAST_POLL_INTERVAL_MS
+            : SLOW_POLL_INTERVAL_MS;
+          timer = setTimeout(poll, interval);
         }
       } catch (err) {
-        if (!cancelled) setError(err.message);
+        if (!cancelled) {
+          setPollError(err.message);
+          if (pollCount.current < MAX_POLLS) {
+            pollCount.current += 1;
+            timer = setTimeout(poll, SLOW_POLL_INTERVAL_MS);
+          }
+        }
       }
     }
     poll();
@@ -142,10 +165,25 @@ export default function PaymentReturn() {
   }
 
   if (!data) {
+    const gaveUp = pollCount.current >= MAX_POLLS;
     return (
       <div className="wrap center-page" style={{ maxWidth: 480, padding: 20 }}>
-        <FiLoader size={32} color="var(--muted)" style={{ marginBottom: 14 }} />
-        <p className="muted">Checking your payment...</p>
+        {gaveUp ? (
+          <>
+            <FiXCircle size={40} color="var(--red)" style={{ marginBottom: 14 }} />
+            <h1 style={{ fontSize: '1.4rem', marginBottom: 10 }}>We couldn't reach the payment check</h1>
+            <p className="muted">{pollError || 'Your payment status is not confirmed yet. Check again before starting another payment.'}</p>
+            <button type="button" className="btn btn--ghost btn--sm" style={{ marginTop: 18 }}
+              onClick={() => window.location.reload()}>
+              Check payment again
+            </button>
+          </>
+        ) : (
+          <>
+            <FiLoader size={32} color="var(--muted)" style={{ marginBottom: 14 }} />
+            <p className="muted">{pollError ? 'Connection interrupted. Retrying your payment check...' : 'Checking your payment...'}</p>
+          </>
+        )}
       </div>
     );
   }
@@ -199,9 +237,20 @@ export default function PaymentReturn() {
       <p className="muted" style={{ marginBottom: 20 }}>{summary} &middot; {totalPrice}</p>
       <p className="muted" style={{ fontSize: '.88rem' }}>
         {gaveUp
-          ? 'This is taking longer than usual. Check your account in a few minutes, or refresh this page to check again.'
-          : "Didn't get a prompt yet? Check your phone for an EcoCash confirmation."}
+          ? 'This is taking longer than usual. Check your EcoCash message. You can safely check this order again below; do not pay for it a second time.'
+          : checkingPrompt
+            ? 'We are confirming whether the EcoCash prompt was sent. Please wait here and do not start another payment for this order.'
+            : "Didn't get a prompt yet? Check your phone for an EcoCash confirmation."}
       </p>
+      {pollError && !gaveUp && (
+        <p className="muted" style={{ fontSize: '.8rem', marginTop: 10 }}>Connection interrupted. We will keep checking automatically.</p>
+      )}
+      {gaveUp && (
+        <button type="button" className="btn btn--ghost btn--sm" style={{ marginTop: 18 }}
+          onClick={() => window.location.reload()}>
+          Check payment again
+        </button>
+      )}
     </div>
   );
 }

@@ -219,7 +219,7 @@ function SubscriptionRow({ subscription, onUpdate, onRenewed }) {
         onRenewed?.();
         return;
       }
-      navigate(`/payment/return?order_id=${data.order_id}`);
+      navigate(`/payment/return?order_id=${data.order_id}${data.checking_payment_status ? '&checking=1' : ''}`);
     } catch (err) {
       setActionError(err.message);
     } finally {

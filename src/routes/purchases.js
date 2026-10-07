@@ -410,6 +410,14 @@ router.post('/', checkoutLimiter, requireVerified, async (req, res) => {
   // GET /api/purchases/status/:orderId (below) until it resolves.
   const order = await createOrder({ orderId, sender: phone, amountMinor, currency: product.currency });
 
+  if (!order.success && order.uncertain) {
+    return res.status(201).json({
+      order_id: orderId,
+      ecocash_status: 'CHECKING',
+      checking_payment_status: true
+    });
+  }
+
   if (!order.success) {
     markPurchaseFailed(purchaseId);
     return res.status(502).json({ error: order.error });
@@ -439,11 +447,20 @@ router.get('/status/:orderId', orderLookupLimiter, async (req, res) => {
 
   if (purchases.length === 0) return res.status(404).json({ error: 'Order not found.' });
 
+  const latestIssueStmt = db.prepare(
+    'SELECT issue_number, title, published_at FROM issues WHERE product_id = ? ORDER BY issue_number DESC LIMIT 1'
+  );
   let current = purchases;
-  if (purchases[0].payment_status === 'pending') {
+  if (purchases.some(p => p.payment_status === 'pending')) {
     const result = await checkOrderStatus(req.params.orderId);
-    if (result.status === 'success') current = purchases.map(p => markPurchasePaid(p.id));
-    else if (result.status === 'failed') current = purchases.map(p => markPurchaseFailed(p.id));
+    if (result.status === 'success') {
+      try {
+        current = purchases.map(p => markPurchasePaid(p.id));
+      } catch (err) {
+        console.error('[payment completion]', err.message);
+        return res.status(503).json({ error: 'Payment is confirmed; access is still being prepared. Keep this page open while we retry.' });
+      }
+    } else if (result.status === 'failed') current = purchases.map(p => markPurchaseFailed(p.id));
     // result.status === 'pending' or 'error': leave as pending, buyer/page can poll again
   }
 
@@ -459,10 +476,14 @@ router.get('/status/:orderId', orderLookupLimiter, async (req, res) => {
       product_title: purchases[i].product_title,
       product_slug: purchases[i].product_slug,
       creator_handle: purchases[i].creator_handle,
+      product_type: p.product_type,
       amount_minor: p.amount_minor,
       currency: p.currency,
       ...fileAccessFor(p),
-      service: serviceStatusFor(p)
+      service: serviceStatusFor(p),
+      latest_issue: ['serial', 'subscription'].includes(p.product_type) && p.payment_status === 'paid'
+        ? latestIssueStmt.get(p.product_id) || null
+        : null
     }))
   });
 });
@@ -480,10 +501,16 @@ router.post('/dischub/callback', orderLookupLimiter, async (req, res) => {
   const purchases = db.prepare('SELECT * FROM purchases WHERE payment_reference = ?').all(orderId);
   if (purchases.length === 0) return res.status(404).json({ error: 'Order not found.' });
 
-  if (purchases[0].payment_status === 'pending') {
+  if (purchases.some(p => p.payment_status === 'pending')) {
     const result = await checkOrderStatus(orderId);
-    if (result.status === 'success') purchases.forEach(p => markPurchasePaid(p.id));
-    else if (result.status === 'failed') purchases.forEach(p => markPurchaseFailed(p.id));
+    if (result.status === 'success') {
+      try {
+        purchases.forEach(p => markPurchasePaid(p.id));
+      } catch (err) {
+        console.error('[payment callback completion]', err.message);
+        return res.status(503).json({ error: 'Payment is confirmed; purchase access is still being prepared.' });
+      }
+    } else if (result.status === 'failed') purchases.forEach(p => markPurchaseFailed(p.id));
   }
 
   res.json({ ok: true });

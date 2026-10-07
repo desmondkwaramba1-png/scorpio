@@ -175,6 +175,15 @@ router.post('/checkout', checkoutLimiter, requireVerified, async (req, res) => {
   // client-side and polls status from there.
   const order = await createOrder({ orderId, sender: phone, amountMinor: totalMinor, currency });
 
+  if (!order.success && order.uncertain) {
+    db.prepare('DELETE FROM cart_items WHERE user_id = ?').run(req.user.id);
+    return res.status(201).json({
+      order_id: orderId,
+      ecocash_status: 'CHECKING',
+      checking_payment_status: true
+    });
+  }
+
   if (!order.success) {
     for (const id of purchaseIds) markPurchaseFailed(id);
     return res.status(502).json({ error: order.error });

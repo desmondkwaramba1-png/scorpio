@@ -96,6 +96,14 @@ router.post('/:id/renew', checkoutLimiter, requireAuth, async (req, res) => {
     orderId, sender: phone, amountMinor: subscription.price_minor, currency: subscription.currency
   });
 
+  if (!order.success && order.uncertain) {
+    return res.status(201).json({
+      order_id: orderId,
+      ecocash_status: 'CHECKING',
+      checking_payment_status: true
+    });
+  }
+
   if (!order.success) {
     markPurchaseFailed(purchaseId);
     return res.status(502).json({ error: order.error });

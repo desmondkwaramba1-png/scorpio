@@ -88,6 +88,41 @@ try {
   assert.equal(db.prepare('SELECT quantity_sold FROM products WHERE id = ?').get(freeProduct).quantity_sold, 1);
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM download_tokens WHERE purchase_id = ?').get(freePurchaseId).n, 1);
 
+  const subscriptionProduct = db.prepare(`
+    INSERT INTO products (creator_id, title, type, price_minor, currency, status, slug, category)
+    VALUES (?, 'Monthly series', 'subscription', 1200, 'USD', 'published', 'fund-subscription', 'ebooks')
+  `).run(creatorId).lastInsertRowid;
+  const subscriptionPurchaseId = db.prepare(`
+    INSERT INTO purchases (buyer_id, product_id, amount_minor, currency, payment_status)
+    VALUES (?, ?, 1200, 'USD', 'pending')
+  `).run(buyerId, subscriptionProduct).lastInsertRowid;
+  db.exec(`
+    CREATE TRIGGER fail_subscription_completion
+    BEFORE INSERT ON subscriptions
+    BEGIN
+      SELECT RAISE(ABORT, 'forced subscription completion failure');
+    END;
+  `);
+  assert.throws(() => markPurchasePaid(subscriptionPurchaseId), /forced subscription completion failure/);
+  const rolledBackPurchase = db.prepare('SELECT payment_status, fulfillment_status FROM purchases WHERE id = ?')
+    .get(subscriptionPurchaseId);
+  assert.equal(rolledBackPurchase.payment_status, 'pending');
+  assert.equal(rolledBackPurchase.fulfillment_status, null);
+  assert.equal(db.prepare('SELECT quantity_sold FROM products WHERE id = ?').get(subscriptionProduct).quantity_sold, 0);
+  db.exec('DROP TRIGGER fail_subscription_completion');
+
+  const subscriptionPurchase = markPurchasePaid(subscriptionPurchaseId);
+  assert.equal(subscriptionPurchase.payment_status, 'paid');
+  assert.equal(subscriptionPurchase.fulfillment_status, 'delivered');
+  assert.ok(subscriptionPurchase.subscription_id);
+  assert.equal(
+    db.prepare('SELECT status FROM subscriptions WHERE id = ?').get(subscriptionPurchase.subscription_id).status,
+    'active'
+  );
+  markPurchasePaid(subscriptionPurchaseId);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE buyer_id = ? AND product_id = ?')
+    .get(buyerId, subscriptionProduct).n, 1);
+
   const legacyProduct = insertProduct.run(creatorId, 'Previously fulfilled product', 500, 'USD', 'fund-legacy').lastInsertRowid;
   const legacyPurchaseId = db.prepare(`
     INSERT INTO purchases (buyer_id, product_id, amount_minor, currency, payment_status, fulfillment_status)

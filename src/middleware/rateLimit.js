@@ -26,7 +26,7 @@ const checkoutLimiter = rateLimit({
 // took an ID-shaped guess with no cap on attempts at all.
 const orderLookupLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
-  limit: 30,
+  limit: 60,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests. Try again in a few minutes.' }

@@ -71,7 +71,27 @@ async function createOrder({ orderId, sender, amountMinor, currency, ecocashNumb
     });
     data = await res.json();
   } catch (err) {
-    return { success: false, error: `Could not reach the payment gateway: ${err.message}` };
+    return {
+      success: false,
+      uncertain: true,
+      error: `We couldn't confirm whether the payment prompt was sent: ${err.message}`
+    };
+  }
+
+  if (!res.ok && res.status >= 500) {
+    return {
+      success: false,
+      uncertain: true,
+      error: 'The payment gateway could not confirm whether the prompt was sent.'
+    };
+  }
+
+  if (!data || typeof data !== 'object') {
+    return {
+      success: false,
+      uncertain: true,
+      error: 'The payment gateway returned an unreadable response, so we could not confirm whether the prompt was sent.'
+    };
   }
 
   if (data.status !== 'success') {
@@ -103,6 +123,18 @@ async function checkOrderStatus(orderId) {
     data = await res.json();
   } catch (err) {
     return { status: 'error', error: `Could not reach the payment gateway: ${err.message}` };
+  }
+
+  if (!res.ok) {
+    return {
+      status: 'error',
+      error: data?.message || `The payment gateway returned HTTP ${res.status}.`,
+      raw: data
+    };
+  }
+
+  if (!data || typeof data !== 'object') {
+    return { status: 'error', error: 'The payment gateway returned an unreadable status response.' };
   }
 
   if (data.status === 'success' || data.status === 'pending' || data.status === 'failed') {

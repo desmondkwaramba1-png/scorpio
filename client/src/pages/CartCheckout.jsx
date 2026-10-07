@@ -35,7 +35,7 @@ export default function CartCheckout() {
       // so this only changes how long a still-working request gets before
       // being wrongly reported as failed.
       const data = await api.post('/api/cart/checkout', checkout, 30000);
-      navigate(`/payment/return?order_id=${data.order_id}`);
+      navigate(`/payment/return?order_id=${data.order_id}${data.checking_payment_status ? '&checking=1' : ''}`);
     } catch (err) {
       setCheckoutError(err.message);
       setStatus('failed');

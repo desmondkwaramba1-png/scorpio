@@ -56,7 +56,7 @@ export default function Checkout() {
       // their phone, no external page to send them to. This is a client-
       // side route change to the same polling page PaymentReturn.jsx
       // already handles.
-      navigate(`/payment/return?order_id=${data.order_id}`);
+      navigate(`/payment/return?order_id=${data.order_id}${data.checking_payment_status ? '&checking=1' : ''}`);
     } catch (err) {
       setCheckoutError(err.message);
       setStatus('failed');

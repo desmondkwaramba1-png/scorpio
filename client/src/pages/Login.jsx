@@ -25,7 +25,7 @@ const SOCIAL_LOGIN_ENABLED = true;
 // fiddly mobile keyboard. tabIndex={-1} keeps the toggle out of the tab
 // order between the field and the next one; it's a convenience click/tap
 // target, not a stop on the form's real path.
-function PasswordField({ id, label, value, onChange, placeholder, hint, minLength }) {
+function PasswordField({ id, label, value, onChange, placeholder, hint, minLength, autoComplete }) {
   const [show, setShow] = useState(false);
   return (
     <div className="field">
@@ -33,7 +33,8 @@ function PasswordField({ id, label, value, onChange, placeholder, hint, minLengt
       <div className="field__password-wrap">
         <input
           id={id} type={show ? 'text' : 'password'} required minLength={minLength}
-          value={value} onChange={onChange} placeholder={placeholder}
+          value={value} onChange={onChange} placeholder={placeholder} autoComplete={autoComplete}
+          autoCapitalize="none" autoCorrect="off" spellCheck={false}
         />
         <button
           type="button" tabIndex={-1} className="field__password-toggle"
@@ -290,10 +291,14 @@ export default function Login() {
             <form onSubmit={handleLogin}>
               <div className="field">
                 <label htmlFor="identifier">Username or email</label>
-                <input id="identifier" required value={form.identifier} onChange={update('identifier')} autoFocus />
+                <input
+                  id="identifier" required value={form.identifier} onChange={update('identifier')}
+                  autoFocus autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                />
               </div>
               <PasswordField
                 id="password" label="Password" value={form.password} onChange={update('password')}
+                autoComplete="current-password"
               />
               {error && <p className="error-text">{error}</p>}
               <button className="btn btn--primary btn--block" disabled={submitting} type="submit">
@@ -338,10 +343,12 @@ export default function Login() {
                   <div className="field-row">
                     <PasswordField
                       id="signup_password" label="Password" value={form.password} onChange={update('password')}
-                      minLength={8} hint="At least 8 characters, pick something you don't use anywhere else."
+                      minLength={8} autoComplete="new-password"
+                      hint="At least 8 characters, pick something you don't use anywhere else."
                     />
                     <PasswordField
                       id="confirm" label="Confirm password" value={form.confirm} onChange={update('confirm')}
+                      autoComplete="new-password"
                     />
                   </div>
                   <div className="field">

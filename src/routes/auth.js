@@ -117,11 +117,13 @@ router.post('/signup', authLimiter, (req, res) => {
 // POST /api/auth/login, identifier is a username or an email.
 router.post('/login', authLimiter, (req, res) => {
   const { identifier, password } = req.body;
-  if (!identifier || !password) {
+  const normalizedIdentifier = typeof identifier === 'string' ? identifier.trim() : '';
+  if (!normalizedIdentifier || !password) {
     return res.status(400).json({ error: 'Enter your username or email and your password.' });
   }
 
-  const user = db.prepare('SELECT * FROM users WHERE username = ? OR email = ?').get(identifier, identifier);
+  const user = db.prepare('SELECT * FROM users WHERE username = ? OR lower(email) = lower(?)')
+    .get(normalizedIdentifier, normalizedIdentifier);
   if (!user || !user.password_hash || !bcrypt.compareSync(password, user.password_hash)) {
     return res.status(401).json({ error: 'That username/email or password is incorrect.' });
   }

@@ -7,9 +7,9 @@ const sharp = require('sharp');
 // what actually moves the needle on page load speed; nothing on the CSS
 // side touches this.
 //
-// Takes and returns a Buffer — nothing here touches disk. Uploads go
-// straight from multer.memoryStorage() to here to R2 (src/lib/storage.js),
-// so there's no local file to read or write back to at any point.
+// Takes and returns a Buffer. Product covers are read back from R2 with a
+// strict size bound before reaching this helper; large product files never
+// pass through image processing.
 // Re-encodes in the SAME format the file came in.
 // `enhance` runs a light, always-safe auto-fix: nudge brightness and
 // saturation up a touch and add a mild sharpen. It's tuned to make a flat,

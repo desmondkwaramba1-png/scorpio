@@ -16,11 +16,14 @@
 //      it will miss claims phrased differently, and that's an honestly
 //      stated limitation, not a hidden one.
 //
-// Operates on an in-memory Buffer, not a file path — uploads go straight
-// from multer.memoryStorage() to here and then to R2 (src/lib/storage.js),
-// never touching this server's own disk at any point.
+// Buffer-based checks remain available for small in-memory callers. Product
+// uploads use runStreamVerification so large deliverables stay stream-based.
 const crypto = require('crypto');
 const { PDFDocument } = require('pdf-lib');
+
+// pdf-lib needs a complete PDF buffer. Keep that optional page-count check
+// bounded; larger uploads still get streamed hashing and signature checks.
+const MAX_PDF_PAGE_CHECK_BYTES = 20 * 1024 * 1024;
 
 function sha256Buffer(buffer) {
   return crypto.createHash('sha256').update(buffer).digest('hex');
@@ -107,4 +110,60 @@ async function runVerification({ buffer, claimedMimeType, title, description }) 
   return { hash, detectedMime, pageCount, flags };
 }
 
-module.exports = { sha256Buffer, detectRealType, getPdfPageCount, extractClaimedPageCount, runVerification };
+async function runStreamVerification({ stream, size, claimedMimeType, title, description }) {
+  const hash = crypto.createHash('sha256');
+  let header = Buffer.alloc(0);
+  let pendingHeaderChunks = [];
+  let pdfChunks = null;
+  let isPdf = null;
+  let bytesRead = 0;
+
+  for await (const chunk of stream) {
+    hash.update(chunk);
+    bytesRead += chunk.length;
+    if (header.length < 12) {
+      header = Buffer.concat([header, chunk.subarray(0, 12 - header.length)]);
+    }
+
+    if (isPdf === null && header.length >= 4) {
+      isPdf = detectRealType(header) === 'application/pdf';
+      if (isPdf && (size === undefined || size <= MAX_PDF_PAGE_CHECK_BYTES) &&
+          bytesRead <= MAX_PDF_PAGE_CHECK_BYTES) {
+        pdfChunks = [...pendingHeaderChunks, chunk];
+      }
+      pendingHeaderChunks = [];
+    } else if (isPdf) {
+      if (pdfChunks && bytesRead <= MAX_PDF_PAGE_CHECK_BYTES) pdfChunks.push(chunk);
+      else pdfChunks = null;
+    } else if (isPdf === null) {
+      pendingHeaderChunks.push(chunk);
+    }
+  }
+
+  const detectedMime = detectRealType(header);
+  const flags = [];
+  if (detectedMime && detectedMime !== claimedMimeType) {
+    flags.push(`File content doesn't match its claimed type (looks like ${detectedMime}, uploaded as ${claimedMimeType}).`);
+  }
+
+  let pageCount = null;
+  if (detectedMime === 'application/pdf' && pdfChunks) {
+    const buffer = Buffer.concat(pdfChunks, bytesRead);
+    pageCount = await getPdfPageCount(buffer);
+    if (pageCount === null) {
+      flags.push('File has a PDF signature but could not actually be opened as a PDF.');
+    } else {
+      const claimed = extractClaimedPageCount(`${title || ''} ${description || ''}`);
+      if (claimed && Math.abs(claimed - pageCount) / claimed > 0.2) {
+        flags.push(`Listing says ${claimed} pages; the file actually has ${pageCount}.`);
+      }
+    }
+  }
+
+  return { hash: hash.digest('hex'), detectedMime, pageCount, flags };
+}
+
+module.exports = {
+  sha256Buffer, detectRealType, getPdfPageCount, extractClaimedPageCount,
+  runVerification, runStreamVerification
+};

@@ -36,7 +36,7 @@ Run both at once, two terminals. Visit http://localhost:5173.
 - Seal badge for verified creators (the trust signal, tied to qualification)
 - EcoCash checkout through Dischub: payment prompts are sent to buyers and orders are fulfilled only after gateway confirmation
 - Payment provider requests and status checks are isolated in `src/services/payment.js`
-- Product files upload directly to the API with short-lived, creator-scoped tokens, bypassing frontend proxy body-size limits
+- Product files stream through the API directly into R2 in bounded multipart chunks, bypassing frontend proxy limits without whole-file RAM buffers or local-disk staging
 
 ## What's next, in order (per our agreed sequencing)
 1. Social layer — a lightweight text/image "story" per product first

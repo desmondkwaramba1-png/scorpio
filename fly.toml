@@ -40,8 +40,6 @@ primary_region = "jnb"
 
 [[vm]]
   size = "shared-cpu-1x"
-  # Product uploads are buffered by multer before they are sent to R2.
-  # The route accepts files up to 500MB, so 512MB could OOM-kill the API
-  # while a creator was publishing. Leave room for the Node process,
-  # image processing, and the optional cover/preview alongside the file.
+  # Product file streams are piped to R2 in bounded multipart chunks.
+  # Only small covers are buffered for image optimization.
   memory = "2gb"

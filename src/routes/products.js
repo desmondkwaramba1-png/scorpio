@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const { PassThrough } = require('node:stream');
 const { randomUUID } = require('crypto');
 const db = require('../db/schema');
 const { requireAuth, requireCreator } = require('../middleware/auth');
@@ -10,7 +11,7 @@ const { CATEGORY_VALUES } = require('../lib/categories');
 const { EBOOKS_ONLY, ACTIVE_CATEGORY_VALUES } = require('../lib/launchScope');
 const { isPromoActive, applyDiscount } = require('../lib/promotions');
 const { addKeys, keyStats, keyForPurchase } = require('../lib/licenseKeys');
-const { runVerification } = require('../lib/contentVerification');
+const { runStreamVerification, extractClaimedPageCount } = require('../lib/contentVerification');
 const { optimizeImage } = require('../lib/imageProcessing');
 const storage = require('../lib/storage');
 const { sendEmail } = require('../lib/notify');
@@ -52,9 +53,7 @@ function productFileFilter(req, file, cb) {
 }
 
 // The strict, category-aware pass productFileFilter above can't safely do.
-// Nothing to clean up on rejection anymore, memoryStorage below never
-// wrote the file to this server's disk (or to R2) in the first place, so
-// there's no orphan to delete, unlike the old disk-based version of this.
+// Category-specific checks run only after multer has parsed all fields.
 function checkDeliverableType(file, category) {
   if (!file || !EBOOKS_ONLY) return null;
   const isCourseVideo = category === 'courses' && VIDEO_TYPES.has(file.mimetype);
@@ -65,19 +64,101 @@ function checkDeliverableType(file, category) {
     : 'The product file must be a PDF.';
 }
 
-// req.file.buffer, never a path on this server's own disk, validated here,
-// then either uploaded to R2 (storage.js) as a public object (cover,
-// preview clip) or a private one (the paid deliverable, only ever reached
-// again through a presigned URL, see routes/downloads.js).
+const MAX_COVER_SIZE = 10 * 1024 * 1024;
+
+const productUploadStorage = {
+  _handleFile(req, file, callback) {
+    if (!storage.isConfigured()) {
+      const error = new Error('File storage is not configured yet.');
+      error.code = 'PRODUCT_STORAGE_NOT_CONFIGURED';
+      return callback(error);
+    }
+    const prefixByField = {
+      cover: 'covers',
+      file: 'product-files',
+      preview_video: 'previews'
+    };
+    const prefix = prefixByField[file.fieldname];
+    if (!prefix) return callback(new Error('Unexpected product upload field.'));
+
+    const key = objectKey(prefix, file.originalname);
+    file.key = key;
+    const body = new PassThrough();
+    const verificationBody = file.fieldname === 'file' ? new PassThrough() : null;
+    const verificationPromise = verificationBody
+      ? runStreamVerification({ stream: verificationBody, claimedMimeType: file.mimetype })
+      : null;
+    if (verificationPromise) verificationPromise.catch(() => {});
+    let size = 0;
+    file.stream.on('data', chunk => { size += chunk.length; });
+    file.stream.once('error', error => {
+      body.destroy(error);
+      if (verificationBody) verificationBody.destroy(error);
+    });
+    file.stream.pipe(body);
+    if (verificationBody) file.stream.pipe(verificationBody);
+    storage.uploadStream(key, body, file.mimetype)
+      .then(() => callback(null, {
+        key, size, ...(verificationPromise ? { verificationPromise } : {})
+      }))
+      .catch(error => {
+        body.destroy();
+        if (verificationBody) verificationBody.destroy(error);
+        const uploadError = error instanceof Error ? error : new Error(String(error));
+        file.stream.destroy(uploadError);
+        uploadError.productUploadFailure = true;
+        callback(uploadError);
+      });
+  },
+  _removeFile(req, file, callback) {
+    if (!file.key) return callback(null);
+    storage.deleteObject(file.key).then(() => callback(null), callback);
+  }
+};
+
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage: productUploadStorage,
   fileFilter: productFileFilter,
-  // A cover is always a small image; the deliverable can now be a real
-  // course video. One shared limit since multer applies it per-upload-
-  // instance, not per-field, generous enough for a real 30-60 minute
-  // course video at reasonable compression.
+  // Multer passes each file stream directly to the storage engine below.
+  // The R2 multipart uploader holds bounded chunks instead of whole files.
   limits: { fileSize: 500 * 1024 * 1024, files: 3 }
 });
+
+function handleProductUploadError(error, req, res, next) {
+  if (error.code === 'PRODUCT_STORAGE_NOT_CONFIGURED') {
+    return res.status(503).json({ error: 'File storage is not configured yet. Try again shortly.' });
+  }
+  if (error.productUploadFailure) {
+    console.error('[product upload]', error);
+    return res.status(502).json({ error: 'Could not upload one of those files, try again.' });
+  }
+  next(error);
+}
+
+function keepProductUpload(req, key) {
+  if (!key) return;
+  if (!req.productUploadKeepKeys) req.productUploadKeepKeys = new Set();
+  req.productUploadKeepKeys.add(key);
+}
+
+function cleanupUncommittedProductObjects(req, res, next) {
+  let cleanupStarted = false;
+  const cleanup = async () => {
+    if (cleanupStarted) return;
+    cleanupStarted = true;
+    const keepKeys = req.productUploadKeepKeys || new Set();
+    const files = Object.values(req.files || {}).flat().filter(file => file.key && !keepKeys.has(file.key));
+    const results = await Promise.allSettled(files.map(file => storage.deleteObject(file.key)));
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error('[product upload cleanup]', result.reason);
+      }
+    }
+  };
+  res.once('finish', cleanup);
+  res.once('close', cleanup);
+  next();
+}
 
 // R2 object keys, prefix says which bucket "folder" and whether it's a
 // public or private object, extension kept for a sane Content-Type/browser
@@ -124,9 +205,7 @@ function parseKeyList(raw) {
 // "suspicious," it's just normal editing, so it's explicitly excluded
 // here rather than left to accidentally self-flag on every edit.
 async function verifyAndRecordFile(productId, creatorId, file, title, description) {
-  const result = await runVerification({
-    buffer: file.buffer, claimedMimeType: file.mimetype, title, description
-  });
+  const result = await file.verificationPromise;
 
   const duplicate = db.prepare(`
     SELECT p.id, p.title, c.handle AS creator_handle
@@ -138,6 +217,11 @@ async function verifyAndRecordFile(productId, creatorId, file, title, descriptio
   `).get(result.hash, creatorId, productId);
 
   const flags = [...result.flags];
+  const claimedPageCount = extractClaimedPageCount(`${title || ''} ${description || ''}`);
+  if (claimedPageCount && result.pageCount !== null &&
+      Math.abs(claimedPageCount - result.pageCount) / claimedPageCount > 0.2) {
+    flags.push(`Listing says ${claimedPageCount} pages; the file actually has ${result.pageCount}.`);
+  }
   if (duplicate) {
     flags.push(`Identical file already listed as "${duplicate.title}" by @${duplicate.creator_handle}.`);
   }
@@ -729,7 +813,7 @@ router.post('/', requireProductUploadAuth, replayProductPublish, upload.fields([
   { name: 'cover', maxCount: 1 },
   { name: 'file', maxCount: 1 },
   { name: 'preview_video', maxCount: 1 }
-]), async (req, res) => {
+]), handleProductUploadError, cleanupUncommittedProductObjects, async (req, res) => {
   const {
     title, description, type, category, price, currency,
     pay_what_you_want, min_price, quantity_limit, status, external_url, license_keys,
@@ -748,6 +832,9 @@ router.post('/', requireProductUploadAuth, replayProductPublish, upload.fields([
   }
   if (!cover) {
     return res.status(400).json({ error: 'A cover image is required.' });
+  }
+  if (cover.size > MAX_COVER_SIZE) {
+    return res.status(413).json({ error: 'The cover image must be 10 MB or smaller.' });
   }
   if (!['single', 'serial', 'service', 'subscription'].includes(type)) {
     return res.status(400).json({ error: "type must be 'single', 'serial', 'service', or 'subscription'." });
@@ -800,61 +887,23 @@ router.post('/', requireProductUploadAuth, replayProductPublish, upload.fields([
   }
   if (!reserveProductPublish(req, res)) return;
 
-  // Every validation above has passed, only now do the actual R2 uploads,
-  // so a request that was going to be rejected anyway never wastes one.
-  //
-  // These three are independent of each other (each is its own R2 object,
-  // none reads what another writes), so they run concurrently instead of
-  // one-after-another, a course with a cover, a free preview clip, and
-  // the real video file used to pay for all three uploads' latency added
-  // together in serial; now it pays for whichever one is slowest.
-  const uploadCover = (async () => {
-    let coverBuffer = cover.buffer;
-    try { coverBuffer = await optimizeImage(cover.buffer, { maxWidth: 1600, enhance: true }); } catch (err) { console.error('[image optimize]', err); }
-    const coverKey = objectKey('covers', cover.originalname);
-    await storage.uploadBuffer(coverKey, coverBuffer, cover.mimetype);
-    return { key: coverKey, value: storage.publicUrl(coverKey) };
-  })();
-
-  // Only meaningful for courses, but not restricted to them at the DB
-  // level, a free sample clip is a reasonable thing for any video
-  // deliverable, not something worth a CHECK constraint over.
-  const uploadPreview = previewVideo ? (async () => {
-    const previewKey = objectKey('previews', previewVideo.originalname);
-    await storage.uploadBuffer(previewKey, previewVideo.buffer, previewVideo.mimetype);
-    return { key: previewKey, value: storage.publicUrl(previewKey) };
-  })() : Promise.resolve({ key: null, value: null });
-
-  // The main deliverable's R2 upload doesn't actually need productId ,
-  // only the product_files row it feeds does, so it can run alongside
-  // the two above instead of waiting for the INSERT below.
-  const uploadFile = file ? (async () => {
-    const fileKey = objectKey('product-files', file.originalname);
-    await storage.uploadBuffer(fileKey, file.buffer, file.mimetype);
-    return { key: fileKey, value: fileKey };
-  })() : Promise.resolve({ key: null, value: null });
-
-  // Unguarded, any one of these three rejecting (a real R2 hiccup, not
-  // hypothetical) left the request hanging forever with no response ever
-  // sent — Express 4 doesn't route a rejected promise to the error
-  // middleware on its own.
-  const uploadResults = await Promise.allSettled([uploadCover, uploadPreview, uploadFile]);
-  const uploadFailure = uploadResults.find(result => result.status === 'rejected');
-  if (uploadFailure) {
-    console.error('[product upload]', uploadFailure.reason);
-    const uploadedKeys = uploadResults
-      .filter(result => result.status === 'fulfilled' && result.value.key)
-      .map(result => result.value.key);
-    const cleanupResults = await Promise.allSettled(uploadedKeys.map(key => storage.deleteObject(key)));
-    cleanupResults.filter(result => result.status === 'rejected')
-      .forEach(result => console.error('[product upload cleanup]', result.reason));
+  // Multer streams each incoming file directly to R2. Only the bounded,
+  // 10 MB cover is read back for image optimization.
+  try {
+    const sourceBuffer = await storage.getObjectBuffer(cover.key, MAX_COVER_SIZE);
+    let coverBuffer = sourceBuffer;
+    try { coverBuffer = await optimizeImage(sourceBuffer, { maxWidth: 1600, enhance: true }); } catch (error) {
+      console.error('[image optimize]', error);
+    }
+    await storage.uploadBuffer(cover.key, coverBuffer, cover.mimetype);
+  } catch (error) {
+    console.error('[product cover processing]', error);
     releaseProductPublish(req);
-    return res.status(502).json({ error: 'Could not upload one of those files, try again.' });
+    return res.status(502).json({ error: 'Could not process the cover image, try again.' });
   }
-  const [coverResult, previewResult, fileResult] = uploadResults.map(result => result.value);
-  const coverPath = coverResult.value;
-  const previewVideoPath = previewResult.value;
-  const fileKey = fileResult.value;
+  const coverPath = storage.publicUrl(cover.key);
+  const previewVideoPath = previewVideo ? storage.publicUrl(previewVideo.key) : null;
+  const fileKey = file?.key || null;
 
   const slug = slugify(title);
   const productCurrency = ['USD', 'ZWG'].includes(currency) ? currency : 'USD';
@@ -877,21 +926,23 @@ router.post('/', requireProductUploadAuth, replayProductPublish, upload.fields([
   );
 
   const productId = result.lastInsertRowid;
+  keepProductUpload(req, cover.key);
+  keepProductUpload(req, previewVideo?.key);
 
   if (file) {
     // Private object, stored as just its R2 key, not a public URL. The
     // only way back to these bytes is routes/downloads.js minting a
     // short-lived presigned URL after checking a valid, unexpired,
-    // not-over-its-download-limit token, exactly like it checked a local
-    // file existed before this migration. (Upload itself already
-    // happened above, in parallel with the cover/preview uploads.)
+    // not-over-its-download-limit token. The upload was streamed to R2
+    // while Multer parsed the request.
     db.prepare(`
       INSERT INTO product_files (product_id, kind, storage_path, original_filename, size_bytes)
       VALUES (?, 'upload', ?, ?, ?)
     `).run(productId, fileKey, file.originalname, file.size);
-    // Fire-and-forget, deliberately not awaited: verification (hashing
-    // the whole file, PDF page-counting) is real work with nothing in
-    // this response depending on its result, it already wasn't allowed
+    keepProductUpload(req, fileKey);
+    // Fire-and-forget, deliberately not awaited: verification (streaming
+    // the file hash, PDF page-counting for small PDFs) is real work with
+    // nothing in this response depending on its result, it already wasn't allowed
     // to fail the request (see the catch below), so there's no reason to
     // make the seller sit through it too. Same "not critical enough to
     // block on" logic, just applied to speed as well as failure.
@@ -925,7 +976,7 @@ router.patch('/:id', requireProductUploadAuth, replayProductPublish, upload.fiel
   { name: 'cover', maxCount: 1 },
   { name: 'file', maxCount: 1 },
   { name: 'preview_video', maxCount: 1 }
-]), async (req, res) => {
+]), handleProductUploadError, cleanupUncommittedProductObjects, async (req, res) => {
   const product = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
   if (!product) return res.status(404).json({ error: 'Product not found.' });
   if (product.creator_id !== req.creator.id) {
@@ -940,6 +991,9 @@ router.patch('/:id', requireProductUploadAuth, replayProductPublish, upload.fiel
   const cover = req.files?.cover?.[0];
   const file = req.files?.file?.[0];
   const previewVideo = req.files?.preview_video?.[0];
+  if (cover && cover.size > MAX_COVER_SIZE) {
+    return res.status(413).json({ error: 'The cover image must be 10 MB or smaller.' });
+  }
   const isService = product.type === 'service';
   const isSubscription = product.type === 'subscription';
 
@@ -1028,52 +1082,23 @@ router.patch('/:id', requireProductUploadAuth, replayProductPublish, upload.fiel
   }
   if (!reserveProductPublish(req, res)) return;
 
-  // All validation above has passed, only now do the actual R2 uploads.
-  // Same reasoning as the POST handler above: whichever of these are
-  // actually present are independent of each other, so they run
-  // concurrently rather than one-after-another.
-  const uploadCover = cover ? (async () => {
-    let coverBuffer = cover.buffer;
-    try { coverBuffer = await optimizeImage(cover.buffer, { maxWidth: 1600, enhance: true }); } catch (err) { console.error('[image optimize]', err); }
-    const coverKey = objectKey('covers', cover.originalname);
-    await storage.uploadBuffer(coverKey, coverBuffer, cover.mimetype);
-    return { key: coverKey, value: storage.publicUrl(coverKey) };
-  })() : Promise.resolve({ key: null, value: product.cover_path });
-
-  const uploadPreview = previewVideo ? (async () => {
-    const previewKey = objectKey('previews', previewVideo.originalname);
-    await storage.uploadBuffer(previewKey, previewVideo.buffer, previewVideo.mimetype);
-    return { key: previewKey, value: storage.publicUrl(previewKey) };
-  })() : Promise.resolve({ key: null, value: product.preview_video_path });
-
-  // The main deliverable's R2 upload doesn't need anything the DELETE/
-  // INSERT below does, so it runs alongside cover/preview too instead of
-  // waiting its turn.
-  const uploadFile = file ? (async () => {
-    const fileKey = objectKey('product-files', file.originalname);
-    await storage.uploadBuffer(fileKey, file.buffer, file.mimetype);
-    return { key: fileKey, value: fileKey };
-  })() : Promise.resolve({ key: null, value: null });
-
-  // Same reasoning as the POST handler above: unguarded, any one of these
-  // rejecting used to hang the request forever with no response ever sent.
-  const uploadResults = await Promise.allSettled([uploadCover, uploadPreview, uploadFile]);
-  const uploadFailure = uploadResults.find(result => result.status === 'rejected');
-  if (uploadFailure) {
-    console.error('[product edit upload]', uploadFailure.reason);
-    const uploadedKeys = uploadResults
-      .filter(result => result.status === 'fulfilled' && result.value.key)
-      .map(result => result.value.key);
-    const cleanupResults = await Promise.allSettled(uploadedKeys.map(key => storage.deleteObject(key)));
-    cleanupResults.filter(result => result.status === 'rejected')
-      .forEach(result => console.error('[product edit upload cleanup]', result.reason));
-    releaseProductPublish(req);
-    return res.status(502).json({ error: 'Could not upload one of those files, try again.' });
+  if (cover) {
+    try {
+      const sourceBuffer = await storage.getObjectBuffer(cover.key, MAX_COVER_SIZE);
+      let coverBuffer = sourceBuffer;
+      try { coverBuffer = await optimizeImage(sourceBuffer, { maxWidth: 1600, enhance: true }); } catch (error) {
+        console.error('[image optimize]', error);
+      }
+      await storage.uploadBuffer(cover.key, coverBuffer, cover.mimetype);
+    } catch (error) {
+      console.error('[product cover processing]', error);
+      releaseProductPublish(req);
+      return res.status(502).json({ error: 'Could not process the cover image, try again.' });
+    }
   }
-  const [coverResult, previewResult, fileResult] = uploadResults.map(result => result.value);
-  const coverPath = coverResult.value;
-  const previewVideoPath = previewResult.value;
-  const fileKey = fileResult.value;
+  const coverPath = cover ? storage.publicUrl(cover.key) : product.cover_path;
+  const previewVideoPath = previewVideo ? storage.publicUrl(previewVideo.key) : product.preview_video_path;
+  const fileKey = file?.key || null;
 
   db.prepare(`
     UPDATE products SET
@@ -1100,18 +1125,20 @@ router.patch('/:id', requireProductUploadAuth, replayProductPublish, upload.fiel
     previewVideoPath,
     product.id
   );
+  keepProductUpload(req, cover?.key);
+  keepProductUpload(req, previewVideo?.key);
 
   // A new file or link replaces the old deliverable outright, one file per
   // product (see getProductFile), so the old row is cleared first.
   if (file || external_url) {
     db.prepare('DELETE FROM product_files WHERE product_id = ?').run(product.id);
     if (file) {
-      // Upload itself already happened above, in parallel with cover/
-      // preview, fileKey is that result.
+      // The upload was streamed to R2 while multer parsed the request.
       db.prepare(`
         INSERT INTO product_files (product_id, kind, storage_path, original_filename, size_bytes)
         VALUES (?, 'upload', ?, ?, ?)
       `).run(product.id, fileKey, file.originalname, file.size);
+      keepProductUpload(req, fileKey);
       // A replaced file is a genuinely new upload, worth re-checking ,
       // review_status resets to 'clear' first so an old flag from a
       // previous file doesn't linger on a file that's since been swapped out.

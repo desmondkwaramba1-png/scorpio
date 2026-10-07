@@ -31,11 +31,12 @@
 // actually needed R2. Lazy require means the rest of the app works fine
 // with R2 simply reporting isConfigured() === false until the package
 // (and the env vars) are actually in place.
-let S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, getSignedUrl;
+let S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, getSignedUrl, Upload;
 function loadSdk() {
   if (S3Client) return;
   ({ S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3'));
   ({ getSignedUrl } = require('@aws-sdk/s3-request-presigner'));
+  ({ Upload } = require('@aws-sdk/lib-storage'));
 }
 
 const ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
@@ -63,14 +64,51 @@ function getClient() {
   return client;
 }
 
-// buffer: the file's raw bytes (multer.memoryStorage() gives req.file.buffer
-// — nothing is ever written to this server's own disk on the way to R2).
+// For small objects already held in memory, such as processed covers.
 async function uploadBuffer(key, buffer, contentType) {
   if (!isConfigured()) throw new Error('File storage is not configured (R2 env vars missing).');
   await getClient().send(new PutObjectCommand({
     Bucket: BUCKET, Key: key, Body: buffer, ContentType: contentType
   }));
   return key;
+}
+
+async function uploadStream(key, body, contentType) {
+  if (!isConfigured()) throw new Error('File storage is not configured (R2 env vars missing).');
+  const upload = new Upload({
+    client: getClient(),
+    params: { Bucket: BUCKET, Key: key, Body: body, ContentType: contentType },
+    queueSize: 2,
+    partSize: 5 * 1024 * 1024,
+    leavePartsOnError: false
+  });
+  await upload.done();
+  return key;
+}
+
+async function getObjectStream(key) {
+  if (!isConfigured()) throw new Error('File storage is not configured (R2 env vars missing).');
+  const result = await getClient().send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
+  return { stream: result.Body, size: result.ContentLength };
+}
+
+async function getObjectBuffer(key, maxBytes) {
+  const { stream, size } = await getObjectStream(key);
+  if (size > maxBytes) {
+    stream.destroy();
+    throw new Error(`Object exceeds the ${maxBytes}-byte in-memory processing limit.`);
+  }
+  const chunks = [];
+  let bytesRead = 0;
+  for await (const chunk of stream) {
+    bytesRead += chunk.length;
+    if (bytesRead > maxBytes) {
+      stream.destroy();
+      throw new Error(`Object exceeds the ${maxBytes}-byte in-memory processing limit.`);
+    }
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks, bytesRead);
 }
 
 function publicUrl(key) {
@@ -103,4 +141,7 @@ async function deleteObject(key) {
   await getClient().send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
 }
 
-module.exports = { isConfigured, uploadBuffer, publicUrl, getPresignedUrl, deleteObject };
+module.exports = {
+  isConfigured, uploadBuffer, uploadStream, getObjectStream, getObjectBuffer,
+  publicUrl, getPresignedUrl, deleteObject
+};

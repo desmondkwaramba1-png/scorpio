@@ -425,91 +425,90 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId, autoOpen
 
   return (
     <div ref={orderRef} className="card card--pad order-card">
-      <div
-        className="order-card__header"
-        role="button"
-        tabIndex={0}
-        aria-expanded={!!watching}
-        onClick={openPurchase}
-        onKeyDown={e => {
-          if (e.target !== e.currentTarget) return;
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            openPurchase();
-          }
-        }}
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap', cursor: 'pointer' }}
-      >
-        <div style={{ display: 'flex', gap: 14, alignItems: 'center', minWidth: 0 }}>
-          <div style={{
-            width: 48, height: 48, borderRadius: 8, flexShrink: 0,
-            background: purchase.product_cover_path ? `url(${purchase.product_cover_path}) center/cover` : 'var(--green-tint)'
-          }} />
-          <div style={{ minWidth: 0 }}>
-            <p style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{purchase.product_title}</p>
-            <p className="muted" style={{ fontSize: '.85rem' }}>{purchase.creator_name} &middot; {formatDate(purchase.created_at)}</p>
-            <Link to={productUrl} onClick={e => e.stopPropagation()} className="muted" style={{ fontSize: '.75rem', textDecoration: 'underline', textUnderlineOffset: 2 }}>
-              Product details
-            </Link>
-          </div>
+      <div className="order-card__header">
+        <button
+          type="button"
+          className="order-card__summary"
+          onClick={openPurchase}
+          aria-expanded={!!watching}
+          aria-label={`${watching ? 'Close' : 'Open'} ${purchase.product_title}`}
+        >
+          <span
+            className="order-card__cover"
+            style={purchase.product_cover_path ? { backgroundImage: `url(${purchase.product_cover_path})` } : undefined}
+            aria-hidden="true"
+          >
+            {!purchase.product_cover_path && <FiBookOpen size={21} />}
+          </span>
+          <span className="order-card__identity">
+            <span className="order-card__title">{purchase.product_title}</span>
+            <span className="order-card__creator">{purchase.creator_name}</span>
+            <span className="order-card__date"><FiClock size={12} /> Purchased {formatDate(purchase.created_at)}</span>
+          </span>
+        </button>
+        <div className="order-card__purchase-meta">
+          <p className="order-card__price mono">{formatMoney(purchase.amount_minor, purchase.currency)}</p>
+          {purchase.service ? (
+            <span className={`badge ${FULFILLMENT_LABEL[purchase.service.fulfillment_status]?.className || 'badge--neutral'}`}>
+              {FULFILLMENT_LABEL[purchase.service.fulfillment_status]?.text || purchase.service.fulfillment_status}
+            </span>
+          ) : (
+            <span className={`badge ${purchase.payment_status === 'paid' ? 'badge--green' : 'badge--neutral'}`}>{purchase.payment_status}</span>
+          )}
         </div>
+      </div>
 
-        {/* flexShrink:0 keeps these buttons from getting squeezed (the
-            title above shrinks instead, via its own minWidth:0). But with
-            up to three buttons plus the price/badge possibly all present
-            at once (a video product that's also downloadable), nothing
-            stopped them together from running past the card's right edge
-            on a narrow phone instead of wrapping, real horizontal overlap
-            a stress test at 320px with all three present actually showed. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '100%' }}>
+      <div className="order-card__toolbar" onClick={e => e.stopPropagation()}>
+        <Link to={productUrl} className="order-card__details-link">
+          <FiExternalLink size={14} /> Product details
+        </Link>
+        <div className="order-card__actions">
           {purchase.view_url && purchase.is_external ? (
-            <a href={purchase.view_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="btn btn--gold btn--sm">
+            <a href={purchase.view_url} target="_blank" rel="noopener noreferrer" className="btn btn--gold btn--sm">
               <FiExternalLink size={14} /> Open
             </a>
           ) : purchase.view_url && (
-            <button onClick={e => { e.stopPropagation(); setWatching(w => !w); }} className="btn btn--gold btn--sm">
+            <button type="button" onClick={() => setWatching(w => !w)} className="btn btn--gold btn--sm">
               {watching ? <FiX size={14} /> : purchase.is_video || purchase.is_audio ? <FiPlay size={14} /> : <FiBookOpen size={14} />}
-              {watching ? 'Close' : purchase.is_video ? 'Watch' : purchase.is_audio ? 'Play' : 'Read / View'}
+              {watching ? 'Close' : purchase.is_video ? 'Watch now' : purchase.is_audio ? 'Listen now' : 'Read now'}
             </button>
           )}
           {purchase.download_url && (
             <>
-              <a href={purchase.download_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="btn btn--gold btn--sm">
-                <FiDownload size={14} /> Download now
+              <a href={purchase.download_url} target="_blank" rel="noopener noreferrer" className="btn btn--primary btn--sm">
+                <FiDownload size={14} /> Download
               </a>
-              <button onClick={resend} disabled={resending} className="btn btn--ghost btn--sm" title="Resend the link by email">
-                <FiRefreshCw size={14} /> {resent ? 'Sent' : 'Resend'}
+              <button type="button" onClick={resend} disabled={resending} className="btn btn--ghost btn--sm" title="Email the download link again">
+                <FiRefreshCw size={14} /> {resending ? 'Sending...' : resent ? 'Email sent' : 'Email link'}
               </button>
             </>
           )}
-          <div style={{ textAlign: 'right' }}>
-            <p className="mono" style={{ fontWeight: 600 }}>{formatMoney(purchase.amount_minor, purchase.currency)}</p>
-            {purchase.service ? (
-              <span className={`badge ${FULFILLMENT_LABEL[purchase.service.fulfillment_status]?.className || 'badge--neutral'}`}>
-                {FULFILLMENT_LABEL[purchase.service.fulfillment_status]?.text || purchase.service.fulfillment_status}
-              </span>
-            ) : (
-              <span className={`badge ${purchase.payment_status === 'paid' ? 'badge--green' : 'badge--neutral'}`}>{purchase.payment_status}</span>
-            )}
-          </div>
         </div>
       </div>
 
-      {watching && purchase.is_video && (
-        <video src={purchase.view_url} controls autoPlay style={{ width: '100%', borderRadius: 'var(--radius-sm)', marginTop: 16, background: '#000' }} />
-      )}
-      {watching && purchase.is_audio && (
-        <audio src={purchase.view_url} controls autoPlay style={{ width: '100%', marginTop: 16 }} />
-      )}
-      {watching && purchase.view_url && !purchase.is_video && !purchase.is_audio && !purchase.is_external && (
-        <iframe src={purchase.view_url} title={purchase.product_title} className="library-file-viewer" />
+      {watching && (
+        <section className="order-card__detail" aria-label={`Your purchase: ${purchase.product_title}`}>
+          <div className="order-card__detail-heading">
+            <span className="order-card__detail-icon"><FiBookOpen size={17} /></span>
+            <div>
+              <p className="order-card__detail-title">Your purchase</p>
+              <p className="order-card__detail-caption">Ready to enjoy from your library.</p>
+            </div>
+          </div>
+          {purchase.is_video && (
+            <video src={purchase.view_url} controls autoPlay className="order-card__media" />
+          )}
+          {purchase.is_audio && (
+            <audio src={purchase.view_url} controls autoPlay className="order-card__media" />
+          )}
+          {purchase.view_url && !purchase.is_video && !purchase.is_audio && !purchase.is_external && (
+            <iframe src={purchase.view_url} title={purchase.product_title} className="library-file-viewer" />
+          )}
+        </section>
       )}
       {purchase.license_key && (
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-          marginTop: 14, padding: '9px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--field-bg)'
-        }}>
-          <span className="mono" style={{ fontSize: '.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="order-card__license">
+          <span className="mono">
             <FiKey size={13} color="var(--gold)" /> {purchase.license_key}
           </span>
           <button onClick={copyKey} className="btn btn--ghost btn--sm" style={keyCopied ? { color: 'var(--green-glow)' } : undefined}>

@@ -407,9 +407,58 @@ img{max-width:100%;display:block;}
 .order-summary{display:flex;gap:12px;align-items:center;padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid var(--line);}
 .order-summary__cover{width:52px;height:52px;border-radius:8px;background-color:var(--green-tint);background-size:contain;background-repeat:no-repeat;background-position:center;flex-shrink:0;}
 .order-summary .mono{font-size:1.2rem;}
-.order-card{overflow:hidden;}
-.order-card__header{width:100%;}
-.order-card__meta{min-width:0;}
+.order-card{overflow:hidden;transition:border-color .18s ease,box-shadow .18s ease;}
+.order-card:has(.order-card__detail){border-color:rgba(var(--gold-rgb),.42);box-shadow:var(--shadow-2);}
+.order-card__header{display:flex;align-items:center;justify-content:space-between;gap:16px;min-width:0;}
+.order-card__summary{
+  display:flex;align-items:center;gap:14px;flex:1 1 auto;min-width:0;padding:0;
+  background:none;border:0;text-align:left;cursor:pointer;color:inherit;font:inherit;
+}
+.order-card__cover{
+  display:grid;place-items:center;width:64px;height:76px;flex:0 0 64px;overflow:hidden;
+  border:1px solid rgba(var(--green-glow-rgb),.12);border-radius:12px;
+  background-color:var(--green-tint);background-size:cover;background-repeat:no-repeat;background-position:center;
+  color:var(--green-glow);box-shadow:0 5px 14px rgba(19,25,33,.1);
+}
+.order-card__identity{display:grid;gap:3px;min-width:0;}
+.order-card__title{
+  overflow:hidden;color:var(--ink);font-size:.98rem;font-weight:750;
+  text-overflow:ellipsis;white-space:nowrap;
+}
+.order-card__creator{overflow:hidden;color:var(--muted);font-size:.83rem;text-overflow:ellipsis;white-space:nowrap;}
+.order-card__date{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:.72rem;}
+.order-card__purchase-meta{display:grid;justify-items:end;gap:5px;flex:0 0 auto;}
+.order-card__price{font-size:.94rem;font-weight:700;}
+.order-card__toolbar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-top:16px;padding-top:14px;border-top:1px solid var(--line);
+}
+.order-card__details-link{
+  display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;min-height:34px;
+  color:var(--link-ink);font-size:.8rem;font-weight:700;
+}
+.order-card__details-link:hover{text-decoration:underline;text-underline-offset:3px;}
+.order-card__actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;}
+.order-card__detail{
+  margin-top:16px;padding:16px;border:1px solid var(--line);border-radius:14px;
+  background:var(--paper);
+}
+.order-card__detail-heading{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.order-card__detail-icon{
+  display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;
+  border-radius:10px;background:var(--gold-tint);color:var(--gold-ink);
+}
+.order-card__detail-title{color:var(--ink);font-size:.9rem;font-weight:750;}
+.order-card__detail-caption{margin-top:2px;color:var(--muted);font-size:.76rem;}
+.order-card__media{display:block;width:100%;border-radius:10px;background:#000;}
+.order-card__media[controls]{min-height:48px;}
+.order-card__license{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  margin-top:14px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);
+  background:var(--field-bg);
+}
+.order-card__license .mono{display:flex;align-items:center;gap:8px;min-width:0;font-size:.85rem;overflow-wrap:anywhere;}
+.order-card__license button{flex:0 0 auto;}
 
 /* Concrete, specific reasons to trust the purchase, sitting right above
    the buy button where they can actually influence the click — a vague
@@ -2126,6 +2175,22 @@ img{max-width:100%;display:block;}
   .product-reel__video{max-height:260px;}
   .order-summary{flex-direction:column;align-items:flex-start;}
   .order-summary__cover{width:64px;height:64px;}
+  .order-card__header{align-items:flex-start;gap:10px;}
+  .order-card__summary{gap:10px;}
+  .order-card__cover{width:54px;height:66px;flex-basis:54px;}
+  .order-card__title{font-size:.9rem;}
+  .order-card__creator{font-size:.76rem;}
+  .order-card__date{font-size:.67rem;}
+  .order-card__purchase-meta{padding-top:2px;}
+  .order-card__price{font-size:.82rem;}
+  .order-card__purchase-meta .badge{font-size:.62rem;padding:3px 7px;}
+  .order-card__toolbar{align-items:flex-start;flex-direction:column;gap:8px;margin-top:12px;padding-top:10px;}
+  .order-card__actions{justify-content:flex-start;width:100%;}
+  .order-card__actions .btn.btn--sm{flex:1 1 118px;min-width:0;padding:.55rem .65rem;font-size:.76rem;}
+  .order-card__detail{padding:12px;}
+  .order-card .library-file-viewer{height:60vh;min-height:300px;}
+  .order-card__license{align-items:flex-start;}
+  .order-card__license .mono{font-size:.74rem;}
   .buy-panel .card{padding:16px;}
   .buy-benefits li{font-size:.8rem;}
   .features-grid{grid-template-columns:1fr;}

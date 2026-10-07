@@ -22,6 +22,29 @@ const { issueProductUploadToken, findProductUploadToken } = require('../lib/prod
 const router = express.Router();
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
+router.use((req, res, next) => {
+  const isCreateUpload = req.method === 'POST' && req.path === '/';
+  const isEditUpload = req.method === 'PATCH' && /^\/\d+$/.test(req.path);
+  if (!isCreateUpload && !isEditUpload) return next();
+
+  const startedAt = Date.now();
+  let responseFinished = false;
+  console.info(`[product upload request] started ${req.method}`);
+  req.once('aborted', () => {
+    console.warn(`[product upload request] client aborted ${req.method} after ${Date.now() - startedAt}ms`);
+  });
+  res.once('finish', () => {
+    responseFinished = true;
+    console.info(`[product upload request] finished ${req.method} ${res.statusCode} in ${Date.now() - startedAt}ms`);
+  });
+  res.once('close', () => {
+    if (!responseFinished) {
+      console.warn(`[product upload request] response closed ${req.method} after ${Date.now() - startedAt}ms`);
+    }
+  });
+  next();
+});
+
 // Uploads are served back out as static files with whatever content-type
 // the extension implies, so an unrestricted cover upload is a stored-XSS
 // hole waiting to happen (an uploaded .svg or .html served at its own URL
@@ -107,6 +130,13 @@ const productUploadStorage = {
         const uploadError = error instanceof Error ? error : new Error(String(error));
         file.stream.destroy(uploadError);
         uploadError.productUploadFailure = true;
+        console.error('[product upload storage]', {
+          field: file.fieldname,
+          name: uploadError.name,
+          code: uploadError.code || null,
+          statusCode: uploadError.$metadata?.httpStatusCode || null,
+          message: uploadError.message
+        });
         callback(uploadError);
       });
   },

@@ -170,7 +170,20 @@ export const api = {
 // it's working — this is what actually fixes that, not a faster server
 // (the server side of a product publish is already fast, confirmed
 // directly: single-digit milliseconds internally).
-function uploadWithProgress(path, method, formData, onProgress, timeoutMs = 120000, headers = {}, { crossOrigin = false } = {}) {
+async function uploadWithProgress(path, method, formData, onProgress, timeoutMs = 120000, headers = {}, { crossOrigin = false } = {}) {
+  const retryDelays = headers['Idempotency-Key'] ? [1000, 3000] : [];
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await sendUpload(path, method, formData, onProgress, timeoutMs, headers, crossOrigin);
+    } catch (error) {
+      if (!error.retryable || attempt >= retryDelays.length) throw error;
+      if (onProgress) onProgress(0);
+      await sleep(retryDelays[attempt]);
+    }
+  }
+}
+
+function sendUpload(path, method, formData, onProgress, timeoutMs, headers, crossOrigin) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open(method, path);
@@ -189,18 +202,28 @@ function uploadWithProgress(path, method, formData, onProgress, timeoutMs = 1200
         notifyConnectionRestored();
         resolve(data);
       }
-      else reject(new Error(data?.error || 'Something went wrong.'));
+      else {
+        const error = new Error(data?.error || 'Something went wrong.');
+        error.retryable = [502, 503, 504].includes(xhr.status);
+        reject(error);
+      }
     };
     xhr.onerror = () => {
       if (!navigator.onLine) {
         reject(connectionError());
         return;
       }
-      reject(new Error(crossOrigin
+      const error = new Error(crossOrigin
         ? 'The upload connection was interrupted. Check your connection and try again.'
-        : 'The upload connection was interrupted. The server or its proxy may have closed the connection; try again.'));
+        : 'The upload connection was interrupted. The server or its proxy may have closed the connection; try again.');
+      error.retryable = true;
+      reject(error);
     };
-    xhr.ontimeout = () => reject(new Error("That's taking too long. Check your connection and try again."));
+    xhr.ontimeout = () => {
+      const error = new Error("That's taking too long. Check your connection and try again.");
+      error.retryable = true;
+      reject(error);
+    };
     if (crossOrigin) {
       xhr.send(formData);
       return;

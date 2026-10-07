@@ -40,14 +40,13 @@ function CopyLinkButton({ handle }) {
 export default function DashboardLayout() {
   const { creator } = useAuth();
   const [runGuide, setRunGuide] = useState(false);
+  const guideKey = creator?.id ? `scorpio_dashboard_tour_seen_v2_${creator.id}` : null;
 
   useEffect(() => {
-    if (!creator?.id) return;
-    const guideKey = `scorpio_dashboard_tour_seen_${creator.id}`;
+    if (!guideKey) return;
     if (localStorage.getItem(guideKey)) return;
-    localStorage.setItem(guideKey, 'true');
     setRunGuide(true);
-  }, [creator?.id]);
+  }, [guideKey]);
 
   // A buyer with no creator profile has no business seeing the seller
   // dashboard shell (tabs, products, wallet) at all, not even a broken/
@@ -56,7 +55,7 @@ export default function DashboardLayout() {
 
   return (
     <div className="dashboard-shell wrap">
-      <TourGuide run={runGuide} setRun={setRunGuide} />
+      <TourGuide run={runGuide} setRun={setRunGuide} storageKey={guideKey} />
       <div className="card dashboard-profile">
         <div className="dashboard-profile__identity">
           <div className="dashboard-profile__avatar" style={{

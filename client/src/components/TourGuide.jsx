@@ -1,28 +1,54 @@
 import { Joyride, STATUS } from 'react-joyride';
 
-export default function TourGuide({ run, setRun }) {
+export default function TourGuide({ run, setRun, storageKey }) {
   const steps = [
     {
-      target: '[data-tour="products"]',
-      title: 'Welcome to your dashboard',
-      content: 'Start here to publish a product and manage everything in your shop.',
+      target: '[data-tour="overview"]',
+      title: 'Dashboard overview',
+      content: 'Get a quick snapshot of your shop, recent orders, and performance.',
       placement: 'bottom',
       disableBeacon: true,
     },
     {
+      target: '[data-tour="products"]',
+      title: 'Products',
+      content: 'Create a listing, publish new work, and manage your products, series, and subscriptions.',
+      placement: 'bottom',
+    },
+    {
+      target: '[data-tour="reels"]',
+      title: 'Reels',
+      content: 'Share short videos to introduce your work and help buyers discover your products.',
+    },
+    {
+      target: '[data-tour="blog"]',
+      title: 'Blog',
+      content: 'Write and manage posts to share useful ideas and bring more people to your storefront.',
+    },
+    {
       target: '[data-tour="orders"]',
       title: 'Orders',
-      content: 'See what customers bought and keep track of fulfillment.',
+      content: 'See customer purchases, respond to orders, and keep track of fulfillment.',
+    },
+    {
+      target: '[data-tour="subscriptions"]',
+      title: 'Subscriptions',
+      content: 'See who subscribes to your recurring products and follow subscription activity.',
+    },
+    {
+      target: '[data-tour="insights"]',
+      title: 'Insights',
+      content: 'Review sales, visits, and product performance to understand how your shop is doing.',
     },
     {
       target: '[data-tour="wallet"]',
       title: 'Wallet',
-      content: 'Review your available balance and payout activity.',
+      content: 'Review your balances, payout activity, and available funds.',
     },
     {
       target: '[data-tour="settings"]',
       title: 'Settings',
-      content: 'Update your storefront and restart this guide whenever you need it.',
+      content: 'Update your storefront and account details, or restart this guide whenever you need it.',
     }
   ];
 
@@ -32,7 +58,7 @@ export default function TourGuide({ run, setRun }) {
 
     if (finishedStatuses.includes(status)) {
       setRun(false);
-      localStorage.setItem('scorpio_tour_completed', 'true');
+      if (storageKey) localStorage.setItem(storageKey, 'true');
     }
   };
 
@@ -51,7 +77,6 @@ export default function TourGuide({ run, setRun }) {
         overlayColor: 'rgba(15,17,17,.48)',
         spotlightPadding: 7,
         spotlightRadius: 9,
-        skipScroll: true,
         targetWaitTimeout: 5000
       }}
       styles={{

@@ -65,7 +65,7 @@ export default function Settings() {
   const avatarUrl = avatarPreview || creator.avatar_path;
 
   function restartGuide() {
-    localStorage.removeItem(`scorpio_dashboard_tour_seen_${creator.id}`);
+    localStorage.removeItem(`scorpio_dashboard_tour_seen_v2_${creator.id}`);
     window.location.assign('/dashboard');
   }
 

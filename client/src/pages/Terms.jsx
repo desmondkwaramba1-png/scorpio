@@ -43,9 +43,11 @@ export default function Terms() {
         </Section>
 
         <Section icon={FiCreditCard} title="Payments, honestly">
-          Payment runs through a real EcoCash integration, not a stand-in. It is currently running in
-          test mode while the platform gets ready to launch, so no real money moves yet. This notice
-          will be removed the day that changes. EcoCash is the only payment method right now.
+          Payments are processed through SCORPIO's EcoCash integration with Dischub. When you check out,
+          an EcoCash approval prompt is sent to the number you provide. An order is marked paid, and
+          digital access is granted, only after the gateway confirms the payment. EcoCash is the only
+          payment method right now. Any refund approved by SCORPIO is processed manually outside the
+          platform through EcoCash.
         </Section>
 
         <Section icon={FiShieldOff} title="Buyer protection">
@@ -71,8 +73,8 @@ export default function Terms() {
         </Section>
 
         <Section icon={FiRefreshCw} title="Changes">
-          This is an early build. These terms will change as real payments, real payouts, and real
-          verification come online. Material changes will be reflected here.
+          SCORPIO is an evolving platform. These terms may change as its payment, payout, and verification
+          processes evolve. Material changes will be reflected here.
         </Section>
       </div>
 

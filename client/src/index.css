@@ -165,56 +165,79 @@ main:has(> .center-page){display:flex;flex-direction:column;}
   position:fixed;inset:0;z-index:1000;display:grid;place-items:center;overflow:hidden;
   background-color:#fbf1e8;
   background-image:
-    radial-gradient(ellipse 54% 45% at 50% 45%,rgba(255,255,255,.72),transparent 100%),
-    radial-gradient(ellipse 70% 38% at 50% 100%,rgba(255,140,66,.12),transparent 100%);
-  color:#20212a;opacity:1;transition:opacity .3s ease;
+    radial-gradient(ellipse 42% 42% at 50% 42%,rgba(255,255,255,.86),transparent 100%),
+    radial-gradient(ellipse 80% 48% at 50% 100%,rgba(255,140,66,.16),transparent 100%),
+    radial-gradient(ellipse 38% 40% at 0% 48%,rgba(255,140,66,.09),transparent 100%),
+    radial-gradient(ellipse 38% 40% at 100% 48%,rgba(32,33,42,.045),transparent 100%);
+  color:#20212a;opacity:1;transition:opacity .4s ease;
 }
 .splash--leaving{opacity:0;pointer-events:none;}
-.splash::before{content:'';position:absolute;inset:0 0 auto;height:4px;background:linear-gradient(90deg,#20212a,#ff8c42);}
+.splash::before{content:'';position:absolute;inset:0 0 auto;height:4px;background:linear-gradient(90deg,#20212a 0%,#ff8c42 48%,#20212a 100%);}
 .splash__content{
   position:relative;width:min(520px,calc(100% - 32px));min-height:100vh;min-height:100dvh;
   display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
   padding:clamp(18px,4vh,32px) 0 78px;
 }
 .splash__eyebrow{
-  color:#8a4712;font-size:.66rem;font-weight:800;letter-spacing:.12em;
-  margin:0 0 clamp(8px,2vh,16px);
+  display:flex;align-items:center;gap:9px;
+  padding:8px 13px;border:1px solid rgba(138,71,18,.13);border-radius:999px;
+  background:rgba(255,255,255,.64);color:#754015;font-size:.62rem;font-weight:800;
+  letter-spacing:.1em;box-shadow:0 4px 14px rgba(138,71,18,.045);
+  margin:0 0 clamp(10px,2.2vh,18px);
+}
+.splash__eyebrow::before{
+  content:'';width:7px;height:7px;flex:0 0 7px;border-radius:50%;
+  background:#e86f1f;box-shadow:0 0 0 3px rgba(232,111,31,.13);
 }
 .splash__stage{
-  position:relative;display:grid;place-items:center;
-  width:clamp(220px,38vh,320px);aspect-ratio:1;
+  position:relative;isolation:isolate;display:grid;place-items:center;
+  width:clamp(220px,39vh,320px);aspect-ratio:1;
   opacity:0;transform:translateY(12px) scale(.9);
   transition:opacity .5s ease,transform .55s cubic-bezier(.2,.75,.25,1);
+}
+.splash__stage::before,.splash__stage::after{
+  content:'';position:absolute;z-index:-1;aspect-ratio:1;border-radius:50%;pointer-events:none;
+}
+.splash__stage::before{
+  inset:4%;border:1px solid rgba(198,94,37,.17);
+  box-shadow:0 0 0 12px rgba(255,255,255,.2),0 0 0 30px rgba(255,140,66,.035);
+}
+.splash__stage::after{
+  inset:-1%;border:1px dashed rgba(198,94,37,.2);
+  animation:splash-orbit 42s linear infinite;
 }
 .splash__stage.is-in{opacity:1;transform:translateY(0) scale(1);}
 .splash__mark{
   position:relative;z-index:1;display:block;width:100%;height:auto;border-radius:24px;
-  box-shadow:0 20px 48px rgba(138,71,18,.12),0 0 0 1px rgba(138,71,18,.08);
+  box-shadow:0 22px 52px rgba(76,48,30,.14),0 0 0 6px rgba(255,255,255,.72),0 0 0 7px rgba(138,71,18,.09);
 }
 .splash__tagline{
-  margin:4px 0 0;color:#3d332d;font-size:.94rem;font-weight:650;
+  margin:6px 0 0;color:#3d332d;font-size:.98rem;font-weight:700;letter-spacing:-.015em;
   opacity:0;transform:translateY(8px);transition:opacity .4s ease .12s,transform .4s ease .12s;
 }
 .splash__tagline.is-in{opacity:1;transform:translateY(0);}
 .splash__highlights{
-  display:flex;justify-content:center;gap:10px;width:min(100%,450px);margin-top:20px;
+  display:flex;justify-content:center;gap:10px;width:min(100%,450px);margin-top:22px;
   opacity:0;transform:translateY(8px);transition:opacity .4s ease .2s,transform .4s ease .2s;
 }
 .splash__highlights.is-in{opacity:1;transform:translateY(0);}
 .splash__highlight{
-  display:flex;flex:1;align-items:center;justify-content:center;gap:7px;min-height:48px;
-  padding:8px 10px;border:1px solid rgba(138,71,18,.12);border-radius:14px;
-  background:rgba(255,255,255,.68);color:#53463d;font-size:.68rem;font-weight:700;
-  box-shadow:0 4px 14px rgba(138,71,18,.05);
+  display:flex;flex:1;align-items:center;justify-content:center;gap:8px;min-height:52px;
+  padding:9px 11px;border:1px solid rgba(138,71,18,.13);border-radius:16px;
+  background:rgba(255,255,255,.76);color:#493a30;font-size:.7rem;font-weight:750;
+  box-shadow:0 7px 20px rgba(76,48,30,.055),inset 0 1px 0 rgba(255,255,255,.8);
 }
 .splash__highlight-icon{
   display:grid;flex:0 0 28px;place-items:center;width:28px;height:28px;border-radius:9px;
   background:#ffead8;color:#c65e25;
 }
+.splash__highlight:nth-child(2) .splash__highlight-icon{background:#f9e8d2;color:#965216;}
+.splash__highlight:nth-child(3) .splash__highlight-icon{background:#f6e5df;color:#a24c39;}
 .splash__loading{position:absolute;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translateX(-50%);display:grid;justify-items:center;gap:9px;width:min(220px,100%);}
 .splash__loading-label{color:#8b7c70;font-size:.66rem;font-weight:600;}
 .splash__loading-track{display:block;width:168px;max-width:100%;height:3px;overflow:hidden;border-radius:4px;background:#ead9cb;}
 .splash__loading-track span{display:block;width:42%;height:100%;border-radius:inherit;background:#e86f1f;animation:splash-progress 1.1s ease-in-out infinite alternate;}
+@keyframes splash-orbit{to{transform:rotate(1turn);}}
 @keyframes splash-progress{
   from{transform:translateX(-8%);}
   to{transform:translateX(148%);}
@@ -222,6 +245,7 @@ main:has(> .center-page){display:flex;flex-direction:column;}
 @media (prefers-reduced-motion:reduce){
   .splash__stage,.splash__tagline,.splash__highlights,.splash__loading-track span{animation:none;transition:none;}
   .splash__stage,.splash__tagline,.splash__highlights{opacity:1;transform:none;}
+  .splash__stage::after{animation:none;}
   .splash__loading-track span{width:60%;}
 }
 @media (max-width:380px){
@@ -231,7 +255,7 @@ main:has(> .center-page){display:flex;flex-direction:column;}
 }
 @media (max-height:480px){
   .splash__content{padding:12px 0 68px;}
-  .splash__eyebrow{margin-bottom:5px;}
+  .splash__eyebrow{margin-bottom:5px;padding:6px 10px;}
   .splash__stage{width:clamp(160px,38vh,190px);}
   .splash__tagline{margin-top:5px;font-size:.82rem;}
   .splash__highlights{gap:6px;margin-top:12px;}

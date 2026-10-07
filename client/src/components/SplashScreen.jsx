@@ -21,14 +21,14 @@ export default function SplashScreen() {
 
     if (reduceMotion) {
       setReady(true);
-      const toFade = setTimeout(() => setPhase('leaving'), 250);
-      const toDone = setTimeout(() => setPhase('done'), 550);
+      const toFade = setTimeout(() => setPhase('leaving'), 900);
+      const toDone = setTimeout(() => setPhase('done'), 1200);
       return () => { clearTimeout(toFade); clearTimeout(toDone); };
     }
 
     const firstFrame = requestAnimationFrame(() => setReady(true));
 
-    const holdMs = 1350;
+    const holdMs = 3000;
     const toFade = setTimeout(() => setPhase('leaving'), holdMs);
     const toDone = setTimeout(() => setPhase('done'), holdMs + 300);
     return () => {

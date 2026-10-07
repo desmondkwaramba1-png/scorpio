@@ -114,6 +114,14 @@ function maybeCsrf(req, res, next) {
   // itself (see routes/purchases.js), so skipping CSRF here isn't
   // skipping the real authenticity check.
   if (req.path === '/api/purchases/dischub/callback') return next();
+  // Large product files go directly to the API host so the frontend proxy
+  // never buffers their bytes. This bearer token is minted by the
+  // CSRF-protected upload-token route and verified by productsRouter before
+  // any product mutation, so a cross-origin upload must not depend on the
+  // frontend-origin CSRF cookie being sent to the API host.
+  if (req.get('X-Product-Upload-Token') &&
+      ((req.method === 'POST' && req.path === '/api/products') ||
+       (req.method === 'PATCH' && /^\/api\/products\/\d+$/.test(req.path)))) return next();
   // Admin app authenticates with X-Admin-Key, not the buyer/seller
   // session cookie. Requiring a CSRF cookie there blocked every admin
   // mutation (dispute resolve, blog publish) while GETs still worked.

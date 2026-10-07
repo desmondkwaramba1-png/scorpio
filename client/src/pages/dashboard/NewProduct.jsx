@@ -127,8 +127,17 @@ export default function NewProduct() {
       // real connection is what can take real time. Real progress here
       // (see lib/api.js's uploadWithProgress) is what turns that wait from
       // "is this broken?" into something visibly, honestly working.
-      const data = await api.uploadWithProgress('/api/products', 'POST', body, setUploadProgress, 180000, {
-        'Idempotency-Key': publishRequest.current.key
+      const requestKey = publishRequest.current.key;
+      const uploadHeaders = { 'Idempotency-Key': requestKey };
+      let uploadUrl = '/api/products';
+      const directUpload = ['scorpio.co.zw', 'www.scorpio.co.zw'].includes(window.location.hostname);
+      if (directUpload) {
+        const authorization = await api.post('/api/products/upload-token', { request_key: requestKey });
+        uploadUrl = authorization.upload_url;
+        uploadHeaders['X-Product-Upload-Token'] = authorization.token;
+      }
+      const data = await api.uploadWithProgress(uploadUrl, 'POST', body, setUploadProgress, 180000, uploadHeaders, {
+        crossOrigin: directUpload
       });
       publishRequest.current = null;
       if (status === 'published') setPublishedProduct(data);

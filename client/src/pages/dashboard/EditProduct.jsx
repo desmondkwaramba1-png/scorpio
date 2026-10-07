@@ -131,8 +131,20 @@ export default function EditProduct() {
       // Same reasoning as NewProduct.jsx: a replaced deliverable (a course
       // video especially) can be a genuinely large upload, real progress
       // is what keeps that from reading as broken.
-      await api.uploadWithProgress(`/api/products/${id}`, 'PATCH', body, setUploadProgress, 180000, {
-        'Idempotency-Key': publishRequest.current.key
+      const requestKey = publishRequest.current.key;
+      const uploadHeaders = { 'Idempotency-Key': requestKey };
+      let uploadUrl = `/api/products/${id}`;
+      const directUpload = ['scorpio.co.zw', 'www.scorpio.co.zw'].includes(window.location.hostname);
+      if (directUpload) {
+        const authorization = await api.post('/api/products/upload-token', {
+          request_key: requestKey,
+          product_id: Number(id)
+        });
+        uploadUrl = authorization.upload_url;
+        uploadHeaders['X-Product-Upload-Token'] = authorization.token;
+      }
+      await api.uploadWithProgress(uploadUrl, 'PATCH', body, setUploadProgress, 180000, uploadHeaders, {
+        crossOrigin: directUpload
       });
       publishRequest.current = null;
       navigate('/dashboard/products');

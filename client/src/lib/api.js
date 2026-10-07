@@ -170,11 +170,11 @@ export const api = {
 // it's working — this is what actually fixes that, not a faster server
 // (the server side of a product publish is already fast, confirmed
 // directly: single-digit milliseconds internally).
-function uploadWithProgress(path, method, formData, onProgress, timeoutMs = 120000, headers = {}) {
+function uploadWithProgress(path, method, formData, onProgress, timeoutMs = 120000, headers = {}, { crossOrigin = false } = {}) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open(method, path);
-    xhr.withCredentials = true;
+    xhr.withCredentials = !crossOrigin;
     xhr.timeout = timeoutMs;
     Object.entries(headers).forEach(([name, value]) => xhr.setRequestHeader(name, value));
     if (onProgress) {
@@ -196,9 +196,15 @@ function uploadWithProgress(path, method, formData, onProgress, timeoutMs = 1200
         reject(connectionError());
         return;
       }
-      reject(new Error('The upload connection was interrupted. The server or its proxy may have closed the connection; try again.'));
+      reject(new Error(crossOrigin
+        ? 'The upload connection was interrupted. Check your connection and try again.'
+        : 'The upload connection was interrupted. The server or its proxy may have closed the connection; try again.'));
     };
     xhr.ontimeout = () => reject(new Error("That's taking too long. Check your connection and try again."));
+    if (crossOrigin) {
+      xhr.send(formData);
+      return;
+    }
     getCsrfToken()
       .then(token => {
         xhr.setRequestHeader('X-CSRF-Token', token);

@@ -8,6 +8,7 @@ primary_region = "jnb"
 [env]
   PORT = "4000"
   DATA_DIR = "/data"
+  PRODUCT_UPLOAD_ORIGIN = "https://scorpio-api.fly.dev"
 
 # One machine only: SQLite on a single mounted volume can't be safely
 # written to from more than one machine at once, so this app must never be

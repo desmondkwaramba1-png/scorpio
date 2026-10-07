@@ -16,6 +16,7 @@ const storage = require('../lib/storage');
 const { sendEmail } = require('../lib/notify');
 const { syncSubscriptionStatuses } = require('../lib/subscriptions');
 const { isVideoFilename, isAudioFilename, getActiveTokenForPurchase, createDownloadToken } = require('../lib/downloads');
+const { issueProductUploadToken, findProductUploadToken } = require('../lib/productUploadTokens');
 
 const router = express.Router();
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -672,7 +673,59 @@ function releaseProductPublish(req) {
   `).run(req.creator.id, req.productPublishRequestKey);
 }
 
-router.post('/', requireAuth, requireCreator, replayProductPublish, upload.fields([
+function requireProductUploadAuth(req, res, next) {
+  const token = req.get('X-Product-Upload-Token');
+  if (!token) {
+    return requireAuth(req, res, () => requireCreator(req, res, next));
+  }
+
+  const method = req.method;
+  const productId = method === 'PATCH' ? Number(req.params.id) : null;
+  const uploadToken = findProductUploadToken({
+    token,
+    requestKey: req.get('Idempotency-Key'),
+    method,
+    productId
+  });
+  if (!uploadToken) return res.status(401).json({ error: 'This upload authorization expired. Please try publishing again.' });
+
+  const creator = db.prepare('SELECT * FROM creators WHERE id = ?').get(uploadToken.creator_id);
+  const user = creator && db.prepare('SELECT * FROM users WHERE id = ?').get(creator.user_id);
+  if (!creator || !user) return res.status(401).json({ error: 'This upload authorization is no longer valid. Please sign in again.' });
+
+  req.creator = creator;
+  req.user = user;
+  next();
+}
+
+router.post('/upload-token', requireAuth, requireCreator, (req, res) => {
+  const { request_key: requestKey, product_id: rawProductId } = req.body || {};
+  if (typeof requestKey !== 'string' || requestKey.length < 16 || requestKey.length > 128) {
+    return res.status(400).json({ error: 'A valid product publish request key is required.' });
+  }
+
+  const productId = rawProductId === undefined || rawProductId === null ? null : Number(rawProductId);
+  if (productId !== null && (!Number.isSafeInteger(productId) || productId < 1)) {
+    return res.status(400).json({ error: 'A valid product ID is required.' });
+  }
+  if (productId !== null) {
+    const product = db.prepare('SELECT id FROM products WHERE id = ? AND creator_id = ?').get(productId, req.creator.id);
+    if (!product) return res.status(404).json({ error: 'Product not found.' });
+  }
+
+  const method = productId === null ? 'POST' : 'PATCH';
+  const { token, expiresAt } = issueProductUploadToken({
+    creatorId: req.creator.id, requestKey, method, productId
+  });
+  const uploadOrigin = (process.env.PRODUCT_UPLOAD_ORIGIN || 'https://scorpio-api.fly.dev').replace(/\/$/, '');
+  res.json({
+    token,
+    expires_at: expiresAt,
+    upload_url: `${uploadOrigin}/api/products${productId === null ? '' : `/${productId}`}`
+  });
+});
+
+router.post('/', requireProductUploadAuth, replayProductPublish, upload.fields([
   { name: 'cover', maxCount: 1 },
   { name: 'file', maxCount: 1 },
   { name: 'preview_video', maxCount: 1 }
@@ -868,7 +921,7 @@ router.post('/', requireAuth, requireCreator, replayProductPublish, upload.field
 });
 
 // PATCH /api/products/:id, edit, publish, or unpublish. Owner only.
-router.patch('/:id', requireAuth, requireCreator, replayProductPublish, upload.fields([
+router.patch('/:id', requireProductUploadAuth, replayProductPublish, upload.fields([
   { name: 'cover', maxCount: 1 },
   { name: 'file', maxCount: 1 },
   { name: 'preview_video', maxCount: 1 }

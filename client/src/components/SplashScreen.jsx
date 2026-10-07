@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
+import { FiBookOpen, FiDollarSign, FiDownload } from 'react-icons/fi';
+import scorpioArtwork from '../../../images/WhatsApp Image 2026-10-07 at 08.57.14.jpeg';
 
 const SEEN_KEY = 'scorpio_splash_seen';
+
+const SPLASH_HIGHLIGHTS = [
+  { icon: FiDownload, label: 'Instant downloads' },
+  { icon: FiDollarSign, label: 'Earn from ideas' },
+  { icon: FiBookOpen, label: 'Books & guides' }
+];
 
 export default function SplashScreen() {
   const [phase, setPhase] = useState(() => (sessionStorage.getItem(SEEN_KEY) ? 'done' : 'showing'));
@@ -37,10 +45,17 @@ export default function SplashScreen() {
       <div className="splash__content">
         <p className="splash__eyebrow mono">ZIMBABWE'S CREATOR MARKETPLACE</p>
         <div className={`splash__stage${ready ? ' is-in' : ''}`} aria-hidden="true">
-          <img className="splash__mark" src="/brand/splash-scorpion.svg" alt="" />
+          <img className="splash__mark" src={scorpioArtwork} alt="" />
         </div>
-        <h1 className={`splash__name${ready ? ' is-in' : ''}`}>SCORPIO</h1>
-        <p className="splash__tagline">Your ideas, out in the world.</p>
+        <p className={`splash__tagline${ready ? ' is-in' : ''}`}>Your ideas, out in the world.</p>
+        <div className={`splash__highlights${ready ? ' is-in' : ''}`}>
+          {SPLASH_HIGHLIGHTS.map(({ icon: Icon, label }) => (
+            <div className="splash__highlight" key={label}>
+              <span className="splash__highlight-icon"><Icon size={17} /></span>
+              <span>{label}</span>
+            </div>
+          ))}
+        </div>
         <div className="splash__loading">
           <span className="splash__loading-label">Opening your marketplace</span>
           <span className="splash__loading-track"><span /></span>

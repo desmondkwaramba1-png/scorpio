@@ -274,14 +274,19 @@ function SubscriptionRow({ subscription, onUpdate, onRenewed }) {
           shown on the product page itself, here so it's visible without
           having to go look. */}
       <p className="muted" style={{ fontSize: '.8rem', marginTop: 2 }}>
-        {subscription.latest_issue
-          ? `Latest: issue ${subscription.latest_issue.issue_number}, ${timeAgo(subscription.latest_issue.published_at)}`
-          : 'No issues published yet'}
+        {subscription.latest_issue ? (
+          <Link to={`${productUrl}#issues-section`}>
+            Latest: issue {subscription.latest_issue.issue_number}, {timeAgo(subscription.latest_issue.published_at)}
+          </Link>
+        ) : 'No issues published yet'}
       </p>
 
       {actionError && <p className="error-text" style={{ marginTop: 8, fontSize: '.85rem' }}>{actionError}</p>}
 
       <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+        <Link to={`${productUrl}#issues-section`} className="btn btn--ghost btn--sm">
+          <FiBookOpen size={13} /> View issues
+        </Link>
         {subscription.renewable && !showRenewForm && (
           <button onClick={() => setShowRenewForm(true)} className="btn btn--gold btn--sm">
             <FiRefreshCw size={13} /> Renew
@@ -339,7 +344,7 @@ function SeriesRow({ purchase, currentUserId, onUpdate }) {
             <p className="muted" style={{ fontSize: '.85rem' }}>{purchase.creator_name}</p>
           </div>
         </div>
-        <Link to={productUrl} className="btn btn--ghost btn--sm" style={{ flexShrink: 0 }}>
+        <Link to={`${productUrl}#issues-section`} className="btn btn--ghost btn--sm" style={{ flexShrink: 0 }}>
           <FiBookOpen size={13} /> {purchase.latest_issue ? `${purchase.latest_issue.issue_number} issue${purchase.latest_issue.issue_number === 1 ? '' : 's'}` : 'View'}
         </Link>
       </div>

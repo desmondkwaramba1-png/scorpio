@@ -502,6 +502,11 @@ export default function Product() {
                 ? `Latest: issue ${product.issues[0].issue_number}, ${timeAgo(product.issues[0].published_at)}`
                 : `Listed ${timeAgo(product.created_at)}, no issues published yet`}
             </p>
+            {isOwner && (
+              <Link to={`/dashboard/products/${product.id}/issues`} className="btn btn--ghost btn--sm" style={{ marginBottom: 14 }}>
+                <FiEdit2 size={13} /> Manage issues
+              </Link>
+            )}
             {!product.issues || product.issues.length === 0 ? (
               <p className="muted" style={{ fontSize: '.88rem' }}>Nothing published yet, check back soon.</p>
             ) : (

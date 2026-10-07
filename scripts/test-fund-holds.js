@@ -10,6 +10,7 @@ const db = require('../src/db/schema');
 const { balancesFor } = require('../src/lib/walletBalances');
 const { createDownloadToken } = require('../src/lib/downloads');
 const { markPurchasePaid } = require('../src/lib/purchaseCompletion');
+const { findOrCreateSubscription } = require('../src/lib/subscriptions');
 
 try {
   const creatorId = db.prepare('INSERT INTO creators (name, email) VALUES (?, ?)')
@@ -122,6 +123,21 @@ try {
   markPurchasePaid(subscriptionPurchaseId);
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE buyer_id = ? AND product_id = ?')
     .get(buyerId, subscriptionProduct).n, 1);
+
+  const subscriptionId = subscriptionPurchase.subscription_id;
+  db.prepare("UPDATE subscriptions SET current_period_end = datetime('now', '+2 days') WHERE id = ?")
+    .run(subscriptionId);
+  const paidUntilBeforeRenewal = db.prepare('SELECT current_period_end FROM subscriptions WHERE id = ?')
+    .get(subscriptionId).current_period_end;
+  const renewed = findOrCreateSubscription({
+    buyerId, creatorId, productId: subscriptionProduct, priceMinor: 1200, currency: 'USD'
+  }).subscription;
+  assert.equal(renewed.current_period_start, paidUntilBeforeRenewal);
+  assert.equal(
+    db.prepare("SELECT ROUND((julianday(?) - julianday(?)) * 24 * 60) AS minutes")
+      .get(renewed.current_period_end, paidUntilBeforeRenewal).minutes,
+    30 * 24 * 60
+  );
 
   const legacyProduct = insertProduct.run(creatorId, 'Previously fulfilled product', 500, 'USD', 'fund-legacy').lastInsertRowid;
   const legacyPurchaseId = db.prepare(`

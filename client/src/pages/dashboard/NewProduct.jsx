@@ -65,22 +65,35 @@ export default function NewProduct() {
   const isSoftware = form.category === 'software';
   const isCourse = form.category === 'courses';
   const hasDeliverable = isService || hasIssues || !!file || form.license_keys.trim().length > 0;
-  const detailsReady = !!form.title.trim() && !!form.category && form.price !== '';
+  const detailsReady = !!form.title.trim() && !!form.category &&
+    form.price !== '' && Number.isFinite(Number(form.price)) && Number(form.price) >= 0;
   const publishReady = detailsReady && hasDeliverable && !!cover;
+
+  function showValidationError(message, fieldId) {
+    setError(message);
+    if (fieldId) {
+      requestAnimationFrame(() => document.getElementById(fieldId)?.focus());
+    }
+  }
 
   async function submit(status) {
     if (submitLock.current) return;
     setError(null);
-    if (!form.title.trim() || !form.category || form.price === '') {
-      setError('Add a title, choose a category, and set a price before continuing.');
-      return;
-    }
-    if (!cover) {
-      setError("A cover image is required. It's the first thing buyers see.");
+    if (!form.title.trim()) {
+      showValidationError('Add a clear product title before continuing.', 'title');
       return;
     }
     if (!form.category) {
-      setError('Pick a category. It\'s how buyers find this when browsing.');
+      showValidationError('Choose a category so buyers can find your product.', 'category');
+      return;
+    }
+    const numericPrice = Number(form.price);
+    if (form.price === '' || !Number.isFinite(numericPrice) || numericPrice < 0) {
+      showValidationError('Enter a valid price of zero or more.', 'price');
+      return;
+    }
+    if (!cover) {
+      showValidationError("Add a cover image. It's the first thing buyers see.", 'cover');
       return;
     }
     // A serial's (and a subscription's) content is its issues, added
@@ -90,7 +103,7 @@ export default function NewProduct() {
     if (!isService && !hasIssues) {
       const hasKeys = form.license_keys.trim().length > 0;
       if (status === 'published' && !file && !hasKeys) {
-        setError('Attach a file, or paste license keys, before publishing. Buyers need something to actually receive after paying.');
+        showValidationError('Add the file or license keys buyers will receive before publishing.', isSoftware ? 'license_keys' : 'file');
         return;
       }
     }
@@ -177,12 +190,12 @@ export default function NewProduct() {
   }
 
   return (
-    <div>
+    <div className="new-product-page">
       <div className="product-editor-intro">
         <div>
           <p className="section__eyebrow mono">YOUR NEXT BIG IDEA</p>
-          <h1 style={{ fontSize: '1.65rem', marginBottom: 6 }}>Create your product</h1>
-          <p className="muted">Give it a great first impression, set a fair price, and show buyers exactly what they’ll get.</p>
+          <h1 style={{ fontSize: '1.65rem', marginBottom: 6 }}>Add a product</h1>
+          <p className="muted">Add the essentials, preview your listing, and publish when it’s ready.</p>
         </div>
         <div className="publish-steps" aria-label="Product publishing steps">
           <span className={`publish-step${detailsReady ? ' publish-step--complete' : ' publish-step--active'}`}><b>{detailsReady ? <FiCheckCircle size={12} /> : '1'}</b> Details</span>
@@ -194,33 +207,26 @@ export default function NewProduct() {
       </div>
 
       <div className="form-layout">
-        <form onSubmit={e => { e.preventDefault(); submit('published'); }} style={{ maxWidth: 480 }}>
-          <FormSection icon={FiImage} title="The basics">
+        <form className="new-product-form" noValidate onSubmit={e => { e.preventDefault(); submit('published'); }}>
+          <FormSection icon={FiImage} title="Product details" note="Start with the information buyers use to recognize and find your work.">
             <div className="field">
-              <label htmlFor="cover">Cover image</label>
-              <FileUpload id="cover" accept="image/*" onChange={handleCover}
-                label={cover ? 'Cover ready' : 'Choose a cover image'}
-                hint="This is what people see first on the marketplace and when you share your link. We'll auto-tune the colours."
-                preview={coverPreview} previewKind="image" crop={{ aspect: 5 / 4 }} />
+              <label htmlFor="title">Product title <span className="new-product-required">Required</span></label>
+              <input id="title" autoFocus required value={form.title} onChange={update('title')} placeholder={EBOOKS_ONLY ? 'e.g. 30-Day Business Plan Template' : 'e.g. Excel for Small Business'} />
             </div>
 
             <div className="field">
-              <label htmlFor="title">Title</label>
-              <input id="title" required value={form.title} onChange={update('title')} placeholder={EBOOKS_ONLY ? 'e.g. 30-Day Business Plan Template' : 'e.g. Excel for Small Business'} />
-            </div>
-
-            <div className="field">
-              <label htmlFor="description">Description</label>
+              <label htmlFor="description">Description <span className="new-product-optional">Optional</span></label>
               <textarea id="description" value={form.description} onChange={update('description')}
-                placeholder="What is it, and why should someone buy it?" />
+                placeholder="What does it help with? What will buyers get or learn?" />
+              <small>A short, specific description helps buyers decide faster. You can improve it later.</small>
             </div>
 
             <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="category">Category</label>
+              <label htmlFor="category">Category <span className="new-product-required">Required</span></label>
               {ACTIVE_CATEGORIES.length === 1 ? (
                 <>
-                  <input value={ACTIVE_CATEGORIES[0].label} disabled />
-                  <small>We're starting focused with guides &amp; templates. More categories are coming soon.</small>
+                  <input id="category" value={ACTIVE_CATEGORIES[0].label} disabled />
+                  <small>Your product will be listed in this category.</small>
                 </>
               ) : (
                 <select id="category" required value={form.category} onChange={update('category')}>
@@ -232,13 +238,13 @@ export default function NewProduct() {
             </div>
           </FormSection>
 
-          <FormSection icon={FiDollarSign} title="Pricing">
+          <FormSection icon={FiDollarSign} title="Choose how to sell" note="Pick the product type and set a clear price. You can change these later.">
             <div className="field">
-              <label htmlFor="type">Type</label>
+              <label htmlFor="type">Product type</label>
               <select id="type" value={form.type} onChange={update('type')}>
-                <option value="single">{EBOOKS_ONLY ? 'Single item (guide, template, one-off)' : 'Single item (ebook, course, one-off)'}</option>
-                <option value="serial">Serial (pay once, unlocks every future issue)</option>
-                <option value="subscription">Subscription (recurring, e.g. monthly access)</option>
+                <option value="single">One-time purchase</option>
+                <option value="serial">Series — pay once, get every issue</option>
+                <option value="subscription">Subscription — recurring monthly access</option>
                 {!EBOOKS_ONLY && <option value="service">Service (bespoke work, paid via escrow)</option>}
               </select>
               {isService && (
@@ -255,19 +261,22 @@ export default function NewProduct() {
               )}
             </div>
 
-            <div className="field" style={{ display: 'flex', gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <label htmlFor="price">{isSubscription ? 'Monthly price' : 'Price'}</label>
-                <input id="price" type="number" min="0" step="0.01" required
-                  value={form.price} onChange={update('price')} placeholder="5.00" />
+            <div className="new-product-price-row">
+              <div className="field">
+                <label htmlFor="price">{isSubscription ? 'Monthly price' : 'Price'} <span className="new-product-required">Required</span></label>
+                <div className="new-product-price-input">
+                  <span aria-hidden="true">{form.currency === 'USD' ? '$' : 'ZiG'}</span>
+                  <input id="price" type="number" min="0" step="0.01" required inputMode="decimal"
+                    value={form.price} onChange={update('price')} placeholder="0.00" />
+                </div>
                 <small>{isSubscription
-                  ? 'Charged every 30 days. Enter 0 for a free subscription.'
-                  : 'Enter 0 to give it away free, no EcoCash step, buyers get it instantly.'}</small>
+                  ? 'Billed every 30 days. Set to 0 for free access.'
+                  : 'Set to 0 for a free product. Buyers get free products immediately.'}</small>
               </div>
-              <div style={{ width: 90 }}>
+              <div className="field">
                 <label htmlFor="currency">Currency</label>
                 <select id="currency" value={form.currency} onChange={update('currency')}>
-                  <option value="USD">USD</option>
+                  <option value="USD">USD ($)</option>
                   <option value="ZWG">ZiG</option>
                 </select>
               </div>
@@ -282,6 +291,13 @@ export default function NewProduct() {
           </FormSection>
 
           <FormSection icon={isService ? FiBriefcase : hasIssues ? FiFilePlus : FiPackage} title={isService ? 'Service details' : hasIssues ? 'Issues' : 'What buyers get'}>
+            <div className="field">
+              <label htmlFor="cover">Cover image <span className="new-product-required">Required</span></label>
+              <FileUpload id="cover" accept="image/*" onChange={handleCover}
+                label={cover ? 'Change cover image' : 'Choose a cover image'}
+                hint="Choose a clear image that looks good in a marketplace card. We’ll crop it to fit."
+                preview={coverPreview} previewKind="image" crop={{ aspect: 5 / 4 }} />
+            </div>
             {isService ? (
               <>
                 <div className="field">
@@ -320,7 +336,7 @@ export default function NewProduct() {
             ) : (
               <>
                 <div className="field">
-                  <label htmlFor="file">{isCourse ? 'Course video' : EBOOKS_ONLY ? 'PDF file' : 'Product file'}</label>
+                  <label htmlFor="file">{isCourse ? 'Course video' : EBOOKS_ONLY ? 'PDF file' : 'Product file'} <span className={isSoftware ? 'new-product-optional' : 'new-product-required'}>{isSoftware ? 'Optional if using license keys' : 'Required to publish'}</span></label>
                   <FileUpload id="file" accept={isCourse ? 'video/mp4,video/webm,video/quicktime' : EBOOKS_ONLY ? 'application/pdf' : undefined} onChange={handleFile}
                     label={filePreview || (isCourse ? 'Choose a video' : EBOOKS_ONLY ? 'Choose a PDF' : 'Choose a file')}
                     hint={isSoftware ? 'Required to publish, unless you paste license keys below instead.' : 'Required to publish. It\'s what the buyer actually gets.'} />
@@ -350,7 +366,7 @@ export default function NewProduct() {
             )}
           </FormSection>
 
-          {error && <p className="error-text" style={{ marginTop: 20 }}>{error}</p>}
+          {error && <p className="error-text" role="alert" aria-live="assertive" style={{ marginTop: 20 }}>{error}</p>}
 
           {submitting && (
             <div style={{ marginTop: 20 }}>
@@ -361,12 +377,12 @@ export default function NewProduct() {
             </div>
           )}
 
-          <div className="btn-row" style={{ marginTop: 20 }}>
+          <div className="new-product-actions">
             <button className="btn btn--ghost" disabled={submitting} type="button" onClick={() => submit('draft')}>
-              Save as draft
+              {submitting ? 'Please wait...' : 'Save draft'}
             </button>
             <button className="btn btn--primary" style={{ flex: 1 }} disabled={submitting} type="submit">
-              <FiSend size={14} /> {submitting ? 'Publishing...' : 'Publish it'}
+              <FiSend size={14} /> {submitting ? 'Publishing...' : 'Publish product'}
             </button>
           </div>
         </form>
@@ -374,7 +390,7 @@ export default function NewProduct() {
         <div className="form-layout__preview">
           <div className="preview-heading">
             <div><p className="preview-heading__eyebrow mono">BUYER PREVIEW</p><p className="preview-heading__title">What people will see</p></div>
-            <span className="preview-heading__badge">Live</span>
+            <span className="preview-heading__badge">Preview</span>
           </div>
           <div className="product-card" style={{ cursor: 'default' }}>
             <div

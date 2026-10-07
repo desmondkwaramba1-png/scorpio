@@ -1598,6 +1598,40 @@ img{max-width:100%;display:block;}
   .publish-success__actions .btn{width:100%;}
 }
 
+/* Keep the create flow focused on the form; the preview supports it rather
+   than pushing the first input below the fold on smaller screens. */
+.new-product-page .form-layout{grid-template-columns:minmax(0, 1fr) 320px;gap:clamp(18px, 3vw, 32px);}
+.new-product-form{min-width:0;max-width:720px;}
+.new-product-page .form-section__note{max-width:54ch;}
+.new-product-required,.new-product-optional{
+  display:inline-flex;align-items:center;margin-left:5px;padding:2px 6px;border-radius:999px;
+  background:var(--paper);color:var(--muted);font-size:.65rem;font-weight:700;vertical-align:middle;
+}
+.new-product-optional{background:transparent;font-weight:500;}
+.new-product-price-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(125px,.42fr);gap:14px;align-items:start;}
+.new-product-price-input{position:relative;}
+.new-product-price-input > span{
+  position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);
+  font-size:.9rem;font-weight:700;pointer-events:none;
+}
+.new-product-price-input input{padding-left:48px;}
+.new-product-actions{
+  position:sticky;bottom:8px;z-index:5;display:flex;gap:10px;margin-top:18px;padding:12px;
+  border:1px solid var(--line);border-radius:12px;
+  background:color-mix(in srgb,var(--surface) 94%,transparent);
+  box-shadow:0 8px 24px rgba(19,25,33,.12);backdrop-filter:blur(12px);
+}
+.new-product-actions .btn{min-height:46px;}
+@media (max-width:920px){
+  .new-product-page .form-layout{grid-template-columns:minmax(0,1fr);}
+  .new-product-page .form-layout__preview{order:1;max-width:420px;width:100%;margin-top:2px;}
+  .new-product-form{max-width:none;}
+}
+@media (max-width:560px){
+  .new-product-price-row{grid-template-columns:minmax(0,1fr) minmax(105px,.55fr);gap:10px;}
+  .new-product-actions{bottom:4px;padding:9px;gap:8px;}
+}
+
 /* ---- settings page ---- */
 /* Settings used to reuse the exact same icon-card-per-section shape
    NewProduct/EditProduct use for their forms - real feedback was that

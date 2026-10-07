@@ -18,6 +18,7 @@ export default function ProductIssues() {
   const [product, setProduct] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [issues, setIssues] = useState(null);
+  const [issuesError, setIssuesError] = useState(null);
   const [newIssue, setNewIssue] = useState({ title: '', external_url: '' });
   const [newIssueFile, setNewIssueFile] = useState(null);
   const [addingIssue, setAddingIssue] = useState(false);
@@ -39,9 +40,11 @@ export default function ProductIssues() {
 
   useEffect(() => {
     if (!product) return;
+    setIssues(null);
+    setIssuesError(null);
     api.get(`/api/products/${product.slug}`)
       .then(p => setIssues(p.issues || []))
-      .catch(() => setIssues([]));
+      .catch(err => setIssuesError(err.message));
   }, [product]);
 
   async function addIssue(e) {
@@ -138,7 +141,9 @@ export default function ProductIssues() {
       </div>
 
       <p style={{ fontWeight: 700, marginBottom: 12 }}>Published issues</p>
-      {issues === null ? (
+      {issuesError ? (
+        <p className="error-text">{issuesError}</p>
+      ) : issues === null ? (
         <p className="muted" style={{ fontSize: '.85rem' }}>Loading...</p>
       ) : issues.length === 0 ? (
         <p className="muted" style={{ fontSize: '.85rem' }}>Nothing published yet, use the form above.</p>

@@ -50,7 +50,14 @@ function findOrCreateSubscription({ buyerId, creatorId, productId, priceMinor, c
   db.prepare(`
     UPDATE subscriptions SET
       status = 'active', canceled_at = NULL, price_minor = ?, currency = ?,
-      current_period_start = datetime('now'), current_period_end = datetime('now', '+${PERIOD_DAYS} days'),
+      current_period_start = CASE
+        WHEN current_period_end > datetime('now') THEN current_period_end
+        ELSE datetime('now')
+      END,
+      current_period_end = CASE
+        WHEN current_period_end > datetime('now') THEN datetime(current_period_end, '+${PERIOD_DAYS} days')
+        ELSE datetime('now', '+${PERIOD_DAYS} days')
+      END,
       reminder_sent_at = NULL, lapse_notice_sent_at = NULL
     WHERE id = ?
   `).run(priceMinor, currency, existing.id);

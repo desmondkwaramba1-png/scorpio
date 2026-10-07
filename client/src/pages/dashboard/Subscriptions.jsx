@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { FiUsers, FiDollarSign, FiRepeat } from 'react-icons/fi';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
@@ -51,8 +51,17 @@ export default function Subscriptions() {
   const active = subscriptions.filter(s => s.status === 'active');
   // Rough MRR, not a real accounting figure, same "gross before fees"
   // honesty wallet.js's own numbers already use — the platform fee still
-  // applies to each individual renewal the same as any other charge.
-  const mrrMinor = active.reduce((sum, s) => sum + s.price_minor, 0);
+  // applies to each individual renewal the same as any other charge. Keep
+  // currencies separate: adding USD and ZWG minor units has no meaning.
+  const mrrByCurrency = active
+    .filter(s => !s.canceled_at)
+    .reduce((totals, s) => {
+      totals[s.currency] = (totals[s.currency] || 0) + s.price_minor;
+      return totals;
+    }, {});
+  const mrr = Object.entries(mrrByCurrency)
+    .map(([currency, amount]) => formatMoney(amount, currency))
+    .join(' + ') || formatMoney(0, 'USD');
 
   return (
     <div>
@@ -68,7 +77,7 @@ export default function Subscriptions() {
         </div>
         <div className="card stat-tile">
           <span className="stat-tile__label"><FiDollarSign size={13} /> Rough MRR</span>
-          <span className="mono stat-tile__value">{formatMoney(mrrMinor, 'USD')}</span>
+          <span className="mono stat-tile__value">{mrr}</span>
         </div>
       </div>
 
@@ -91,6 +100,9 @@ export default function Subscriptions() {
                   <p className="muted" style={{ fontSize: '.85rem' }}>
                     {s.product_title} &middot; subscribed since {formatDate(s.created_at)}
                   </p>
+                  <Link to={`/@${s.creator_handle}/${s.product_slug}#issues-section`} className="muted" style={{ fontSize: '.8rem' }}>
+                    View product issues
+                  </Link>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <p className="mono" style={{ fontWeight: 600 }}>{formatMoney(s.price_minor, s.currency)}/mo</p>

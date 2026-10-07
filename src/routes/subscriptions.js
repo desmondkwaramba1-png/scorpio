@@ -54,6 +54,7 @@ router.get('/mine', requireAuth, (req, res) => {
 router.post('/:id/renew', checkoutLimiter, requireAuth, async (req, res) => {
   const { phone } = req.body;
 
+  syncSubscriptionStatuses();
   const subscription = db.prepare(`
     SELECT s.* FROM subscriptions s JOIN buyers b ON b.id = s.buyer_id
     WHERE s.id = ? AND b.user_id = ?
@@ -66,6 +67,12 @@ router.post('/:id/renew', checkoutLimiter, requireAuth, async (req, res) => {
   // checkout, the same door every first subscribe already uses.
   if (subscription.status === 'canceled') {
     return res.status(400).json({ error: 'This subscription was canceled. Subscribe again from the product page.' });
+  }
+  if (subscription.canceled_at) {
+    return res.status(400).json({ error: 'This subscription is canceled and cannot be renewed. Subscribe again from the product page after your current access ends.' });
+  }
+  if (subscription.status === 'active' && daysRemaining(subscription.current_period_end) > 3) {
+    return res.status(409).json({ error: 'You can renew during the final 3 days of your current subscription.' });
   }
 
   const isFree = subscription.price_minor === 0;
@@ -133,14 +140,16 @@ router.post('/:id/cancel', requireAuth, (req, res) => {
 // scopes it to one product, used by EditProduct.jsx's "View subscribers"
 // link; omitted, it's the whole dashboard Subscriptions page.
 router.get('/creator', requireAuth, requireCreator, (req, res) => {
+  syncSubscriptionStatuses();
   const productId = req.query.product_id ? Number(req.query.product_id) : null;
 
   const rows = db.prepare(`
     SELECT s.*, b.name AS buyer_name, b.email AS buyer_email,
-           p.title AS product_title, p.slug AS product_slug
+           p.title AS product_title, p.slug AS product_slug, c.handle AS creator_handle
     FROM subscriptions s
     JOIN buyers b ON b.id = s.buyer_id
     JOIN products p ON p.id = s.product_id
+    JOIN creators c ON c.id = s.creator_id
     WHERE s.creator_id = ?${productId ? ' AND s.product_id = ?' : ''}
     ORDER BY s.created_at DESC
   `).all(...(productId ? [req.creator.id, productId] : [req.creator.id]));

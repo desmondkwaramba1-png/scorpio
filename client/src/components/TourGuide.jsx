@@ -19,36 +19,43 @@ export default function TourGuide({ run, setRun, storageKey }) {
       target: '[data-tour="reels"]',
       title: 'Reels',
       content: 'Share short videos to introduce your work and help buyers discover your products.',
+      placement: 'bottom',
     },
     {
       target: '[data-tour="blog"]',
       title: 'Blog',
       content: 'Write and manage posts to share useful ideas and bring more people to your storefront.',
+      placement: 'bottom',
     },
     {
       target: '[data-tour="orders"]',
       title: 'Orders',
       content: 'See customer purchases, respond to orders, and keep track of fulfillment.',
+      placement: 'bottom',
     },
     {
       target: '[data-tour="subscriptions"]',
       title: 'Subscriptions',
       content: 'See who subscribes to your recurring products and follow subscription activity.',
+      placement: 'bottom',
     },
     {
       target: '[data-tour="insights"]',
       title: 'Insights',
       content: 'Review sales, visits, and product performance to understand how your shop is doing.',
+      placement: 'bottom',
     },
     {
       target: '[data-tour="wallet"]',
       title: 'Wallet',
       content: 'Review your balances, payout activity, and available funds.',
+      placement: 'bottom',
     },
     {
       target: '[data-tour="settings"]',
       title: 'Settings',
       content: 'Update your storefront and account details, or restart this guide whenever you need it.',
+      placement: 'bottom',
     }
   ];
 
@@ -70,6 +77,7 @@ export default function TourGuide({ run, setRun, storageKey }) {
       scrollToFirstStep={false}
       showProgress={true}
       showSkipButton={true}
+      spotlightClicks={true}
       steps={steps}
       options={{
         zIndex: 10000,

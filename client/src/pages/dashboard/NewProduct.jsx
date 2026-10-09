@@ -128,22 +128,37 @@ export default function NewProduct() {
       // (see lib/api.js's uploadWithProgress) is what turns that wait from
       // "is this broken?" into something visibly, honestly working.
       const requestKey = publishRequest.current.key;
-      const uploadHeaders = { 'Idempotency-Key': requestKey };
-      let uploadUrl = '/api/products';
       const directUpload = ['scorpio.co.zw', 'www.scorpio.co.zw'].includes(window.location.hostname);
-      if (directUpload) {
-        const authorization = await api.post('/api/products/upload-token', { request_key: requestKey });
-        uploadUrl = authorization.upload_url;
-        uploadHeaders['X-Product-Upload-Token'] = authorization.token;
-      }
-      const data = await api.uploadWithProgress(uploadUrl, 'POST', body, setUploadProgress, 180000, uploadHeaders, {
-        crossOrigin: directUpload
+      const prepareAttempt = async () => {
+        const requestId = crypto.randomUUID();
+        const headers = { 'Idempotency-Key': requestKey, 'X-Request-ID': requestId };
+        if (!directUpload) return { path: '/api/products', headers, crossOrigin: false };
+        let authorization;
+        try {
+          authorization = await api.post(
+            '/api/products/upload-token',
+            { request_key: requestKey },
+            undefined,
+            { 'X-Request-ID': requestId }
+          );
+        } catch (error) {
+          error.requestId = requestId;
+          if (!error.status || [502, 503, 504].includes(error.status)) error.retryable = true;
+          throw error;
+        }
+        headers['X-Product-Upload-Token'] = authorization.token;
+        return { path: authorization.upload_url, headers, crossOrigin: true };
+      };
+      const data = await api.uploadWithProgress('/api/products', 'POST', body, setUploadProgress, 180000, {
+        'Idempotency-Key': requestKey
+      }, {
+        prepareAttempt
       });
       publishRequest.current = null;
       if (status === 'published') setPublishedProduct(data);
       else navigate('/dashboard/products');
     } catch (err) {
-      setError(err.message);
+      setError(err.requestId ? `${err.message} (Reference: ${err.requestId})` : err.message);
     } finally {
       submitLock.current = false;
       setSubmitting(false);

@@ -5,6 +5,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const multer = require('multer');
 const fs = require('fs');
+const { randomUUID } = require('crypto');
 
 const { UPLOADS_DIR } = require('./lib/paths');
 const { attachUser } = require('./middleware/auth');
@@ -72,6 +73,50 @@ const app = express();
 // every rate-limited request (auth, checkout, reports), confirmed live in
 // production logs.
 app.set('trust proxy', 1);
+app.use((req, res, next) => {
+  const isProductUploadPath = req.path === '/api/products' ||
+    req.path === '/api/products/' ||
+    req.path === '/api/products/upload-token' ||
+    /^\/api\/products\/\d+$/.test(req.path);
+  if (!isProductUploadPath || !['OPTIONS', 'POST', 'PATCH'].includes(req.method)) return next();
+
+  const suppliedId = req.get('X-Request-ID');
+  req.uploadRequestId = typeof suppliedId === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(suppliedId)
+    ? suppliedId
+    : randomUUID();
+  res.setHeader('X-Request-ID', req.uploadRequestId);
+
+  if (req.method === 'OPTIONS' || req.path === '/api/products/upload-token') {
+    const startedAt = Date.now();
+    let finished = false;
+    res.once('finish', () => {
+      finished = true;
+      console.info('[product upload transport]', JSON.stringify({
+        event: req.method === 'OPTIONS' ? 'preflight' : 'authorization',
+        requestId: req.uploadRequestId,
+        path: req.path,
+        origin: req.get('Origin') || null,
+        requestedMethod: req.get('Access-Control-Request-Method') || null,
+        requestedHeaders: req.get('Access-Control-Request-Headers') || null,
+        status: res.statusCode,
+        durationMs: Date.now() - startedAt
+      }));
+    });
+    res.once('close', () => {
+      if (!finished) {
+        console.warn('[product upload transport]', JSON.stringify({
+          event: 'closed',
+          requestId: req.uploadRequestId,
+          path: req.path,
+          origin: req.get('Origin') || null,
+          durationMs: Date.now() - startedAt
+        }));
+      }
+    });
+  }
+  next();
+});
 // contentSecurityPolicy: false — this app is a JSON API; the only HTML it
 // serves itself (share.js's link-preview pages, admin's none) is small
 // and trusted, and helmet's default page CSP would block the inline
@@ -89,7 +134,8 @@ app.use(cors({
     if (!origin || ALLOWED_ORIGINS.has(origin)) return callback(null, true);
     callback(new Error('Not allowed by CORS'));
   },
-  credentials: true
+  credentials: true,
+  exposedHeaders: ['X-Request-ID']
 }));
 app.use(express.json({ limit: '2mb' }));
 // cookie-parser has to run before both sessions (attachUser reads
@@ -170,14 +216,33 @@ app.use('/share', shareRouter);
 // calls can't parse, so a real "your file is too big" moment shows up to
 // the user as an unexplained crash instead of the clear error it should be.
 app.use((err, req, res, next) => {
+  const requestId = req.uploadRequestId || req.get('X-Request-ID') || null;
+  const isProductUpload = Boolean(requestId) ||
+    (['POST', 'PATCH'].includes(req.method) &&
+      (req.path === '/api/products' || /^\/api\/products\/\d+$/.test(req.path)));
+  const logUploadError = (status, code, message) => {
+    if (!isProductUpload) return;
+    console.error('[product upload request error]', JSON.stringify({
+      requestId,
+      method: req.method,
+      path: req.path,
+      origin: req.get('Origin') || null,
+      status,
+      code: code || null,
+      message: message || null
+    }));
+  };
   if (err instanceof multer.MulterError) {
     const message = err.code === 'LIMIT_FILE_SIZE' ? 'That file is too large.' : err.message;
+    logUploadError(400, err.code, message);
     return res.status(400).json({ error: message });
   }
   if (err && err.code === 'EBADCSRFTOKEN') {
+    logUploadError(403, err.code, 'CSRF validation failed.');
     return res.status(403).json({ error: 'That request expired. Refresh the page and try again.' });
   }
   if (err && err.message === 'Not allowed by CORS') {
+    logUploadError(403, 'CORS_ORIGIN_REJECTED', 'Origin not allowed.');
     return res.status(403).json({ error: 'Origin not allowed.' });
   }
   // Covers fileFilter rejections (a plain Error, not a MulterError) and
@@ -187,6 +252,7 @@ app.use((err, req, res, next) => {
   // readable 400 beats Express's default HTML crash page hitting a
   // fetch() call that can only ever expect JSON back.
   if (err) {
+    logUploadError(400, err.code, err.message);
     console.error(err);
     return res.status(400).json({ error: err.message || 'Something went wrong with that request.' });
   }
@@ -194,4 +260,8 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`SCORPIO API running on port ${PORT}`));
+const server = require('http').createServer({
+  requestTimeout: 30 * 60 * 1000,
+  headersTimeout: 65 * 1000
+}, app);
+server.listen(PORT, () => console.log(`SCORPIO API running on port ${PORT}`));

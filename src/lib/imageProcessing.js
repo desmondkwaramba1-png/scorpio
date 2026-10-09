@@ -47,9 +47,16 @@ async function optimizeImage(buffer, { maxWidth, maxHeight, enhance = false } = 
 
   const encode = {
     jpeg: () => pipeline.jpeg({ quality: 82, mozjpeg: true }),
+    jpg: () => pipeline.jpeg({ quality: 82, mozjpeg: true }),
     png: () => pipeline.png({ compressionLevel: 9 }),
     webp: () => pipeline.webp({ quality: 82 }),
-    gif: () => pipeline.gif()
+    gif: () => pipeline.gif(),
+    heif: () => pipeline.jpeg({ quality: 82, mozjpeg: true }),
+    heic: () => pipeline.jpeg({ quality: 82, mozjpeg: true }),
+    avif: () => pipeline.jpeg({ quality: 82, mozjpeg: true }),
+    bmp: () => pipeline.jpeg({ quality: 82, mozjpeg: true }),
+    tif: () => pipeline.jpeg({ quality: 82, mozjpeg: true }),
+    tiff: () => pipeline.jpeg({ quality: 82, mozjpeg: true })
   }[meta.format] || (() => pipeline.jpeg({ quality: 82, mozjpeg: true }));
 
   return encode().toBuffer();

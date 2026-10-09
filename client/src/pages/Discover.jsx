@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FiSearch, FiCompass } from 'react-icons/fi';
 import ProductCard from '../components/ProductCard.jsx';
@@ -12,6 +12,7 @@ const TYPES = [
   { value: 'single', label: 'Single item' },
   { value: 'serial', label: 'Serial' }
 ];
+const PAGE_SIZE = 24;
 
 function SkeletonCard() {
   return (
@@ -30,6 +31,9 @@ export default function Discover() {
   const [params, setParams] = useSearchParams();
   const [products, setProducts] = useState(null);
   const [error, setError] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const requestGeneration = useRef(0);
 
   const type = params.get('type') || '';
   const q = params.get('q') || '';
@@ -37,17 +41,57 @@ export default function Discover() {
   const category = params.get('category') || '';
 
   useEffect(() => {
+    const requestId = ++requestGeneration.current;
+    let active = true;
     const qs = new URLSearchParams();
     if (type) qs.set('type', type);
     if (q) qs.set('q', q);
     if (sort) qs.set('sort', sort);
     if (category) qs.set('category', category);
+    qs.set('limit', String(PAGE_SIZE));
     setProducts(null);
     setError(null);
-    api.get(`/api/products?${qs.toString()}`)
-      .then(setProducts)
-      .catch(err => setError(err.message));
+    setHasMore(false);
+    setLoadingMore(false);
+    const timer = setTimeout(() => {
+      api.get(`/api/products?${qs.toString()}`)
+        .then(batch => {
+          if (!active || requestGeneration.current !== requestId) return;
+          setProducts(batch);
+          setHasMore(batch.length === PAGE_SIZE);
+        })
+        .catch(err => {
+          if (active && requestGeneration.current === requestId) setError(err.message);
+        });
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [type, q, sort, category]);
+
+  async function loadMore() {
+    if (loadingMore || !hasMore || !products) return;
+    const requestId = requestGeneration.current;
+    const qs = new URLSearchParams();
+    if (type) qs.set('type', type);
+    if (q) qs.set('q', q);
+    if (sort) qs.set('sort', sort);
+    if (category) qs.set('category', category);
+    qs.set('limit', String(PAGE_SIZE));
+    qs.set('offset', String(products.length));
+    setLoadingMore(true);
+    try {
+      const batch = await api.get(`/api/products?${qs.toString()}`);
+      if (requestGeneration.current !== requestId) return;
+      setProducts(current => [...current, ...batch]);
+      setHasMore(batch.length === PAGE_SIZE);
+    } catch (err) {
+      if (requestGeneration.current === requestId) setError(err.message);
+    } finally {
+      if (requestGeneration.current === requestId) setLoadingMore(false);
+    }
+  }
 
   function updateParam(key, value) {
     const next = new URLSearchParams(params);
@@ -132,6 +176,13 @@ export default function Discover() {
       {products && products.length > 0 && (
         <div className="product-grid">
           {products.map(p => <ProductCard key={p.id} product={p} />)}
+        </div>
+      )}
+      {products && hasMore && (
+        <div style={{ display: 'flex', justifyContent: 'center', margin: '24px 0 40px' }}>
+          <button className="btn btn--ghost" onClick={loadMore} disabled={loadingMore}>
+            {loadingMore ? 'Loading…' : 'Load more'}
+          </button>
         </div>
       )}
     </div>

@@ -132,7 +132,11 @@ async function request(path, { method = 'GET', body, timeoutMs = DEFAULT_TIMEOUT
       options.headers['X-CSRF-Token'] = await getCsrfToken();
       continue;
     }
-    if (!res.ok) throw new Error(data?.error || 'Something went wrong.');
+    if (!res.ok) {
+      const error = new Error(data?.error || 'Something went wrong.');
+      error.status = res.status;
+      throw error;
+    }
     notifyConnectionRestored();
     return data;
   }
@@ -146,7 +150,9 @@ export const api = {
   // checkout POST that waits on Dischub triggering a real EcoCash prompt,
   // where the default would abort (and report "failed") a request that
   // was actually still working.
-  post: (path, body, timeoutMs) => request(path, { method: 'POST', body, ...(timeoutMs && { timeoutMs }) }),
+  post: (path, body, timeoutMs, headers) => request(path, {
+    method: 'POST', body, ...(timeoutMs && { timeoutMs }), ...(headers && { headers })
+  }),
   patch: (path, body, timeoutMs) => request(path, { method: 'PATCH', body, ...(timeoutMs && { timeoutMs }) }),
   delete: (path) => request(path, { method: 'DELETE' }),
   uploadWithProgress
@@ -170,11 +176,23 @@ export const api = {
 // it's working — this is what actually fixes that, not a faster server
 // (the server side of a product publish is already fast, confirmed
 // directly: single-digit milliseconds internally).
-async function uploadWithProgress(path, method, formData, onProgress, timeoutMs = 120000, headers = {}, { crossOrigin = false } = {}) {
+async function uploadWithProgress(path, method, formData, onProgress, timeoutMs = 120000, headers = {}, {
+  crossOrigin = false,
+  prepareAttempt
+} = {}) {
   const retryDelays = headers['Idempotency-Key'] ? [1000, 3000] : [];
   for (let attempt = 0; ; attempt++) {
     try {
-      return await sendUpload(path, method, formData, onProgress, timeoutMs, headers, crossOrigin);
+      const prepared = prepareAttempt ? await prepareAttempt() : {};
+      return await sendUpload(
+        prepared.path || path,
+        method,
+        formData,
+        onProgress,
+        timeoutMs,
+        prepared.headers || headers,
+        prepared.crossOrigin ?? crossOrigin
+      );
     } catch (error) {
       if (!error.retryable || attempt >= retryDelays.length) throw error;
       if (onProgress) onProgress(0);
@@ -186,16 +204,42 @@ async function uploadWithProgress(path, method, formData, onProgress, timeoutMs 
 function sendUpload(path, method, formData, onProgress, timeoutMs, headers, crossOrigin) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    const requestId = headers['X-Request-ID'];
+    const addRequestId = error => {
+      const responseRequestId = (() => {
+        try { return xhr.getResponseHeader('X-Request-ID'); } catch { return null; }
+      })();
+      error.requestId = responseRequestId || requestId || null;
+      return error;
+    };
+    let idleTimer = null;
+    let timedOut = false;
+    const resetIdleTimer = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        timedOut = true;
+        xhr.abort();
+        const error = addRequestId(new Error('The upload stalled for too long. Check your connection and retry.'));
+        error.retryable = true;
+        reject(error);
+      }, timeoutMs);
+    };
+    const clearIdleTimer = () => clearTimeout(idleTimer);
     xhr.open(method, path);
     xhr.withCredentials = !crossOrigin;
-    xhr.timeout = timeoutMs;
+    // A total-duration timeout incorrectly fails large uploads over a slow
+    // but working connection. Reset this watchdog whenever bytes move.
+    xhr.timeout = 0;
     Object.entries(headers).forEach(([name, value]) => xhr.setRequestHeader(name, value));
-    if (onProgress) {
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
-      };
-    }
+    resetIdleTimer();
+    xhr.upload.onprogress = (e) => {
+      resetIdleTimer();
+      if (onProgress && e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.upload.onload = resetIdleTimer;
+    xhr.onprogress = resetIdleTimer;
     xhr.onload = () => {
+      clearIdleTimer();
       let data = null;
       try { data = JSON.parse(xhr.responseText); } catch { /* non-JSON error page, data stays null */ }
       if (xhr.status >= 200 && xhr.status < 300) {
@@ -203,26 +247,31 @@ function sendUpload(path, method, formData, onProgress, timeoutMs, headers, cros
         resolve(data);
       }
       else {
-        const error = new Error(data?.error || 'Something went wrong.');
+        const error = addRequestId(new Error(data?.error || 'Something went wrong.'));
+        error.status = xhr.status;
         error.retryable = [502, 503, 504].includes(xhr.status);
         reject(error);
       }
     };
     xhr.onerror = () => {
+      clearIdleTimer();
       if (!navigator.onLine) {
         reject(connectionError());
         return;
       }
-      const error = new Error(crossOrigin
+      const error = addRequestId(new Error(crossOrigin
         ? 'The upload connection was interrupted. Check your connection and try again.'
-        : 'The upload connection was interrupted. The server or its proxy may have closed the connection; try again.');
+        : 'The upload connection was interrupted. The server or its proxy may have closed the connection; try again.'));
       error.retryable = true;
       reject(error);
     };
-    xhr.ontimeout = () => {
-      const error = new Error("That's taking too long. Check your connection and try again.");
-      error.retryable = true;
-      reject(error);
+    xhr.onabort = () => {
+      clearIdleTimer();
+      if (!timedOut) {
+        const error = addRequestId(new Error('The upload was interrupted. Check your connection and try again.'));
+        error.retryable = true;
+        reject(error);
+      }
     };
     if (crossOrigin) {
       xhr.send(formData);

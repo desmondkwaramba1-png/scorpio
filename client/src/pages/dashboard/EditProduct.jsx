@@ -132,24 +132,36 @@ export default function EditProduct() {
       // video especially) can be a genuinely large upload, real progress
       // is what keeps that from reading as broken.
       const requestKey = publishRequest.current.key;
-      const uploadHeaders = { 'Idempotency-Key': requestKey };
-      let uploadUrl = `/api/products/${id}`;
       const directUpload = ['scorpio.co.zw', 'www.scorpio.co.zw'].includes(window.location.hostname);
-      if (directUpload) {
-        const authorization = await api.post('/api/products/upload-token', {
-          request_key: requestKey,
-          product_id: Number(id)
-        });
-        uploadUrl = authorization.upload_url;
-        uploadHeaders['X-Product-Upload-Token'] = authorization.token;
-      }
-      await api.uploadWithProgress(uploadUrl, 'PATCH', body, setUploadProgress, 180000, uploadHeaders, {
-        crossOrigin: directUpload
+      const prepareAttempt = async () => {
+        const requestId = crypto.randomUUID();
+        const headers = { 'Idempotency-Key': requestKey, 'X-Request-ID': requestId };
+        if (!directUpload) return { path: `/api/products/${id}`, headers, crossOrigin: false };
+        let authorization;
+        try {
+          authorization = await api.post(
+            '/api/products/upload-token',
+            { request_key: requestKey, product_id: Number(id) },
+            undefined,
+            { 'X-Request-ID': requestId }
+          );
+        } catch (error) {
+          error.requestId = requestId;
+          if (!error.status || [502, 503, 504].includes(error.status)) error.retryable = true;
+          throw error;
+        }
+        headers['X-Product-Upload-Token'] = authorization.token;
+        return { path: authorization.upload_url, headers, crossOrigin: true };
+      };
+      await api.uploadWithProgress(`/api/products/${id}`, 'PATCH', body, setUploadProgress, 180000, {
+        'Idempotency-Key': requestKey
+      }, {
+        prepareAttempt
       });
       publishRequest.current = null;
       navigate('/dashboard/products');
     } catch (err) {
-      setError(err.message);
+      setError(err.requestId ? `${err.message} (Reference: ${err.requestId})` : err.message);
     } finally {
       submitLock.current = false;
       setSubmitting(false);

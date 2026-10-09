@@ -29,17 +29,40 @@ router.use((req, res, next) => {
 
   const startedAt = Date.now();
   let responseFinished = false;
-  console.info(`[product upload request] started ${req.method}`);
+  const requestId = req.uploadRequestId || req.get('X-Request-ID') || null;
+  console.info('[product upload request]', JSON.stringify({
+    event: 'started',
+    requestId,
+    method: req.method,
+    origin: req.get('Origin') || null,
+    contentLength: Number(req.get('Content-Length')) || null
+  }));
   req.once('aborted', () => {
-    console.warn(`[product upload request] client aborted ${req.method} after ${Date.now() - startedAt}ms`);
+    console.warn('[product upload request]', JSON.stringify({
+      event: 'client-aborted',
+      requestId,
+      method: req.method,
+      durationMs: Date.now() - startedAt
+    }));
   });
   res.once('finish', () => {
     responseFinished = true;
-    console.info(`[product upload request] finished ${req.method} ${res.statusCode} in ${Date.now() - startedAt}ms`);
+    console.info('[product upload request]', JSON.stringify({
+      event: 'finished',
+      requestId,
+      method: req.method,
+      status: res.statusCode,
+      durationMs: Date.now() - startedAt
+    }));
   });
   res.once('close', () => {
     if (!responseFinished) {
-      console.warn(`[product upload request] response closed ${req.method} after ${Date.now() - startedAt}ms`);
+      console.warn('[product upload request]', JSON.stringify({
+        event: 'response-closed',
+        requestId,
+        method: req.method,
+        durationMs: Date.now() - startedAt
+      }));
     }
   });
   next();
@@ -57,9 +80,21 @@ router.use((req, res, next) => {
 // stays permissive at the filter level and the real, category-specific
 // check runs after multer finishes parsing, see checkDeliverableType
 // below, called from both POST and PATCH once req.body is complete.
-const COVER_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const COVER_IMAGE_TYPES = new Set([
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'image/heic', 'image/heif', 'image/avif', 'image/bmp'
+]);
 const PDF_TYPE = 'application/pdf';
 const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
+
+function normalizeCoverMimeType(mimeType) {
+  return {
+    'image/heic': 'image/jpeg',
+    'image/heif': 'image/jpeg',
+    'image/avif': 'image/jpeg',
+    'image/bmp': 'image/jpeg'
+  }[mimeType] || mimeType || 'image/jpeg';
+}
 function productFileFilter(req, file, cb) {
   if (file.fieldname === 'cover') {
     if (COVER_IMAGE_TYPES.has(file.mimetype)) return cb(null, true);
@@ -108,6 +143,7 @@ const productUploadStorage = {
     file.key = key;
     const body = new PassThrough();
     const verificationBody = file.fieldname === 'file' ? new PassThrough() : null;
+    const uploadStartedAt = Date.now();
     const verificationPromise = verificationBody
       ? runStreamVerification({ stream: verificationBody, claimedMimeType: file.mimetype })
       : null;
@@ -121,22 +157,32 @@ const productUploadStorage = {
     file.stream.pipe(body);
     if (verificationBody) file.stream.pipe(verificationBody);
     storage.uploadStream(key, body, file.mimetype)
-      .then(() => callback(null, {
-        key, size, ...(verificationPromise ? { verificationPromise } : {})
-      }))
+      .then(() => {
+        console.info('[product upload storage]', JSON.stringify({
+          event: 'stored',
+          requestId: req.uploadRequestId || req.get('X-Request-ID') || null,
+          field: file.fieldname,
+          sizeBytes: size,
+          durationMs: Date.now() - uploadStartedAt
+        }));
+        callback(null, { key, size, ...(verificationPromise ? { verificationPromise } : {}) });
+      })
       .catch(error => {
         body.destroy();
         if (verificationBody) verificationBody.destroy(error);
         const uploadError = error instanceof Error ? error : new Error(String(error));
         file.stream.destroy(uploadError);
         uploadError.productUploadFailure = true;
-        console.error('[product upload storage]', {
+        console.error('[product upload storage]', JSON.stringify({
+          requestId: req.uploadRequestId || req.get('X-Request-ID') || null,
           field: file.fieldname,
+          sizeBytes: size,
+          durationMs: Date.now() - uploadStartedAt,
           name: uploadError.name,
           code: uploadError.code || null,
           statusCode: uploadError.$metadata?.httpStatusCode || null,
           message: uploadError.message
-        });
+        }));
         callback(uploadError);
       });
   },
@@ -190,6 +236,21 @@ function cleanupUncommittedProductObjects(req, res, next) {
   next();
 }
 
+const productFieldsUpload = upload.fields([
+  { name: 'cover', maxCount: 1 },
+  { name: 'file', maxCount: 1 },
+  { name: 'preview_video', maxCount: 1 }
+]);
+
+function parseProductUpload(req, res, next) {
+  productFieldsUpload(req, res, error => {
+    if (!error) return next();
+    cleanupUncommittedProductObjects(req, res, () => {
+      handleProductUploadError(error, req, res, next);
+    });
+  });
+}
+
 // R2 object keys, prefix says which bucket "folder" and whether it's a
 // public or private object, extension kept for a sane Content-Type/browser
 // hint, uuid keeps two uploads from ever colliding.
@@ -202,11 +263,11 @@ function objectKey(prefix, originalname) {
 // attaches key stock, total_keys is 0 for the vast majority of products
 // that don't use license keys at all, so callers can treat "total_keys > 0"
 // as "this is a keyed product" without a separate flag.
-function withPromo(product) {
+function withPromo(product, keyCounts) {
   const active = !product.pay_what_you_want && isPromoActive(product);
   product.promo_active = active;
   product.discounted_price_minor = active ? applyDiscount(product.price_minor, product.discount_percent) : null;
-  const stats = keyStats(product.id);
+  const stats = keyCounts || keyStats(product.id);
   product.total_keys = stats.total;
   product.unclaimed_keys = stats.unclaimed;
   return product;
@@ -274,16 +335,39 @@ async function verifyAndRecordFile(productId, creatorId, file, title, descriptio
 const FEED_SELECT = `
   SELECT p.*, c.name as creator_name, c.handle as creator_handle,
          c.verified as creator_verified, c.avatar_path as creator_avatar,
-         (SELECT COUNT(*) FROM product_likes WHERE product_id = p.id) AS like_count,
-         (SELECT COUNT(*) FROM product_comments WHERE product_id = p.id) AS comment_count,
-         (SELECT COUNT(*) FROM product_shares WHERE product_id = p.id) AS share_count,
-         (SELECT ROUND(AVG(rating), 1) FROM product_reviews WHERE product_id = p.id) AS avg_rating,
-         (SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id) AS review_count,
+         COALESCE((SELECT COUNT(*) FROM product_likes WHERE product_id = p.id), 0) AS like_count,
+         COALESCE((SELECT COUNT(*) FROM product_comments WHERE product_id = p.id), 0) AS comment_count,
+         COALESCE((SELECT COUNT(*) FROM product_shares WHERE product_id = p.id), 0) AS share_count,
+         COALESCE((SELECT ROUND(AVG(rating), 1) FROM product_reviews WHERE product_id = p.id), 0) AS avg_rating,
+         COALESCE((SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id), 0) AS review_count,
+         COALESCE((SELECT COUNT(*) FROM license_keys WHERE product_id = p.id), 0) AS total_keys,
+         COALESCE((SELECT COUNT(*) FROM license_keys WHERE product_id = p.id AND claimed_at IS NULL), 0) AS unclaimed_keys,
          EXISTS(SELECT 1 FROM product_likes WHERE product_id = p.id AND user_id = ?) AS liked_by_me,
          EXISTS(SELECT 1 FROM cart_items WHERE product_id = p.id AND user_id = ?) AS in_cart
   FROM products p
   JOIN creators c ON c.id = p.creator_id
 `;
+
+function loadProductMetrics(productId, userId) {
+  return db.prepare(`
+    SELECT
+      COALESCE((SELECT COUNT(*) FROM product_likes WHERE product_id = p.id), 0) AS like_count,
+      COALESCE((SELECT COUNT(*) FROM product_comments WHERE product_id = p.id), 0) AS comment_count,
+      COALESCE((SELECT COUNT(*) FROM product_shares WHERE product_id = p.id), 0) AS share_count,
+      COALESCE((SELECT ROUND(AVG(rating), 1) FROM product_reviews WHERE product_id = p.id), 0) AS avg_rating,
+      COALESCE((SELECT COUNT(*) FROM product_reviews WHERE product_id = p.id), 0) AS review_count,
+      EXISTS(SELECT 1 FROM product_likes WHERE product_id = p.id AND user_id = ?) AS liked_by_me
+    FROM products p
+    WHERE p.id = ?
+  `).get(userId, productId) || {
+    like_count: 0,
+    comment_count: 0,
+    share_count: 0,
+    avg_rating: 0,
+    review_count: 0,
+    liked_by_me: false
+  };
+}
 
 // GET /api/products, the public /discover feed. type, q (title search),
 // sort=new|price_asc|price_desc|popular|bestselling, limit (homepage rails).
@@ -329,21 +413,29 @@ router.get('/', (req, res) => {
   }
 
   const orderBy = {
-    price_asc: 'p.price_minor ASC',
-    price_desc: 'p.price_minor DESC',
-    popular: 'like_count DESC, p.created_at DESC',
-    bestselling: 'p.quantity_sold DESC, p.created_at DESC'
-  }[sort] || 'p.created_at DESC';
+    price_asc: 'p.price_minor ASC, p.id ASC',
+    price_desc: 'p.price_minor DESC, p.id DESC',
+    popular: 'like_count DESC, p.created_at DESC, p.id DESC',
+    bestselling: 'p.quantity_sold DESC, p.created_at DESC, p.id DESC'
+  }[sort] || 'p.created_at DESC, p.id DESC';
 
-  const capped = Math.min(parseInt(limit, 10) || 0, 50);
-  const limitSql = capped > 0 ? ' LIMIT ?' : '';
-  if (capped > 0) params.push(capped);
+  const parsedLimit = Number.parseInt(limit, 10);
+  const capped = Number.isInteger(parsedLimit) && parsedLimit > 0
+    ? Math.min(parsedLimit, 50)
+    : 24;
+  const parsedOffset = Number.parseInt(req.query.offset, 10);
+  const offset = Number.isSafeInteger(parsedOffset) ? Math.max(parsedOffset, 0) : 0;
+  params.push(capped, offset);
 
   const products = db.prepare(
-    `${FEED_SELECT} WHERE ${clauses.join(' AND ')} ORDER BY ${orderBy}${limitSql}`
+    `${FEED_SELECT} WHERE ${clauses.join(' AND ')} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
   ).all(...params);
 
-  res.json(products.map(withPromo));
+  res.json(products.map(product => withPromo(product, {
+    total: product.total_keys,
+    unclaimed: product.unclaimed_keys,
+    claimed: product.total_keys - product.unclaimed_keys
+  })));
 });
 
 // GET /api/products/mine, the logged-in creator's own products, any status.
@@ -509,14 +601,13 @@ router.get('/:slug', (req, res) => {
     'SELECT id, kind, external_url, original_filename FROM product_files WHERE product_id = ?'
   ).all(product.id);
 
-  product.like_count = db.prepare('SELECT COUNT(*) AS n FROM product_likes WHERE product_id = ?').get(product.id).n;
-  product.comment_count = db.prepare('SELECT COUNT(*) AS n FROM product_comments WHERE product_id = ?').get(product.id).n;
-  product.share_count = db.prepare('SELECT COUNT(*) AS n FROM product_shares WHERE product_id = ?').get(product.id).n;
-  product.avg_rating = db.prepare('SELECT ROUND(AVG(rating), 1) AS n FROM product_reviews WHERE product_id = ?').get(product.id).n;
-  product.review_count = db.prepare('SELECT COUNT(*) AS n FROM product_reviews WHERE product_id = ?').get(product.id).n;
-  product.liked_by_me = req.user
-    ? !!db.prepare('SELECT 1 FROM product_likes WHERE product_id = ? AND user_id = ?').get(product.id, req.user.id)
-    : false;
+  const productMetrics = loadProductMetrics(product.id, req.user ? req.user.id : 0);
+  product.like_count = Number(productMetrics.like_count || 0);
+  product.comment_count = Number(productMetrics.comment_count || 0);
+  product.share_count = Number(productMetrics.share_count || 0);
+  product.avg_rating = Number(productMetrics.avg_rating || 0);
+  product.review_count = Number(productMetrics.review_count || 0);
+  product.liked_by_me = !!productMetrics.liked_by_me;
 
   res.json(withPromo(product));
 });
@@ -839,11 +930,7 @@ router.post('/upload-token', requireAuth, requireCreator, (req, res) => {
   });
 });
 
-router.post('/', requireProductUploadAuth, replayProductPublish, upload.fields([
-  { name: 'cover', maxCount: 1 },
-  { name: 'file', maxCount: 1 },
-  { name: 'preview_video', maxCount: 1 }
-]), handleProductUploadError, cleanupUncommittedProductObjects, async (req, res) => {
+router.post('/', requireProductUploadAuth, replayProductPublish, parseProductUpload, cleanupUncommittedProductObjects, async (req, res) => {
   const {
     title, description, type, category, price, currency,
     pay_what_you_want, min_price, quantity_limit, status, external_url, license_keys,
@@ -922,10 +1009,14 @@ router.post('/', requireProductUploadAuth, replayProductPublish, upload.fields([
   try {
     const sourceBuffer = await storage.getObjectBuffer(cover.key, MAX_COVER_SIZE);
     let coverBuffer = sourceBuffer;
-    try { coverBuffer = await optimizeImage(sourceBuffer, { maxWidth: 1600, enhance: true }); } catch (error) {
+    let coverMimeType = normalizeCoverMimeType(cover.mimetype);
+    try {
+      coverBuffer = await optimizeImage(sourceBuffer, { maxWidth: 1600, enhance: true });
+      coverMimeType = normalizeCoverMimeType(cover.mimetype);
+    } catch (error) {
       console.error('[image optimize]', error);
     }
-    await storage.uploadBuffer(cover.key, coverBuffer, cover.mimetype);
+    await storage.uploadBuffer(cover.key, coverBuffer, coverMimeType);
   } catch (error) {
     console.error('[product cover processing]', error);
     releaseProductPublish(req);
@@ -1002,11 +1093,7 @@ router.post('/', requireProductUploadAuth, replayProductPublish, upload.fields([
 });
 
 // PATCH /api/products/:id, edit, publish, or unpublish. Owner only.
-router.patch('/:id', requireProductUploadAuth, replayProductPublish, upload.fields([
-  { name: 'cover', maxCount: 1 },
-  { name: 'file', maxCount: 1 },
-  { name: 'preview_video', maxCount: 1 }
-]), handleProductUploadError, cleanupUncommittedProductObjects, async (req, res) => {
+router.patch('/:id', requireProductUploadAuth, replayProductPublish, parseProductUpload, cleanupUncommittedProductObjects, async (req, res) => {
   const product = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
   if (!product) return res.status(404).json({ error: 'Product not found.' });
   if (product.creator_id !== req.creator.id) {
@@ -1116,10 +1203,14 @@ router.patch('/:id', requireProductUploadAuth, replayProductPublish, upload.fiel
     try {
       const sourceBuffer = await storage.getObjectBuffer(cover.key, MAX_COVER_SIZE);
       let coverBuffer = sourceBuffer;
-      try { coverBuffer = await optimizeImage(sourceBuffer, { maxWidth: 1600, enhance: true }); } catch (error) {
+      let coverMimeType = normalizeCoverMimeType(cover.mimetype);
+      try {
+        coverBuffer = await optimizeImage(sourceBuffer, { maxWidth: 1600, enhance: true });
+        coverMimeType = normalizeCoverMimeType(cover.mimetype);
+      } catch (error) {
         console.error('[image optimize]', error);
       }
-      await storage.uploadBuffer(cover.key, coverBuffer, cover.mimetype);
+      await storage.uploadBuffer(cover.key, coverBuffer, coverMimeType);
     } catch (error) {
       console.error('[product cover processing]', error);
       releaseProductPublish(req);

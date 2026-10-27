@@ -12,6 +12,7 @@ const { createDownloadToken, getActiveTokenForPurchase, productHasFile, getProdu
 const { keyForPurchase } = require('../lib/licenseKeys');
 const { isSoldOut } = require('../lib/stock');
 const { buyerForUser } = require('../lib/buyers');
+const { reconcileForUser } = require('../lib/reconcilePayments');
 const { normalizeExternalUrl } = require('../lib/safeUrl');
 const { sweepAutoReleases, deliveryFor, disputeFor, markDelivered, confirmDelivery, openDispute } = require('../lib/escrow');
 const { sendEmail } = require('../lib/notify');
@@ -111,8 +112,12 @@ function serviceStatusFor(purchase) {
 }
 
 // GET /api/purchases/mine — a logged-in buyer's own order history.
-router.get('/mine', requireAuth, (req, res) => {
+router.get('/mine', requireAuth, async (req, res) => {
   sweepAutoReleases();
+  // A buyer who approved EcoCash after closing the checkout page is paid up
+  // but still 'pending' here. Ask the gateway now so their order is complete
+  // the moment they look; a gateway hiccup must never break the page.
+  await reconcileForUser(req.user.id).catch(err => console.error('[mine reconcile]', err.message));
 
   const purchases = db.prepare(`
     SELECT pu.*, p.title AS product_title, p.slug AS product_slug, p.cover_path AS product_cover_path,

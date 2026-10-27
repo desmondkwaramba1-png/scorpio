@@ -8,7 +8,7 @@ const { sendEmail } = require('../lib/notify');
 const { generateToken } = require('../lib/tokens');
 const { createSession, destroySession, TTL_DAYS } = require('../lib/session');
 const { requireAuth, COOKIE_NAME } = require('../middleware/auth');
-const { authLimiter, accountSecurityLimiter } = require('../middleware/rateLimit');
+const { authLimiter, loginLimiter, accountSecurityLimiter } = require('../middleware/rateLimit');
 const { loginLockedFor, recordLoginFailure, clearLoginFailures, passwordMatches, passwordProblem } = require('../lib/accountSecurity');
 const { checkAndUpdateVerification } = require('../lib/verification');
 const { linkGuestPurchases } = require('../lib/linkGuestPurchases');
@@ -116,7 +116,7 @@ router.post('/signup', authLimiter, (req, res) => {
 });
 
 // POST /api/auth/login, identifier is a username or an email.
-router.post('/login', authLimiter, (req, res) => {
+router.post('/login', loginLimiter, (req, res) => {
   const { identifier, password } = req.body;
   const normalizedIdentifier = typeof identifier === 'string' ? identifier.trim() : '';
   if (!normalizedIdentifier || !password) {

@@ -11,6 +11,17 @@ const authLimiter = rateLimit({
   message: { error: 'Too many attempts. Try again in a few minutes.' }
 });
 
+// Login gets a looser per-IP cap than the email-sending routes: mobile carriers
+// put many real people behind one address, and guessing a single account is
+// already stopped by the per-account lockout in lib/accountSecurity.js.
+const loginLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many sign-in attempts from your network. Try again in a few minutes.' }
+});
+
 const checkoutLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   limit: 20,
@@ -60,10 +71,10 @@ const reportLimiter = rateLimit({
 // from login so legitimate use never competes with them.
 const accountSecurityLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
-  limit: 10,
+  limit: Number(process.env.ACCOUNT_SECURITY_RATE_LIMIT) || 10,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many security changes. Try again in a few minutes.' }
 });
 
-module.exports = { accountSecurityLimiter, authLimiter, checkoutLimiter, reportLimiter, orderLookupLimiter, adminLimiter };
+module.exports = { accountSecurityLimiter, loginLimiter, authLimiter, checkoutLimiter, reportLimiter, orderLookupLimiter, adminLimiter };

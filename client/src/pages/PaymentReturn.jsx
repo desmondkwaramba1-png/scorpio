@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { FiCheckCircle, FiXCircle, FiLoader, FiDownload, FiPlay, FiX, FiKey, FiCopy, FiCheck, FiShield, FiBookOpen, FiExternalLink } from 'react-icons/fi';
 import { formatMoney } from '../lib/money';
+import DocumentViewer from '../components/DocumentViewer.jsx';
 
 const FAST_POLL_INTERVAL_MS = 3000;
 const SLOW_POLL_INTERVAL_MS = 20000;
@@ -99,7 +100,7 @@ function ItemRow({ item }) {
         <audio src={item.view_url} controls autoPlay style={{ width: '100%', marginTop: 14 }} />
       )}
       {open && item.view_url && !item.is_video && !item.is_audio && !item.is_external && (
-        <iframe src={item.view_url} title={item.product_title} className="library-file-viewer" />
+        <DocumentViewer src={item.view_url} title={item.product_title} downloadUrl={item.download_url} />
       )}
     </div>
   );
@@ -245,6 +246,10 @@ export default function PaymentReturn() {
       {pollError && !gaveUp && (
         <p className="muted" style={{ fontSize: '.8rem', marginTop: 10 }}>Connection interrupted. We will keep checking automatically.</p>
       )}
+      <p className="muted" style={{ fontSize: '.82rem', marginTop: 16, lineHeight: 1.5 }}>
+        Approved the EcoCash prompt already? You can safely leave this page. We keep checking, and your purchase
+        will appear under <Link to="/account" style={{ fontWeight: 700 }}>My orders</Link> as soon as the payment clears.
+      </p>
       {gaveUp && (
         <button type="button" className="btn btn--ghost btn--sm" style={{ marginTop: 18 }}
           onClick={() => window.location.reload()}>

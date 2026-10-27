@@ -8,6 +8,7 @@ const { accountSecurityLimiter } = require('../middleware/rateLimit');
 const { passwordMatches } = require('../lib/accountSecurity');
 const { isValidEcocashNumber } = require('../services/payment');
 const { sendEmail } = require('../lib/notify');
+const { issuePayoutCode, consumePayoutCode, TTL_MINUTES } = require('../lib/payoutCodes');
 const { getVerificationCriteria, checkAndUpdateVerification } = require('../lib/verification');
 const { optimizeImage } = require('../lib/imageProcessing');
 const storage = require('../lib/storage');
@@ -108,12 +109,22 @@ router.patch('/me', accountSecurityLimiter, requireAuth, upload.single('avatar')
     if (requestedPayout && !isValidEcocashNumber(requestedPayout)) {
       return res.status(400).json({ error: 'Enter a valid EcoCash number, e.g. 0771234567 or +263771234567.' });
     }
-    if (req.user.password_hash) {
-      if (!passwordMatches(req.user, req.body.current_password)) {
-        return res.status(403).json({ error: 'Enter your current password to change your payout number.', code: 'REAUTH_REQUIRED' });
-      }
-    } else if (!req.user.email_verified_at) {
+    // Proof it's really the owner: the password, or a one-time code emailed
+    // to the account. Google/Facebook accounts have no password to give, so
+    // for them the emailed code is the only route.
+    if (!req.user.email_verified_at) {
       return res.status(403).json({ error: 'Verify your email before changing your payout number.' });
+    }
+    const hasPassword = !!req.user.password_hash;
+    const passwordOk = hasPassword && passwordMatches(req.user, req.body.current_password);
+    if (!passwordOk && !consumePayoutCode(req.user.id, req.body.payout_code)) {
+      return res.status(403).json({
+        error: hasPassword
+          ? 'Enter your password, or the 6-digit code we emailed you, to change your payout number.'
+          : 'Enter the 6-digit code we emailed you to change your payout number.',
+        code: 'REAUTH_REQUIRED',
+        methods: hasPassword ? ['password', 'email_code'] : ['email_code']
+      });
     }
   }
 
@@ -160,6 +171,22 @@ router.patch('/me', accountSecurityLimiter, requireAuth, upload.single('avatar')
   checkAndUpdateVerification(req.creator.id);
   const creator = db.prepare('SELECT * FROM creators WHERE id = ?').get(req.creator.id);
   res.json(creator);
+});
+
+// POST /api/creators/me/payout-code: emails a one-time code that authorises
+// a payout-number change. Rate limited, and each new code replaces the last.
+router.post('/me/payout-code', accountSecurityLimiter, requireAuth, (req, res) => {
+  if (!req.creator) return res.status(404).json({ error: 'No creator profile yet.' });
+  if (!req.user.email_verified_at) {
+    return res.status(403).json({ error: 'Verify your email first so we can send you the code.' });
+  }
+  const code = issuePayoutCode(req.user.id);
+  sendEmail(
+    req.user.email,
+    'Your SCORPIO payout confirmation code',
+    `Your code to confirm a payout number change is ${code}. It expires in ${TTL_MINUTES} minutes. If you didn't ask for this, ignore this email and consider changing your password. Never share this code with anyone.`
+  );
+  res.json({ sent: true, expires_in_minutes: TTL_MINUTES });
 });
 
 // GET /api/creators/me/verification-status — the checklist behind the Seal.

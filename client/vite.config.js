@@ -53,6 +53,10 @@ export default defineConfig({
         // the explicit runtime rule below also retains a cache fallback for
         // a route the visitor has previously opened while offline.
         navigateFallback: null,
+        // The document reader (PDF engine + worker, ~1 MB) is only needed when
+        // someone opens a document, so it is kept out of the install-time
+        // precache and cached on first use instead (rule below).
+        globIgnores: ['**/pdf*.js', '**/PdfReader*.js'],
         // Everything NOT matched by a rule below is a plain network
         // passthrough, never touched by the service worker — this is
         // deliberately an allowlist, not a blocklist, so anything
@@ -100,6 +104,15 @@ export default defineConfig({
             options: {
               cacheName: 'r2-media',
               expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          },
+          {
+            urlPattern: ({ url }) => /^\/assets\/(pdf|PdfReader)/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'reader-engine',
+              expiration: { maxEntries: 6, maxAgeSeconds: 60 * 60 * 24 * 60 },
               cacheableResponse: { statuses: [0, 200] }
             }
           },

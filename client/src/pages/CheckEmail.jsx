@@ -65,6 +65,11 @@ export default function CheckEmail() {
         {resent ? 'Sent, check your inbox' : resending ? 'Sending...' : 'Resend the email'}
       </button>
 
+      <p className="muted" style={{ fontSize: '.82rem', marginTop: 18, lineHeight: 1.55 }}>
+        Nothing yet? Check your spam or junk folder, and make sure <strong style={{ color: 'var(--ink)' }}>{user.email}</strong> is spelled correctly.
+        It can take a minute or two to arrive.
+      </p>
+
       {error && <p className="error-text" style={{ marginTop: 16 }}>{error}</p>}
     </AuthShell>
   );

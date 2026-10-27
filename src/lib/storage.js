@@ -86,10 +86,17 @@ async function uploadStream(key, body, contentType) {
   return key;
 }
 
-async function getObjectStream(key) {
+// `range` is an HTTP Range header value ("bytes=0-65535") passed straight to
+// the store, so readers can fetch a large document a piece at a time.
+async function getObjectStream(key, { range } = {}) {
   if (!isConfigured()) throw new Error('File storage is not configured (R2 env vars missing).');
-  const result = await getClient().send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
-  return { stream: result.Body, size: result.ContentLength };
+  const result = await getClient().send(new GetObjectCommand({ Bucket: BUCKET, Key: key, ...(range ? { Range: range } : {}) }));
+  return {
+    stream: result.Body,
+    size: result.ContentLength,
+    contentRange: result.ContentRange || null,
+    contentType: result.ContentType || null
+  };
 }
 
 async function getObjectBuffer(key, maxBytes) {

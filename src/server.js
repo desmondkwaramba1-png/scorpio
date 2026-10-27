@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+require('./lib/asyncErrors').installProcessSafetyNet();
 const helmet = require('helmet');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -265,3 +266,5 @@ const server = require('http').createServer({
   headersTimeout: 65 * 1000
 }, app);
 server.listen(PORT, () => console.log(`SCORPIO API running on port ${PORT}`));
+require('./lib/reconcilePayments').startPaymentReconciler();
+require('./lib/housekeeping').startHousekeeping();

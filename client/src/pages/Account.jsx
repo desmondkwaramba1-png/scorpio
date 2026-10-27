@@ -8,6 +8,7 @@ import { timeAgo } from '../lib/time';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 import ReportProblem from '../components/ReportProblem.jsx';
 import DisputeThread from '../components/DisputeThread.jsx';
+import DocumentViewer from '../components/DocumentViewer.jsx';
 
 function formatDate(sqliteDatetime) {
   const d = new Date(sqliteDatetime.replace(' ', 'T'));
@@ -458,7 +459,16 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId, autoOpen
               {FULFILLMENT_LABEL[purchase.service.fulfillment_status]?.text || purchase.service.fulfillment_status}
             </span>
           ) : (
-            <span className={`badge ${purchase.payment_status === 'paid' ? 'badge--green' : 'badge--neutral'}`}>{purchase.payment_status}</span>
+            <>
+              <span className={`badge ${purchase.payment_status === 'paid' ? 'badge--green' : 'badge--neutral'}`}>
+                {{ paid: 'Paid', pending: 'Waiting for payment', failed: 'Payment not completed' }[purchase.payment_status] || purchase.payment_status}
+              </span>
+              {purchase.payment_status === 'pending' && purchase.payment_reference && (
+                <Link to={`/payment/return?order_id=${purchase.payment_reference}`} style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--green-glow)' }}>
+                  Check payment
+                </Link>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -507,7 +517,7 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId, autoOpen
             <audio src={purchase.view_url} controls autoPlay className="order-card__media" />
           )}
           {purchase.view_url && !purchase.is_video && !purchase.is_audio && !purchase.is_external && (
-            <iframe src={purchase.view_url} title={purchase.product_title} className="library-file-viewer" />
+            <DocumentViewer src={purchase.view_url} title={purchase.product_title} downloadUrl={purchase.download_url} />
           )}
         </section>
       )}

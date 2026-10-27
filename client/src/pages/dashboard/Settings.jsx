@@ -13,6 +13,10 @@ export default function Settings() {
   const { security, refreshSecurity } = useOutletContext();
   const location = useLocation();
   const [payoutPassword, setPayoutPassword] = useState('');
+  const [payoutCode, setPayoutCode] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
+  const [codeBusy, setCodeBusy] = useState(false);
+  const [codeError, setCodeError] = useState(null);
 
   const [form, setForm] = useState({
     name: creator?.name || '',
@@ -39,6 +43,19 @@ export default function Settings() {
   if (!creator) return <Navigate to="/onboarding" replace />;
 
   const normalize = v => String(v || '').replace(/[\s-]+/g, '');
+  async function sendPayoutCode() {
+    setCodeBusy(true);
+    setCodeError(null);
+    try {
+      await api.post('/api/creators/me/payout-code');
+      setCodeSent(true);
+    } catch (err) {
+      setCodeError(err.message);
+    } finally {
+      setCodeBusy(false);
+    }
+  }
+
   const payoutChanged = normalize(form.payout_ecocash_number) !== normalize(creator.payout_ecocash_number);
 
   const update = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
@@ -64,12 +81,17 @@ export default function Settings() {
     const body = new FormData();
     Object.entries(form).forEach(([k, v]) => body.append(k, v));
     if (avatar) body.append('avatar', avatar);
-    if (payoutChanged) body.append('current_password', payoutPassword);
+    if (payoutChanged) {
+      if (payoutPassword) body.append('current_password', payoutPassword);
+      if (payoutCode) body.append('payout_code', payoutCode.trim());
+    }
 
     try {
       await api.patch('/api/creators/me', body);
       await refresh();
       setPayoutPassword('');
+      setPayoutCode('');
+      setCodeSent(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
@@ -207,14 +229,38 @@ export default function Settings() {
                   <small>Where your earnings get paid out. Also required to unlock verification.</small>
                 </div>
               </div>
-              {payoutChanged && security?.has_password !== false && (
+              {payoutChanged && security && (
                 <div className="settings-row settings-row--stacked settings-row--secure">
-                  <div className="field" style={{ marginBottom: 0 }}>
-                    <label htmlFor="payout_password"><FiLock size={13} /> Confirm with your password</label>
-                    <input id="payout_password" type="password" autoComplete="current-password" value={payoutPassword}
-                      onChange={e => setPayoutPassword(e.target.value)} placeholder="Your current password" />
-                    <small>Changing where money is sent needs your password. We will email you when it changes, and new numbers are reviewed before the first payout.</small>
-                  </div>
+                  <p className="security__title" style={{ marginBottom: 6 }}><FiLock size={13} /> Confirm this change</p>
+                  {security.has_password && (
+                    <div className="field" style={{ marginBottom: 10 }}>
+                      <label htmlFor="payout_password">Your password</label>
+                      <input id="payout_password" type="password" autoComplete="current-password" value={payoutPassword}
+                        onChange={e => setPayoutPassword(e.target.value)} placeholder="Your current password" />
+                    </div>
+                  )}
+                  {!security.has_password && (
+                    <small style={{ display: 'block', marginBottom: 10 }}>
+                      You signed in with Google or Facebook, so there is no password. We will email a 6-digit code to {user?.email} instead.
+                    </small>
+                  )}
+                  {security.has_password && !codeSent && (
+                    <small style={{ display: 'block', marginBottom: 8 }}>No password handy? Use an emailed code instead.</small>
+                  )}
+                  {!codeSent ? (
+                    <button type="button" className="btn btn--ghost btn--sm" onClick={sendPayoutCode} disabled={codeBusy}>
+                      {codeBusy ? 'Sending...' : `Email me a code${security.has_password ? ' instead' : ''}`}
+                    </button>
+                  ) : (
+                    <div className="field" style={{ marginBottom: 0 }}>
+                      <label htmlFor="payout_code">6-digit code</label>
+                      <input id="payout_code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} pattern="\d{6}"
+                        value={payoutCode} onChange={e => setPayoutCode(e.target.value.replace(/\D/g, ''))} placeholder="123456" />
+                      <small>Sent to {user?.email}. It expires in 10 minutes. <button type="button" className="link-btn" onClick={sendPayoutCode} disabled={codeBusy}>Send a new one</button></small>
+                    </div>
+                  )}
+                  {codeError && <p className="error-text" role="alert">{codeError}</p>}
+                  <small style={{ display: 'block', marginTop: 10 }}>We email you when your payout number changes, and new numbers are reviewed before the first payout.</small>
                 </div>
               )}
             </div>

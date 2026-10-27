@@ -11,6 +11,7 @@ const { PassThrough } = require('node:stream');
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'scorpio-integrity-'));
 process.env.NODE_ENV = 'test';
+process.env.ACCOUNT_SECURITY_RATE_LIMIT = '1000'; // every request here shares one loopback IP
 
 // --- stubs, installed before any route module captures the real ones ------
 const objects = new Map();   // key -> { body: Buffer, contentType }
@@ -31,15 +32,33 @@ storage.uploadBuffer = async (key, body, contentType) => {
 };
 storage.getObjectBuffer = async key => objects.get(key).body;
 storage.deleteObject = async key => { deleted.push(key); objects.delete(key); };
+storage.getObjectStream = async (key, { range } = {}) => {
+  const { Readable } = require('node:stream');
+  const whole = objects.get(key).body;
+  let start = 0; let end = whole.length - 1;
+  if (range) {
+    const m = /^bytes=(\d*)-(\d*)$/.exec(range);
+    start = m[1] === '' ? Math.max(0, whole.length - Number(m[2])) : Number(m[1]);
+    end = m[1] !== '' && m[2] !== '' ? Math.min(Number(m[2]), whole.length - 1) : end;
+    if (start >= whole.length) { const e = new Error('InvalidRange'); e.$metadata = { httpStatusCode: 416 }; throw e; }
+  }
+  const slice = whole.subarray(start, end + 1);
+  return { stream: Readable.from([slice]), size: slice.length, contentRange: range ? `bytes ${start}-${end}/${whole.length}` : null, contentType: null };
+};
 storage.keyFromReference = (ref) => {
   if (typeof ref !== 'string') return null;
   const key = ref.replace('https://cdn.test/', '');
   return /^(covers|product-files|previews|issue-files)\//.test(key) ? key : null;
 };
 
+const sentEmails = [];
+require('../src/lib/notify').sendEmail = async (to, subject, body) => { sentEmails.push({ to, subject, body }); };
+
 const payment = require('../src/services/payment');
 payment.createOrder = async () => ({ success: true, ecocashStatus: 'PENDING SUBSCRIBER VALIDATION' });
-payment.checkOrderStatus = async () => ({ status: 'pending' });
+let gatewayStatus = 'pending';
+payment.checkOrderStatus = async () => ({ status: gatewayStatus });
+payment.isConfigured = () => true;
 
 const express = require('express');
 const cookieParser = require('cookie-parser');
@@ -55,8 +74,11 @@ app.use(attachUser);
 app.use('/api/products', require('../src/routes/products'));
 app.use('/api/purchases', require('../src/routes/purchases'));
 app.use('/api/cart', require('../src/routes/cart'));
+app.use('/api/downloads', require('../src/routes/downloads'));
 app.use('/api/auth', require('../src/routes/auth'));
 app.use('/api/creators', require('../src/routes/creators'));
+require('../src/lib/asyncErrors');
+app.get('/__boom', async () => { throw new Error('async route failure'); });
 app.use((err, req, res, _next) => res.status(400).json({ error: err.message }));
 
 let n = 0;
@@ -303,6 +325,126 @@ async function main() {
     assert.equal(objects.get(issue.file_path).body.toString(), '%PDF-1.4 test', 'stored bytes must be the uploaded file');
   });
 
+  await check('a rejecting async route returns an error response instead of hanging or killing the process', async () => {
+    const res = await call('GET', '/__boom');
+    assert.equal(res.status, 400);
+    assert.match(res.data.error, /async route failure/);
+    assert.equal((await call('GET', '/api/auth/me')).status, 200, 'server still alive');
+  });
+
+  await check('housekeeping purges expired sessions and codes but keeps live ones', async () => {
+    const { purgeExpired } = require('../src/lib/housekeeping');
+    const hk = makeUser({ email: 'hk@example.invalid' });
+    db.prepare("INSERT INTO sessions (id, user_id, expires_at) VALUES ('expired-hk', ?, '2020-01-01T00:00:00.000Z')").run(hk.userId);
+    db.prepare("INSERT INTO payout_change_codes (user_id, code_hash, expires_at) VALUES (?, 'x', '2020-01-01T00:00:00.000Z')").run(hk.userId);
+    assert.ok(purgeExpired() >= 2);
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM sessions WHERE id = 'expired-hk'").get().n, 0);
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?').get(hk.userId).n, 1);
+  });
+
+  // ---- in-app document reader -----------------------------------------------
+  await check('document stream: access rules, headers, Range, and PDF.js can open it over HTTP', async () => {
+    const { PDFDocument } = require('pdf-lib');
+    const { createDownloadToken } = require('../src/lib/downloads');
+    const pdf = await PDFDocument.create();
+    for (let i = 0; i < 3; i += 1) pdf.addPage([300, 400]).drawText(`Page ${i + 1}`, { x: 40, y: 200 });
+    const bytes = Buffer.from(await pdf.save());
+    objects.set('product-files/reader-test.pdf', { body: bytes, contentType: 'application/pdf' });
+
+    const { id } = addProduct(seller.creatorId, { title: 'Readable' });
+    db.prepare('DELETE FROM product_files WHERE product_id = ?').run(id);
+    db.prepare("INSERT INTO product_files (product_id, kind, storage_path, original_filename) VALUES (?, 'upload', 'product-files/reader-test.pdf', 'guide.pdf')").run(id);
+    const reader = makeUser({ email: 'reader@example.invalid' });
+    const buyerId = db.prepare('INSERT INTO buyers (name, email, user_id) VALUES (?, ?, ?)').run('r', 'reader@example.invalid', reader.userId).lastInsertRowid;
+    const mkPurchase = status => db.prepare("INSERT INTO purchases (buyer_id, product_id, amount_minor, currency, payment_status) VALUES (?, ?, 500, 'USD', ?)").run(buyerId, id, status).lastInsertRowid;
+    const paid = mkPurchase('paid');
+    const token = createDownloadToken(paid);
+
+    const full = await fetch(`${base}/api/downloads/${token}/stream`);
+    assert.equal(full.status, 200);
+    assert.equal(full.headers.get('content-type'), 'application/pdf');
+    assert.equal(full.headers.get('x-content-type-options'), 'nosniff');
+    assert.equal(full.headers.get('cache-control'), 'private, no-store');
+    assert.equal(full.headers.get('accept-ranges'), 'bytes');
+    assert.equal(Buffer.from(await full.arrayBuffer()).equals(bytes), true);
+
+    const part = await fetch(`${base}/api/downloads/${token}/stream`, { headers: { Range: 'bytes=0-9' } });
+    assert.equal(part.status, 206);
+    assert.equal(part.headers.get('content-range'), `bytes 0-9/${bytes.length}`);
+    assert.equal((await part.arrayBuffer()).byteLength, 10);
+
+    assert.equal((await fetch(`${base}/api/downloads/${token}/stream`, { headers: { Range: 'bytes=99999999-' } })).status, 416);
+    assert.equal((await fetch(`${base}/api/downloads/${token}/stream`, { headers: { Range: 'garbage' } })).status, 200, 'malformed Range is ignored, not an error');
+    assert.equal((await fetch(`${base}/api/downloads/not-a-real-token/stream`)).status, 404);
+    assert.equal((await fetch(`${base}/api/downloads/${createDownloadToken(mkPurchase('pending'))}/stream`)).status, 403);
+    const refunded = mkPurchase('paid');
+    db.prepare("UPDATE purchases SET fulfillment_status = 'refunded' WHERE id = ?").run(refunded);
+    assert.equal((await fetch(`${base}/api/downloads/${createDownloadToken(refunded)}/stream`)).status, 403);
+
+    // The reader's engine lives in the client workspace; skip this one assertion
+    // only if the client dependencies are not installed.
+    let pdfjs = null;
+    try { pdfjs = require('../client/node_modules/pdfjs-dist/legacy/build/pdf.js'); } catch { console.log('       (pdfjs-dist not installed in client/, skipping the PDF.js open check)'); }
+    if (!pdfjs) return;
+    const loaded = await pdfjs.getDocument({ url: `${base}/api/downloads/${token}/stream`, isEvalSupported: false, useSystemFonts: true }).promise;
+    assert.equal(loaded.numPages, 3);
+    await loaded.destroy();
+  });
+
+  await check('serial issue stream needs login and a paid purchase of that product', async () => {
+    const serial = addProduct(seller.creatorId, { type: 'serial', title: 'Serial reader' });
+    objects.set('issue-files/i1.pdf', { body: Buffer.from('%PDF-1.4 issue'), contentType: 'application/pdf' });
+    const issueId = db.prepare("INSERT INTO issues (product_id, issue_number, title, kind, file_path, original_filename) VALUES (?, 1, 'One', 'upload', 'issue-files/i1.pdf', 'one.pdf')").run(serial.id).lastInsertRowid;
+    const owner = makeUser({ email: 'issue-owner@example.invalid' });
+    const stranger = makeUser({ email: 'issue-stranger@example.invalid' });
+    const buyerId = db.prepare('INSERT INTO buyers (name, email, user_id) VALUES (?, ?, ?)').run('o', 'issue-owner@example.invalid', owner.userId).lastInsertRowid;
+    db.prepare("INSERT INTO purchases (buyer_id, product_id, amount_minor, currency, payment_status) VALUES (?, ?, 500, 'USD', 'paid')").run(buyerId, serial.id);
+    const url = `${base}/api/downloads/issue/${issueId}/stream`;
+    assert.equal((await fetch(url)).status, 401);
+    assert.equal((await fetch(url, { headers: { Cookie: stranger.cookie } })).status, 403);
+    const ok = await fetch(url, { headers: { Cookie: owner.cookie } });
+    assert.equal(ok.status, 200);
+    assert.equal(ok.headers.get('content-type'), 'application/pdf');
+  });
+
+  // ---- late payment reconciliation ----------------------------------------
+  await check('a payment approved after the buyer left the page is completed once, on opening Account', async () => {
+    const { id } = addProduct(seller.creatorId, { quantity_limit: 10 });
+    const late = makeUser({ email: 'late@example.invalid' });
+    const buyerId = db.prepare('INSERT INTO buyers (name, email, user_id) VALUES (?, ?, ?)').run('late', 'late@example.invalid', late.userId).lastInsertRowid;
+    const pid = db.prepare("INSERT INTO purchases (buyer_id, product_id, amount_minor, currency, payment_status, payment_reference, created_at) VALUES (?, ?, 500, 'USD', 'pending', 'zs-late-1', datetime('now','-2 minutes'))").run(buyerId, id).lastInsertRowid;
+
+    gatewayStatus = 'pending';
+    let mine = await call('GET', '/api/purchases/mine', { cookie: late.cookie });
+    assert.equal(mine.data.find(p => p.id === pid).payment_status, 'pending');
+
+    gatewayStatus = 'success';
+    mine = await call('GET', '/api/purchases/mine', { cookie: late.cookie });
+    assert.equal(mine.data.find(p => p.id === pid).payment_status, 'paid');
+    await call('GET', '/api/purchases/mine', { cookie: late.cookie });
+    assert.equal(db.prepare('SELECT quantity_sold FROM products WHERE id = ?').get(id).quantity_sold, 1);
+    gatewayStatus = 'pending';
+  });
+
+  await check('background sweep settles paid/failed orders, leaves fresh and day-old ones alone', async () => {
+    const { reconcilePendingPayments } = require('../src/lib/reconcilePayments');
+    const { id } = addProduct(seller.creatorId);
+    const sweepUser = makeUser({ email: 'sweep@example.invalid' });
+    const buyerId = db.prepare('INSERT INTO buyers (name, email, user_id) VALUES (?, ?, ?)').run('s', 'sweep@example.invalid', sweepUser.userId).lastInsertRowid;
+    const insert = (ref, age) => db.prepare(`INSERT INTO purchases (buyer_id, product_id, amount_minor, currency, payment_status, payment_reference, created_at) VALUES (?, ?, 500, 'USD', 'pending', ?, datetime('now', ?))`).run(buyerId, id, ref, age).lastInsertRowid;
+    const recent = insert('zs-sweep-recent', '-3 minutes');
+    const fresh = insert('zs-sweep-fresh', '-2 seconds');
+    const stale = insert('zs-sweep-stale', '-30 hours');
+    const status = pid => db.prepare('SELECT payment_status FROM purchases WHERE id = ?').get(pid).payment_status;
+
+    gatewayStatus = 'failed';
+    await reconcilePendingPayments();
+    assert.equal(status(recent), 'failed');
+    assert.equal(status(fresh), 'pending', 'too new: the buyer own poll goes first');
+    assert.equal(status(stale), 'pending', 'older than 24h is never touched');
+    gatewayStatus = 'pending';
+  });
+
   // ---- account security --------------------------------------------------
   const extraSession = (user, id) => db.prepare('INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)')
     .run(id, user.userId, new Date(Date.now() + 3600e3).toISOString());
@@ -328,6 +470,51 @@ async function main() {
     // Re-saving the same number (the Settings form always sends it) must not demand a password.
     const same = await call('PATCH', '/api/creators/me', { cookie: owner.cookie, json: { name: 'Renamed', payout_ecocash_number: '0771234567' } });
     assert.equal(same.status, 200);
+  });
+
+  await check('Google-style account (no password) changes payout with an emailed code, never a password', async () => {
+    const g = makeUser({ email: 'google@example.invalid', creator: true });
+    const patch = json => call('PATCH', '/api/creators/me', { cookie: g.cookie, json });
+    const denied = await patch({ payout_ecocash_number: '0772222222' });
+    assert.equal(denied.status, 403);
+    assert.deepEqual(denied.data.methods, ['email_code']);
+    assert.match(denied.data.error, /6-digit code/);
+
+    const unverified = makeUser({ email: 'gu@example.invalid', creator: true, verified: false });
+    assert.equal((await call('POST', '/api/creators/me/payout-code', { cookie: unverified.cookie })).status, 403);
+
+    const before = sentEmails.length;
+    assert.equal((await call('POST', '/api/creators/me/payout-code', { cookie: g.cookie })).status, 200);
+    const mail = sentEmails.slice(before).find(m => m.to === 'google@example.invalid');
+    const code = mail.body.match(/\b(\d{6})\b/)[1];
+
+    assert.equal((await patch({ payout_ecocash_number: '0772222222', payout_code: code === '000000' ? '111111' : '000000' })).status, 403);
+    const ok = await patch({ payout_ecocash_number: '0772222222', payout_code: code });
+    assert.equal(ok.status, 200, JSON.stringify(ok.data));
+    assert.equal(db.prepare('SELECT payout_ecocash_number FROM creators WHERE id = ?').get(g.creatorId).payout_ecocash_number, '0772222222');
+    // single use
+    assert.equal((await patch({ payout_ecocash_number: '0773333333', payout_code: code })).status, 403);
+  });
+
+  await check('payout code dies after 5 wrong guesses even if later guessed right', async () => {
+    const g = makeUser({ email: 'brute@example.invalid', creator: true });
+    const before = sentEmails.length;
+    await call('POST', '/api/creators/me/payout-code', { cookie: g.cookie });
+    const code = sentEmails.slice(before).find(m => m.to === 'brute@example.invalid').body.match(/\b(\d{6})\b/)[1];
+    const wrong = code === '123456' ? '654321' : '123456';
+    for (let i = 0; i < 5; i += 1) {
+      assert.equal((await call('PATCH', '/api/creators/me', { cookie: g.cookie, json: { payout_ecocash_number: '0774444444', payout_code: wrong } })).status, 403);
+    }
+    assert.equal((await call('PATCH', '/api/creators/me', { cookie: g.cookie, json: { payout_ecocash_number: '0774444444', payout_code: code } })).status, 403);
+  });
+
+  await check('password account can also use an emailed code instead of the password', async () => {
+    const p = makeUser({ email: 'both@example.invalid', creator: true, password: true });
+    const before = sentEmails.length;
+    await call('POST', '/api/creators/me/payout-code', { cookie: p.cookie });
+    const code = sentEmails.slice(before).find(m => m.to === 'both@example.invalid').body.match(/\b(\d{6})\b/)[1];
+    const res = await call('PATCH', '/api/creators/me', { cookie: p.cookie, json: { payout_ecocash_number: '0775555555', payout_code: code } });
+    assert.equal(res.status, 200, JSON.stringify(res.data));
   });
 
   await check('change-password: wrong current is refused, success signs out other devices but keeps this one', async () => {

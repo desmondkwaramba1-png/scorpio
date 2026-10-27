@@ -50,6 +50,53 @@ router.get('/:token', async (req, res) => {
   }
 });
 
+// Streams a stored document through the API (instead of redirecting to the
+// file store) so the in-app reader can load it same-origin, a page at a time,
+// using HTTP Range requests. Same access rules as /view are enforced by the
+// callers before this runs.
+async function streamDocument(req, res, key, filename) {
+  const range = typeof req.headers.range === 'string' && /^bytes=\d*-\d*$/.test(req.headers.range) ? req.headers.range : undefined;
+  try {
+    const object = await storage.getObjectStream(key, { range });
+    const isPdf = /\.pdf$/i.test(filename || '') || object.contentType === 'application/pdf';
+    const safeName = encodeURIComponent((filename || 'document').replace(/[\r\n"]/g, ''));
+    res.status(object.contentRange ? 206 : 200);
+    res.set({
+      'Content-Type': isPdf ? 'application/pdf' : 'application/octet-stream',
+      'Content-Disposition': `inline; filename*=UTF-8''${safeName}`,
+      'Accept-Ranges': 'bytes',
+      'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': 'private, no-store'
+    });
+    if (object.contentRange) res.set('Content-Range', object.contentRange);
+    if (Number.isFinite(object.size)) res.set('Content-Length', String(object.size));
+    object.stream.on('error', err => {
+      console.error('[downloads stream]', err.message);
+      res.destroy(err);
+    });
+    object.stream.pipe(res);
+  } catch (err) {
+    if (err?.$metadata?.httpStatusCode === 416 || err?.name === 'InvalidRange') return res.status(416).send('Range not satisfiable.');
+    console.error('[downloads stream]', err.message);
+    if (!res.headersSent) res.status(404).send('That file could not be found.');
+  }
+}
+
+// GET /api/downloads/:token/stream: the in-app reader's source.
+router.get('/:token/stream', async (req, res) => {
+  const row = db.prepare('SELECT * FROM download_tokens WHERE token = ?').get(req.params.token);
+  if (!row) return res.status(404).send('This link is invalid.');
+  if (new Date(row.expires_at) < new Date()) return res.status(410).send('This link has expired.');
+
+  const purchase = db.prepare('SELECT * FROM purchases WHERE id = ?').get(row.purchase_id);
+  if (!purchase || purchase.payment_status !== 'paid') return res.status(403).send('This purchase is not paid.');
+  if (purchase.fulfillment_status === 'refunded') return res.status(403).send('This order was refunded, so the document is no longer available.');
+
+  const file = db.prepare('SELECT * FROM product_files WHERE product_id = ? LIMIT 1').get(purchase.product_id);
+  if (!file || file.kind === 'external_link') return res.status(404).send('No document is attached to this product.');
+  return streamDocument(req, res, file.storage_path, file.original_filename);
+});
+
 // GET /api/downloads/:token/view — inline streaming for in-app viewing
 // (video playback, PDFs opened in a tab) instead of forcing a save-to-disk
 // prompt. Doesn't count against the token's download limit — rewatching a
@@ -121,6 +168,21 @@ router.get('/issue/:issueId', requireAuth, async (req, res) => {
     console.error('[downloads]', err.message);
     res.status(404).send('That file could not be found.');
   }
+});
+
+// GET /api/downloads/issue/:issueId/stream: reader source for a serial issue.
+router.get('/issue/:issueId/stream', requireAuth, async (req, res) => {
+  const issue = db.prepare('SELECT * FROM issues WHERE id = ?').get(req.params.issueId);
+  if (!issue) return res.status(404).send('This issue could not be found.');
+
+  const owns = db.prepare(`
+    SELECT 1 FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
+    WHERE b.user_id = ? AND pu.product_id = ? AND pu.payment_status = 'paid'
+      AND COALESCE(pu.fulfillment_status, '') != 'refunded'
+  `).get(req.user.id, issue.product_id);
+  if (!owns) return res.status(403).send("You don't have access to this issue.");
+  if (issue.kind === 'external_link' || !issue.file_path) return res.status(404).send('No document is attached to this issue.');
+  return streamDocument(req, res, issue.file_path, issue.original_filename);
 });
 
 // GET /api/downloads/issue/:issueId/view — inline streaming for a serial

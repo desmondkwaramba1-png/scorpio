@@ -16,6 +16,7 @@ import { shareOrCopy } from '../lib/share';
 import { useSEO } from '../lib/seo';
 import { SITE_ORIGIN } from '../lib/site';
 import { timeAgo } from '../lib/time';
+import DocumentViewer from '../components/DocumentViewer.jsx';
 
 // A short extension read off the actual uploaded file, not a guess, real
 // specificity ("Delivered as PDF") reads as more trustworthy on a page
@@ -107,7 +108,7 @@ function IssueRow({ iss, focused }) {
         <audio src={iss.view_url} controls style={{ width: '100%', marginTop: 12 }} />
       )}
       {expanded && !isExternal && !iss.is_video && !iss.is_audio && (
-        <iframe src={iss.view_url} title={iss.title} style={{ width: '100%', height: 500, border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', marginTop: 12 }} />
+        <div style={{ marginTop: 12 }}><DocumentViewer src={iss.view_url} title={`Issue ${iss.issue_number}: ${iss.title}`} downloadUrl={`/api/downloads/issue/${iss.id}`} /></div>
       )}
     </div>
   );
@@ -663,7 +664,7 @@ export default function Product() {
                     ) : product.owned_access.is_audio ? (
                       <audio src={product.owned_access.view_url} controls style={{ width: '100%', marginTop: 12 }} />
                     ) : (
-                      <iframe src={product.owned_access.view_url} title={product.title} className="library-file-viewer" />
+                      <DocumentViewer src={product.owned_access.view_url} title={product.title} downloadUrl={product.owned_access.download_url} />
                     )
                   )}
                   {!product.owned_access?.view_url && !product.owned_access?.download_url && !product.owned_access?.license_key && (

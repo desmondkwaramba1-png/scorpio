@@ -62,4 +62,19 @@ async function optimizeImage(buffer, { maxWidth, maxHeight, enhance = false } = 
   return encode().toBuffer();
 }
 
-module.exports = { optimizeImage };
+const MIME_BY_FORMAT = { jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' };
+
+// The real type of an image, from its bytes, not the client-supplied
+// Content-Type. null means "not a decodable JPEG/PNG/WebP/GIF" - including
+// HEIC/AVIF/BMP, which the prebuilt sharp can't always decode and which
+// browsers can't render anyway, so they must not be published as covers.
+async function detectImageMime(buffer) {
+  try {
+    const meta = await sharp(buffer).metadata();
+    return MIME_BY_FORMAT[meta.format] || null;
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { optimizeImage, detectImageMime };

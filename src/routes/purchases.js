@@ -9,7 +9,10 @@ const { isPromoActive, applyDiscount } = require('../lib/promotions');
 const { checkoutLimiter, orderLookupLimiter } = require('../middleware/rateLimit');
 const { requireVerified, requireAuth, requireCreator } = require('../middleware/auth');
 const { createDownloadToken, getActiveTokenForPurchase, productHasFile, getProductFile, isVideoFilename, isAudioFilename } = require('../lib/downloads');
-const { productHasKeys, unclaimedCount, keyForPurchase } = require('../lib/licenseKeys');
+const { keyForPurchase } = require('../lib/licenseKeys');
+const { isSoldOut } = require('../lib/stock');
+const { buyerForUser } = require('../lib/buyers');
+const { normalizeExternalUrl } = require('../lib/safeUrl');
 const { sweepAutoReleases, deliveryFor, disputeFor, markDelivered, confirmDelivery, openDispute } = require('../lib/escrow');
 const { sendEmail } = require('../lib/notify');
 const { markPurchasePaid, markPurchaseFailed } = require('../lib/purchaseCompletion');
@@ -50,7 +53,7 @@ function fileAccessFor(purchase) {
   let downloadUrl = null, viewUrl = null, isVideo = false, isAudio = false;
   if (file) {
     if (file.kind === 'external_link') {
-      viewUrl = file.external_url;
+      viewUrl = normalizeExternalUrl(file.external_url);
     } else {
       const token = getActiveTokenForPurchase(purchase.id) || { token: createDownloadToken(purchase.id) };
       downloadUrl = `/api/downloads/${token.token}`;
@@ -68,15 +71,6 @@ function fileAccessFor(purchase) {
     is_external: file?.kind === 'external_link',
     license_key: keyRow ? keyRow.key_value : null
   };
-}
-
-// A product is "sold out" if either stock signal says so: an explicit
-// quantity_limit, or — for software delivered by key — simply running out
-// of unclaimed keys, even when no quantity_limit was ever set.
-function isSoldOut(product) {
-  if (product.quantity_limit !== null && product.quantity_sold >= product.quantity_limit) return true;
-  if (productHasKeys(product.id) && unclaimedCount(product.id) <= 0) return true;
-  return false;
 }
 
 // null for every ordinary digital-goods purchase — fulfillment_status only
@@ -166,6 +160,9 @@ router.post('/:id/deliver', requireAuth, requireCreator, deliveryUpload.single('
   if (purchase.fulfillment_status !== 'awaiting_delivery') {
     return res.status(409).json({ error: `This order is already ${purchase.fulfillment_status}.` });
   }
+  const rawExternalUrl = (req.body.external_url || '').trim();
+  const externalUrl = rawExternalUrl ? normalizeExternalUrl(rawExternalUrl) : null;
+  if (rawExternalUrl && !externalUrl) return res.status(400).json({ error: 'The delivery link must start with http:// or https://.' });
   const message = (req.body.message || '').trim();
   if (!message) return res.status(400).json({ error: "Describe what you delivered. It's the buyer's (and, if it ever comes to it, a dispute's) only record of what happened." });
 
@@ -193,7 +190,7 @@ router.post('/:id/deliver', requireAuth, requireCreator, deliveryUpload.single('
     message,
     storagePath,
     originalFilename: file ? file.originalname : null,
-    externalUrl: req.body.external_url || null
+    externalUrl: externalUrl
   });
 
   const buyer = db.prepare('SELECT * FROM buyers WHERE id = ?').get(purchase.buyer_id);
@@ -319,10 +316,10 @@ router.post('/:id/resend-download', requireAuth, (req, res) => {
 // "your purchases are always there" promise actually true, not just a page
 // that happens to work once right after paying.
 router.post('/', checkoutLimiter, requireVerified, async (req, res) => {
-  const { email, name, phone, product_slug, amount } = req.body;
+  const { name, phone, product_slug, amount } = req.body;
 
-  if (!email || !product_slug) {
-    return res.status(400).json({ error: 'email and product_slug are required.' });
+  if (!product_slug) {
+    return res.status(400).json({ error: 'product_slug is required.' });
   }
 
   const product = db.prepare("SELECT * FROM products WHERE slug = ? AND status = 'published'").get(product_slug);
@@ -337,7 +334,12 @@ router.post('/', checkoutLimiter, requireVerified, async (req, res) => {
     return res.status(403).json({ error: "You can't buy your own product." });
   }
 
-  if (isSoldOut(product)) {
+  // Resolved before the stock check so this buyer's own earlier unpaid
+  // attempt on the last unit doesn't count against their retry.
+  const buyer = buyerForUser(req.user, name);
+  if (!buyer) return res.status(409).json({ error: 'This email is already attached to another account. Contact support.' });
+
+  if (isSoldOut(product, { excludeBuyerId: buyer.id })) {
     return res.status(409).json({ error: 'This product is sold out.' });
   }
 
@@ -369,17 +371,6 @@ router.post('/', checkoutLimiter, requireVerified, async (req, res) => {
     if (!isValidSenderPhone(phone)) {
       return res.status(400).json({ error: 'Enter a valid EcoCash number, e.g. 0780070488 or +263780070488.' });
     }
-  }
-
-  let buyer = db.prepare('SELECT * FROM buyers WHERE email = ?').get(email);
-  if (!buyer) {
-    const result = db.prepare('INSERT INTO buyers (name, email, user_id) VALUES (?, ?, ?)')
-      .run(name || null, email, req.user.id);
-    buyer = db.prepare('SELECT * FROM buyers WHERE id = ?').get(result.lastInsertRowid);
-  } else if (!buyer.user_id) {
-    // A previously-guest email (from before this route required login)
-    // checking out for the first time as a real account — link it.
-    db.prepare('UPDATE buyers SET user_id = ? WHERE id = ?').run(req.user.id, buyer.id);
   }
 
   const insert = db.prepare(`

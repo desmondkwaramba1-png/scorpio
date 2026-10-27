@@ -55,4 +55,15 @@ const reportLimiter = rateLimit({
   message: { error: 'Too many reports sent. Try again in a few minutes.' }
 });
 
-module.exports = { authLimiter, checkoutLimiter, reportLimiter, orderLookupLimiter, adminLimiter };
+// Password changes, session revocation and payout-destination edits are the
+// actions an attacker with a stolen session would try; cap them separately
+// from login so legitimate use never competes with them.
+const accountSecurityLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many security changes. Try again in a few minutes.' }
+});
+
+module.exports = { accountSecurityLimiter, authLimiter, checkoutLimiter, reportLimiter, orderLookupLimiter, adminLimiter };

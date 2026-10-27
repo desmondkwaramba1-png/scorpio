@@ -18,6 +18,7 @@ export default function ImageCropper({ file, aspect = 1, round = false, onCancel
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [frame, setFrame] = useState({ w: 0, h: 0 });
   const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState(null);
   const frameRef = useRef(null);
   const drag = useRef(null);
 
@@ -80,6 +81,7 @@ export default function ImageCropper({ file, aspect = 1, round = false, onCancel
   async function apply() {
     if (!natural || !vw) return;
     setBusy(true);
+    setFailure(null);
     try {
       const cx = natural.w / 2 - offset.x / scale;
       const cy = natural.h / 2 - offset.y / scale;
@@ -99,12 +101,15 @@ export default function ImageCropper({ file, aspect = 1, round = false, onCancel
       await img.decode();
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
       const blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.92));
+      if (!blob) throw new Error('empty-blob');
       const cropped = new File(
         [blob],
         (file.name || 'image').replace(/\.\w+$/, '') + '.jpg',
         { type: 'image/jpeg' }
       );
       onApply(cropped, URL.createObjectURL(blob));
+    } catch {
+      setFailure('We could not prepare that photo. Try a smaller one, or take a screenshot of it and use that.');
     } finally {
       setBusy(false);
     }
@@ -129,6 +134,7 @@ export default function ImageCropper({ file, aspect = 1, round = false, onCancel
             src={src}
             alt=""
             onLoad={onImgLoad}
+            onError={() => setFailure("This photo can't be opened in your browser (HEIC photos often can't). Choose a JPEG or PNG instead.")}
             draggable={false}
             className="cropper__img"
             style={{
@@ -139,6 +145,8 @@ export default function ImageCropper({ file, aspect = 1, round = false, onCancel
           />
         )}
       </div>
+
+      {failure && <p className="file-upload__error" role="alert">{failure}</p>}
 
       <label className="cropper__zoom">
         <FiZoomIn size={15} />

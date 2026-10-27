@@ -6,18 +6,10 @@ const { isPromoActive, applyDiscount } = require('../lib/promotions');
 const { createOrder, isValidSenderPhone } = require('../services/payment');
 const { checkoutLimiter } = require('../middleware/rateLimit');
 const { markPurchaseFailed } = require('../lib/purchaseCompletion');
-const { productHasKeys, unclaimedCount } = require('../lib/licenseKeys');
+const { isSoldOut } = require('../lib/stock');
+const { buyerForUser } = require('../lib/buyers');
 
 const router = express.Router();
-
-// Sold out if either stock signal says so, an explicit quantity_limit, or
-// (for software delivered by key) simply running out of unclaimed keys,
-// even when no quantity_limit was ever set.
-function isSoldOut(product) {
-  if (product.quantity_limit !== null && product.quantity_sold >= product.quantity_limit) return true;
-  if (productHasKeys(product.id) && unclaimedCount(product.id) <= 0) return true;
-  return false;
-}
 
 const CART_SELECT = `
   SELECT ci.id AS cart_item_id, ci.created_at AS added_at, p.*,
@@ -110,8 +102,8 @@ router.delete('/:productId', requireAuth, (req, res) => {
 // (see services/payment.js RECIPIENT); a cart spanning multiple sellers
 // costs nothing extra here, it's the same one-recipient charge either way.
 router.post('/checkout', checkoutLimiter, requireVerified, async (req, res) => {
-  const { email, name, phone } = req.body;
-  if (!email || !phone) return res.status(400).json({ error: 'email and phone are required.' });
+  const { name, phone } = req.body;
+  if (!phone) return res.status(400).json({ error: 'phone is required.' });
   if (!isValidSenderPhone(phone)) {
     return res.status(400).json({ error: 'Enter a valid EcoCash number, e.g. 0780070488 or +263780070488.' });
   }
@@ -130,7 +122,10 @@ router.post('/checkout', checkoutLimiter, requireVerified, async (req, res) => {
   // Re-checked against reality at the moment of paying, not what the
   // buyer's browser cached when they added it, a product can go sold out
   // or get unpublished between adding to cart and checking out.
-  const unavailable = items.filter(p => p.status !== 'published' || isSoldOut(p));
+  const buyer = buyerForUser(req.user, name);
+  if (!buyer) return res.status(409).json({ error: 'This email is already attached to another account. Contact support.' });
+
+  const unavailable = items.filter(p => p.status !== 'published' || isSoldOut(p, { excludeBuyerId: buyer.id }));
   if (unavailable.length > 0) {
     return res.status(409).json({
       error: `${unavailable.map(p => p.title).join(', ')} ${unavailable.length === 1 ? 'is' : 'are'} no longer available. Remove ${unavailable.length === 1 ? 'it' : 'them'} from your cart and try again.`
@@ -149,14 +144,6 @@ router.post('/checkout', checkoutLimiter, requireVerified, async (req, res) => {
     return res.status(400).json({ error: 'Cart total must be greater than 0 and less than 100,000.' });
   }
 
-  let buyer = db.prepare('SELECT * FROM buyers WHERE email = ?').get(email);
-  if (!buyer) {
-    const result = db.prepare('INSERT INTO buyers (name, email, user_id) VALUES (?, ?, ?)').run(name || null, email, req.user.id);
-    buyer = db.prepare('SELECT * FROM buyers WHERE id = ?').get(result.lastInsertRowid);
-  } else if (!buyer.user_id) {
-    db.prepare('UPDATE buyers SET user_id = ? WHERE id = ?').run(req.user.id, buyer.id);
-  }
-
   // Not tied to any single purchase id the way the direct-buy flow's
   // order_id is (zs${purchaseId}...), a cart order covers several
   // purchase rows at once, so there's no one id to derive it from.
@@ -166,9 +153,11 @@ router.post('/checkout', checkoutLimiter, requireVerified, async (req, res) => {
     INSERT INTO purchases (buyer_id, product_id, amount_minor, currency, payment_status, payment_reference, discount_applied)
     VALUES (?, ?, ?, ?, 'pending', ?, ?)
   `);
-  const purchaseIds = items.map((p, i) =>
+  // All-or-nothing: a half-written cart order would charge for the combined
+  // total while only some of the items ever exist to be fulfilled.
+  const purchaseIds = db.transaction(() => items.map((p, i) =>
     insert.run(buyer.id, p.id, lineAmounts[i], currency, orderId, p.promo_active ? 1 : 0).lastInsertRowid
-  );
+  ))();
 
   // Non-redirecting flow: triggers a real EcoCash prompt on the buyer's
   // phone directly. No pay_url, the frontend moves to /payment/return

@@ -136,6 +136,20 @@ async function getPresignedUrl(key, { expiresInSeconds = 300, contentDisposition
   }), { expiresIn: expiresInSeconds });
 }
 
+// Product rows hold either a bare R2 key (private files) or a full public
+// URL (covers, previews). Anything else - legacy /uploads paths, bundled seed
+// art - is not ours to delete, so it maps to null.
+const OWNED_PREFIXES = /^(covers|product-files|previews|issue-files)\//;
+function keyFromReference(ref) {
+  if (typeof ref !== 'string' || !ref) return null;
+  let key = ref;
+  if (/^https?:\/\//.test(ref)) {
+    if (!PUBLIC_URL || !ref.startsWith(PUBLIC_URL + '/')) return null;
+    key = ref.slice(PUBLIC_URL.length + 1);
+  }
+  return OWNED_PREFIXES.test(key) && !key.includes('..') ? key : null;
+}
+
 async function deleteObject(key) {
   if (!isConfigured()) return;
   await getClient().send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
@@ -143,5 +157,5 @@ async function deleteObject(key) {
 
 module.exports = {
   isConfigured, uploadBuffer, uploadStream, getObjectStream, getObjectBuffer,
-  publicUrl, getPresignedUrl, deleteObject
+  publicUrl, getPresignedUrl, deleteObject, keyFromReference
 };

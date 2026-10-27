@@ -80,7 +80,11 @@ export default function TourGuide({ run, setRun, storageKey }) {
       spotlightClicks={true}
       steps={steps}
       options={{
-        zIndex: 10000,
+        // Must stay below the site top bar (.nav is z-index 50). At 10000
+        // the tour's overlay and tooltips painted over the top bar and
+        // blocked its links. 45 dims the page but leaves the bar usable.
+        zIndex: 45,
+        scrollOffset: 150,
         primaryColor: 'var(--green-glow)',
         overlayColor: 'rgba(15,17,17,.48)',
         spotlightPadding: 7,

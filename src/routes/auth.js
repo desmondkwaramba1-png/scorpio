@@ -8,7 +8,8 @@ const { sendEmail } = require('../lib/notify');
 const { generateToken } = require('../lib/tokens');
 const { createSession, destroySession, TTL_DAYS } = require('../lib/session');
 const { requireAuth, COOKIE_NAME } = require('../middleware/auth');
-const { authLimiter } = require('../middleware/rateLimit');
+const { authLimiter, accountSecurityLimiter } = require('../middleware/rateLimit');
+const { loginLockedFor, recordLoginFailure, clearLoginFailures, passwordMatches, passwordProblem } = require('../lib/accountSecurity');
 const { checkAndUpdateVerification } = require('../lib/verification');
 const { linkGuestPurchases } = require('../lib/linkGuestPurchases');
 const { optimizeImage } = require('../lib/imageProcessing');
@@ -86,7 +87,7 @@ router.post('/signup', authLimiter, (req, res) => {
     return res.status(400).json({ error: 'You must agree to the Terms to create an account.' });
   }
 
-  const existing = db.prepare('SELECT id FROM users WHERE username = ? OR email = ? OR phone = ?')
+  const existing = db.prepare('SELECT id FROM users WHERE username = ? OR lower(email) = lower(?) OR phone = ?')
     .get(username, email, phone);
   if (existing) {
     return res.status(409).json({ error: 'That username, email, or phone is already registered.' });
@@ -122,11 +123,18 @@ router.post('/login', authLimiter, (req, res) => {
     return res.status(400).json({ error: 'Enter your username or email and your password.' });
   }
 
+  const lockedMinutes = loginLockedFor(req.ip, normalizedIdentifier);
+  if (lockedMinutes) {
+    return res.status(429).json({ error: `Too many failed attempts. Try again in ${lockedMinutes} minute${lockedMinutes === 1 ? '' : 's'}, or reset your password.` });
+  }
+
   const user = db.prepare('SELECT * FROM users WHERE username = ? OR lower(email) = lower(?)')
     .get(normalizedIdentifier, normalizedIdentifier);
   if (!user || !user.password_hash || !bcrypt.compareSync(password, user.password_hash)) {
+    recordLoginFailure(req.ip, normalizedIdentifier);
     return res.status(401).json({ error: 'That username/email or password is incorrect.' });
   }
+  clearLoginFailures(req.ip, normalizedIdentifier);
 
   const session = createSession(user.id);
   res.cookie(COOKIE_NAME, session.id, cookieOptions());
@@ -197,7 +205,7 @@ router.post('/forgot-password', authLimiter, (req, res) => {
     return res.status(400).json({ error: 'identifier is required.' });
   }
 
-  const user = db.prepare('SELECT * FROM users WHERE username = ? OR email = ?').get(identifier, identifier);
+  const user = db.prepare('SELECT * FROM users WHERE username = ? OR lower(email) = lower(?)').get(identifier, identifier);
 
   if (user) {
     const token = generateToken();
@@ -240,6 +248,54 @@ router.post('/reset-password', authLimiter, (req, res) => {
   db.prepare('DELETE FROM sessions WHERE user_id = ?').run(row.user_id);
 
   res.json({ ok: true });
+});
+
+// POST /api/auth/change-password. Needs the current password even though the
+// caller is logged in: a stolen cookie alone must not be enough to lock the
+// real owner out. Every other session is signed out; this one stays.
+router.post('/change-password', accountSecurityLimiter, requireAuth, (req, res) => {
+  const { current_password: current, new_password: next } = req.body || {};
+  if (!req.user.password_hash) {
+    return res.status(400).json({ error: 'This account signs in with Google or Facebook and has no password to change. Use "Forgot password" to set one.' });
+  }
+  if (!passwordMatches(req.user, current)) {
+    return res.status(401).json({ error: 'Your current password is incorrect.' });
+  }
+  const problem = passwordProblem(next, req.user);
+  if (problem) return res.status(400).json({ error: problem });
+  if (current === next) return res.status(400).json({ error: 'Choose a password different from your current one.' });
+
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(bcrypt.hashSync(next, 10), req.user.id);
+  const keep = req.cookies?.[COOKIE_NAME];
+  const revoked = db.prepare('DELETE FROM sessions WHERE user_id = ? AND id != ?').run(req.user.id, keep || '').changes;
+  sendEmail(
+    req.user.email,
+    'Your SCORPIO password was changed',
+    `The password on your SCORPIO account was just changed${revoked ? ` and ${revoked} other signed-in device${revoked === 1 ? ' was' : 's were'} signed out` : ''}. If this wasn't you, reset your password immediately: ${FRONTEND_URL}/forgot-password`
+  );
+  res.json({ ok: true, signed_out_elsewhere: revoked });
+});
+
+// GET /api/auth/security: what the Security panel shows. Session ids are
+// never returned; the caller only needs counts and dates.
+router.get('/security', requireAuth, (req, res) => {
+  const current = req.cookies?.[COOKIE_NAME];
+  const sessions = db.prepare(`
+    SELECT id, created_at, expires_at FROM sessions
+    WHERE user_id = ? AND expires_at > ? ORDER BY created_at DESC
+  `).all(req.user.id, new Date().toISOString());
+  res.json({
+    has_password: !!req.user.password_hash,
+    email_verified: !!req.user.email_verified_at,
+    sessions: sessions.map(s => ({ created_at: s.created_at, expires_at: s.expires_at, current: s.id === current }))
+  });
+});
+
+// POST /api/auth/sessions/revoke-others: "sign out of all other devices".
+router.post('/sessions/revoke-others', accountSecurityLimiter, requireAuth, (req, res) => {
+  const keep = req.cookies?.[COOKIE_NAME];
+  const revoked = db.prepare('DELETE FROM sessions WHERE user_id = ? AND id != ?').run(req.user.id, keep || '').changes;
+  res.json({ ok: true, revoked });
 });
 
 // POST /api/auth/accept-terms, the gate for accounts that never saw the

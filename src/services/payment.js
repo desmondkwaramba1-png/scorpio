@@ -145,4 +145,8 @@ async function checkOrderStatus(orderId) {
   return { status: 'error', error: data.message || 'Unknown response from payment gateway.', raw: data };
 }
 
-module.exports = { createOrder, checkOrderStatus, isConfigured, isValidSenderPhone };
+function isValidEcocashNumber(phone) {
+  return typeof phone === 'string' && ECOCASH_NUMBER_RE.test(phone.replace(/[\s-]+/g, ''));
+}
+
+module.exports = { createOrder, checkOrderStatus, isConfigured, isValidSenderPhone, isValidEcocashNumber };

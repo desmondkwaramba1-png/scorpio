@@ -1,14 +1,18 @@
-import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
-import { FiUser, FiCheck, FiCamera, FiCompass } from 'react-icons/fi';
+import { useEffect, useState } from 'react';
+import { Navigate, useLocation, useOutletContext } from 'react-router-dom';
+import { FiUser, FiCheck, FiCamera, FiLock } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import Seal from '../../components/Seal.jsx';
 import ImageCropper from '../../components/ImageCropper.jsx';
 import ThemeToggle from '../../components/ThemeToggle.jsx';
+import SecurityPanel from '../../components/SecurityPanel.jsx';
 
 export default function Settings() {
   const { user, creator, refresh } = useAuth();
+  const { security, refreshSecurity } = useOutletContext();
+  const location = useLocation();
+  const [payoutPassword, setPayoutPassword] = useState('');
 
   const [form, setForm] = useState({
     name: creator?.name || '',
@@ -24,7 +28,18 @@ export default function Settings() {
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
 
+  // Deep links like /dashboard/settings#security from the sidebar and the
+  // Overview checklist. Waits a frame so the section exists.
+  useEffect(() => {
+    if (!location.hash) return;
+    const el = document.getElementById(location.hash.slice(1));
+    if (el) requestAnimationFrame(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }, [location.hash]);
+
   if (!creator) return <Navigate to="/onboarding" replace />;
+
+  const normalize = v => String(v || '').replace(/[\s-]+/g, '');
+  const payoutChanged = normalize(form.payout_ecocash_number) !== normalize(creator.payout_ecocash_number);
 
   const update = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
 
@@ -49,10 +64,12 @@ export default function Settings() {
     const body = new FormData();
     Object.entries(form).forEach(([k, v]) => body.append(k, v));
     if (avatar) body.append('avatar', avatar);
+    if (payoutChanged) body.append('current_password', payoutPassword);
 
     try {
       await api.patch('/api/creators/me', body);
       await refresh();
+      setPayoutPassword('');
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
@@ -64,21 +81,14 @@ export default function Settings() {
 
   const avatarUrl = avatarPreview || creator.avatar_path;
 
-  function restartGuide() {
-    localStorage.removeItem(`scorpio_dashboard_tour_seen_v2_${creator.id}`);
-    window.location.assign('/dashboard');
-  }
-
   return (
     <div>
       <h1 style={{ fontSize: '1.5rem', marginBottom: 4 }}>Settings</h1>
       <p className="muted" style={{ marginBottom: 28 }}>Your account, your storefront, and where your money goes.</p>
-      <button type="button" className="btn btn--ghost btn--sm" onClick={restartGuide} style={{ marginBottom: 24 }}>
-        <FiCompass size={14} /> Restart dashboard guide
-      </button>
 
       <div className="form-layout">
-        <form onSubmit={handleSubmit} style={{ maxWidth: 480 }}>
+        <div style={{ maxWidth: 480, minWidth: 0 }}>
+        <form onSubmit={handleSubmit}>
           {/* Real settings pages lead with who you actually are (username,
               email, phone) before anything about how your storefront
               looks - this app had nowhere at all showing that, Settings
@@ -110,7 +120,7 @@ export default function Settings() {
             </div>
           </div>
 
-          <div className="settings-group">
+          <div className="settings-group" id="profile">
             <p className="settings-group__label">Storefront profile</p>
             <div className="settings-card">
               <div className="settings-row">
@@ -186,7 +196,7 @@ export default function Settings() {
             </div>
           </div>
 
-          <div className="settings-group">
+          <div className="settings-group" id="payouts">
             <p className="settings-group__label">Payouts</p>
             <div className="settings-card">
               <div className="settings-row settings-row--stacked">
@@ -197,6 +207,16 @@ export default function Settings() {
                   <small>Where your earnings get paid out. Also required to unlock verification.</small>
                 </div>
               </div>
+              {payoutChanged && security?.has_password !== false && (
+                <div className="settings-row settings-row--stacked settings-row--secure">
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <label htmlFor="payout_password"><FiLock size={13} /> Confirm with your password</label>
+                    <input id="payout_password" type="password" autoComplete="current-password" value={payoutPassword}
+                      onChange={e => setPayoutPassword(e.target.value)} placeholder="Your current password" />
+                    <small>Changing where money is sent needs your password. We will email you when it changes, and new numbers are reviewed before the first payout.</small>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -221,6 +241,11 @@ export default function Settings() {
             {submitting ? 'Saving...' : 'Save changes'}
           </button>
         </form>
+
+        <div style={{ marginTop: 32 }}>
+          <SecurityPanel security={security} refreshSecurity={refreshSecurity} />
+        </div>
+        </div>
 
         <div className="form-layout__preview">
           <p className="muted" style={{ fontSize: '.8rem', fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.04em' }}>

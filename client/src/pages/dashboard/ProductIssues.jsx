@@ -4,6 +4,12 @@ import { FiArrowLeft, FiUsers, FiX, FiExternalLink } from 'react-icons/fi';
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext.jsx';
 import FileUpload from '../../components/FileUpload.jsx';
+import UploadProgress from '../../components/UploadProgress.jsx';
+import useLeaveGuard from '../../lib/useLeaveGuard.js';
+import { EBOOKS_ONLY } from '../../lib/launchScope.js';
+
+// Mirrors the server's launch-scope rule for product/issue files.
+const ISSUE_FILE_ACCEPT = EBOOKS_ONLY ? 'application/pdf,video/mp4,video/webm,video/quicktime' : undefined;
 
 // Publishing a new issue is a different action from editing a product's
 // price/cover/description, and burying it inside "Edit product" made it
@@ -23,6 +29,8 @@ export default function ProductIssues() {
   const [newIssueFile, setNewIssueFile] = useState(null);
   const [addingIssue, setAddingIssue] = useState(false);
   const [issueError, setIssueError] = useState(null);
+  const [issueProgress, setIssueProgress] = useState(0);
+  useLeaveGuard(addingIssue);
 
   useEffect(() => {
     api.get('/api/products/mine')
@@ -56,12 +64,15 @@ export default function ProductIssues() {
       return;
     }
     setAddingIssue(true);
+    setIssueProgress(0);
     const body = new FormData();
     body.append('title', newIssue.title);
     if (newIssue.external_url.trim()) body.append('external_url', newIssue.external_url.trim());
     if (newIssueFile) body.append('file', newIssueFile);
     try {
-      const created = await api.post(`/api/products/${product.id}/issues`, body);
+      // api.post has a 15s total timeout, far too short for a real PDF or
+      // video on mobile data. This watchdog only fires when no bytes move.
+      const created = await api.uploadWithProgress(`/api/products/${product.id}/issues`, 'POST', body, setIssueProgress, 120000);
       setIssues(list => [{ ...created, unlocked: true }, ...list]);
       setNewIssue({ title: '', external_url: '' });
       setNewIssueFile(null);
@@ -123,8 +134,9 @@ export default function ProductIssues() {
           </div>
           <div className="field">
             <label htmlFor="issue_file">File</label>
-            <FileUpload id="issue_file" onChange={e => setNewIssueFile(e.target.files[0])}
-              label={newIssueFile ? newIssueFile.name : 'Choose a file'} />
+            <FileUpload id="issue_file" accept={ISSUE_FILE_ACCEPT} maxBytes={500 * 1024 * 1024}
+              onChange={e => setNewIssueFile(e.target.files[0] || null)}
+              label={EBOOKS_ONLY ? 'Choose a PDF or video' : 'Choose a file'} />
           </div>
           <div className="field" style={{ marginBottom: 10 }}>
             <label htmlFor="issue_url">Or a link instead</label>
@@ -133,7 +145,8 @@ export default function ProductIssues() {
               placeholder="https://..." />
             <small>Use one or the other, a file you upload here, or a link to where it already lives.</small>
           </div>
-          {issueError && <p className="error-text" style={{ marginBottom: 10 }}>{issueError}</p>}
+          {issueError && <p className="error-text" role="alert" style={{ marginBottom: 10 }}>{issueError}</p>}
+          {addingIssue && newIssueFile && <UploadProgress progress={issueProgress} label="Uploading issue" />}
           <button type="submit" className="btn btn--primary" disabled={addingIssue}>
             {addingIssue ? 'Publishing...' : 'Publish issue'}
           </button>

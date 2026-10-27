@@ -291,8 +291,13 @@ router.get('/buyers', requireAdmin, (req, res) => {
 router.get('/payouts', requireAdmin, (req, res) => {
   sweepAutoReleases();
 
-  const creators = db.prepare('SELECT id, name, handle, email, payout_ecocash_number FROM creators').all();
-  const creatorBalances = creators.map(c => ({ ...c, ...balancesFor(c.id) }));
+  const creators = db.prepare('SELECT id, name, handle, email, payout_ecocash_number, payout_changed_at FROM creators').all();
+  const RECENT_CHANGE_HOURS = 72;
+  const creatorBalances = creators.map(c => ({
+    ...c, ...balancesFor(c.id),
+    payout_number_recently_changed: !!c.payout_changed_at &&
+      Date.now() - new Date(c.payout_changed_at.replace(' ', 'T') + 'Z').getTime() < RECENT_CHANGE_HOURS * 3600e3
+  }));
   const owed = creatorBalances.flatMap(creator => Object.values(creator.balances_by_currency)
     .map(balance => ({ ...creator, ...balance })))
     .filter(c => c.available_minor > 0)

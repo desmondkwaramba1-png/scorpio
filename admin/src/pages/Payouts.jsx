@@ -29,6 +29,11 @@ function MarkPaidRow({ creator, onPaid }) {
         <p className="muted" style={{ fontSize: '.85rem' }}>
           {creator.payout_ecocash_number ? <span className="mono">{creator.payout_ecocash_number}</span> : creator.email}
         </p>
+        {creator.payout_number_recently_changed && (
+          <p style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--red)', marginTop: 4 }}>
+            Payout number changed in the last 72 hours. Confirm with the seller by another channel before paying.
+          </p>
+        )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
         <span className="mono" style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--green-glow)' }}>

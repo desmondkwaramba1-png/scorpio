@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
 import FileUpload from '../../components/FileUpload.jsx';
+import UploadProgress from '../../components/UploadProgress.jsx';
+import useLeaveGuard from '../../lib/useLeaveGuard.js';
 import FormSection from '../../components/FormSection.jsx';
 import Seal from '../../components/Seal.jsx';
 import { CATEGORIES } from '../../lib/categories.js';
@@ -27,6 +29,7 @@ export default function EditProduct() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
+  const [canRetry, setCanRetry] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
@@ -35,6 +38,7 @@ export default function EditProduct() {
   const [keysError, setKeysError] = useState(null);
   const submitLock = useRef(false);
   const publishRequest = useRef(null);
+  useLeaveGuard(submitting);
 
   useEffect(() => {
     api.get('/api/products/mine')
@@ -88,6 +92,7 @@ export default function EditProduct() {
   async function submit(status) {
     if (submitLock.current) return;
     setError(null);
+    setCanRetry(false);
     if (!form.category) {
       setError('Pick a category. It\'s how buyers find this when browsing.');
       return;
@@ -162,6 +167,7 @@ export default function EditProduct() {
       navigate('/dashboard/products');
     } catch (err) {
       setError(err.requestId ? `${err.message} (Reference: ${err.requestId})` : err.message);
+      setCanRetry(!err.status || err.retryable || err.status >= 500);
     } finally {
       submitLock.current = false;
       setSubmitting(false);
@@ -256,7 +262,7 @@ export default function EditProduct() {
               <FileUpload id="cover" accept="image/*" onChange={handleCover}
                 label={cover ? 'New cover ready' : 'Replace cover image'}
                 hint="Leave as-is to keep your current cover. New uploads get their colours auto-tuned."
-                preview={coverPreview} previewKind="image" crop={{ aspect: 5 / 4 }} />
+                preview={coverPreview} previewKind="image" crop={{ aspect: 5 / 4 }} maxBytes={30 * 1024 * 1024} />
             </div>
 
             <div className="field">
@@ -403,7 +409,7 @@ export default function EditProduct() {
               <FormSection icon={FiPackage} title="What buyers get">
                 <div className="field" style={{ marginBottom: isCourse ? undefined : 0 }}>
                   <label htmlFor="file">{isCourse ? 'Course video' : EBOOKS_ONLY ? 'PDF file' : 'Product file'}</label>
-                  <FileUpload id="file" accept={isCourse ? 'video/mp4,video/webm,video/quicktime' : EBOOKS_ONLY ? 'application/pdf' : undefined} onChange={handleFile}
+                  <FileUpload id="file" accept={isCourse ? 'video/mp4,video/webm,video/quicktime' : EBOOKS_ONLY ? 'application/pdf' : undefined} onChange={handleFile} maxBytes={500 * 1024 * 1024}
                     label={filePreview || 'Replace file'}
                     hint={
                       product.file_kind === 'upload' ? `Current file: ${product.file_name}. Choose a new one to replace it.`
@@ -416,7 +422,7 @@ export default function EditProduct() {
                 {isCourse && (
                   <div className="field" style={{ marginBottom: 0 }}>
                     <label htmlFor="preview_video">Free preview clip (optional)</label>
-                    <FileUpload id="preview_video" accept="video/mp4,video/webm,video/quicktime" onChange={handlePreviewVideo}
+                    <FileUpload id="preview_video" accept="video/mp4,video/webm,video/quicktime" onChange={handlePreviewVideo} maxBytes={500 * 1024 * 1024}
                       label={previewVideoName || (product.preview_video_path ? 'Replace preview clip' : 'Choose a short clip')}
                       hint="A short, real sample anyone can watch free, no purchase needed." />
                   </div>
@@ -425,16 +431,14 @@ export default function EditProduct() {
             </>
           )}
 
-          {error && <p className="error-text" style={{ marginTop: 20 }}>{error}</p>}
-
-          {submitting && (
-            <div style={{ marginTop: 20 }}>
-              <div className="upload-progress"><div className="upload-progress__bar" style={{ width: `${uploadProgress}%` }} /></div>
-              <p className="muted" style={{ fontSize: '.8rem', marginTop: 6, textAlign: 'center' }}>
-                {uploadProgress < 100 ? `Uploading ${uploadProgress}%${uploadProgress < 20 ? ', this can take a moment for a bigger file' : ''}` : 'Almost done...'}
-              </p>
+          {error && (
+            <div role="alert" aria-live="assertive" style={{ marginTop: 20 }}>
+              <p className="error-text" style={{ marginTop: 0 }}>{error}</p>
+              {canRetry && <p className="upload-retry">Nothing was lost. Your changes and files are still here. Save again to retry; it will not duplicate anything.</p>}
             </div>
           )}
+
+          {submitting && <UploadProgress progress={uploadProgress} label={file || cover ? 'Uploading your files' : 'Saving'} />}
 
           <div className="btn-row" style={{ marginTop: 20 }}>
             <button

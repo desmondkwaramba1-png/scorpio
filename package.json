@@ -9,7 +9,8 @@
     "dev": "node src/server.js",
     "test": "node -e \"require('http').get('http://localhost:4000/api/health', res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>{const ok=JSON.parse(d).status==='ok';process.exit(ok?0:1);});}).on('error',()=>process.exit(1));\"",
     "test:fund-holds": "node scripts/test-fund-holds.js",
-    "test:content-verification": "node scripts/test-content-verification.js"
+    "test:content-verification": "node scripts/test-content-verification.js",
+    "test:integrity": "node scripts/test-marketplace-integrity.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1128.0",

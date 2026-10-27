@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
 import FileUpload from '../../components/FileUpload.jsx';
+import UploadProgress from '../../components/UploadProgress.jsx';
+import useLeaveGuard from '../../lib/useLeaveGuard.js';
 import FormSection from '../../components/FormSection.jsx';
 import Seal from '../../components/Seal.jsx';
 import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../../lib/launchScope.js';
@@ -26,10 +28,12 @@ export default function NewProduct() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
+  const [canRetry, setCanRetry] = useState(false);
   const [publishedProduct, setPublishedProduct] = useState(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const submitLock = useRef(false);
   const publishRequest = useRef(null);
+  useLeaveGuard(submitting);
 
   const update = (key) => (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -79,6 +83,7 @@ export default function NewProduct() {
   async function submit(status) {
     if (submitLock.current) return;
     setError(null);
+    setCanRetry(false);
     if (!form.title.trim()) {
       showValidationError('Add a clear product title before continuing.', 'title');
       return;
@@ -159,6 +164,7 @@ export default function NewProduct() {
       else navigate('/dashboard/products');
     } catch (err) {
       setError(err.requestId ? `${err.message} (Reference: ${err.requestId})` : err.message);
+      setCanRetry(!err.status || err.retryable || err.status >= 500);
     } finally {
       submitLock.current = false;
       setSubmitting(false);
@@ -320,7 +326,7 @@ export default function NewProduct() {
               <FileUpload id="cover" accept="image/*" onChange={handleCover}
                 label={cover ? 'Change cover image' : 'Choose a cover image'}
                 hint="Choose a clear image that looks good in a marketplace card. We’ll crop it to fit."
-                preview={coverPreview} previewKind="image" crop={{ aspect: 5 / 4 }} />
+                preview={coverPreview} previewKind="image" crop={{ aspect: 5 / 4 }} maxBytes={30 * 1024 * 1024} />
             </div>
             {isService ? (
               <>
@@ -361,7 +367,7 @@ export default function NewProduct() {
               <>
                 <div className="field">
                   <label htmlFor="file">{isCourse ? 'Course video' : EBOOKS_ONLY ? 'PDF file' : 'Product file'} <span className={isSoftware ? 'new-product-optional' : 'new-product-required'}>{isSoftware ? 'Optional if using license keys' : 'Required to publish'}</span></label>
-                  <FileUpload id="file" accept={isCourse ? 'video/mp4,video/webm,video/quicktime' : EBOOKS_ONLY ? 'application/pdf' : undefined} onChange={handleFile}
+                  <FileUpload id="file" accept={isCourse ? 'video/mp4,video/webm,video/quicktime' : EBOOKS_ONLY ? 'application/pdf' : undefined} onChange={handleFile} maxBytes={500 * 1024 * 1024}
                     label={filePreview || (isCourse ? 'Choose a video' : EBOOKS_ONLY ? 'Choose a PDF' : 'Choose a file')}
                     hint={isSoftware ? 'Required to publish, unless you paste license keys below instead.' : 'Required to publish. It\'s what the buyer actually gets.'} />
                 </div>
@@ -369,7 +375,7 @@ export default function NewProduct() {
                 {isCourse && (
                   <div className="field">
                     <label htmlFor="preview_video">Free preview clip (optional)</label>
-                    <FileUpload id="preview_video" accept="video/mp4,video/webm,video/quicktime" onChange={handlePreviewVideo}
+                    <FileUpload id="preview_video" accept="video/mp4,video/webm,video/quicktime" onChange={handlePreviewVideo} maxBytes={500 * 1024 * 1024}
                       label={previewVideoName || 'Choose a short clip'}
                       hint="A short, real sample anyone can watch free, no purchase needed. This is what actually earns a buyer's trust on a course they've never seen, not the full paid video with playback cut off." />
                   </div>
@@ -390,16 +396,14 @@ export default function NewProduct() {
             )}
           </FormSection>
 
-          {error && <p className="error-text" role="alert" aria-live="assertive" style={{ marginTop: 20 }}>{error}</p>}
-
-          {submitting && (
-            <div style={{ marginTop: 20 }}>
-              <div className="upload-progress"><div className="upload-progress__bar" style={{ width: `${uploadProgress}%` }} /></div>
-              <p className="muted" style={{ fontSize: '.8rem', marginTop: 6, textAlign: 'center' }}>
-                {uploadProgress < 100 ? `Uploading ${uploadProgress}%${uploadProgress < 20 ? ', this can take a moment for a bigger file' : ''}` : 'Almost done...'}
-              </p>
+          {error && (
+            <div role="alert" aria-live="assertive" style={{ marginTop: 20 }}>
+              <p className="error-text" style={{ marginTop: 0 }}>{error}</p>
+              {canRetry && <p className="upload-retry">Nothing was lost. Your details and files are still here. Tap Publish again to retry; it will not create a duplicate listing.</p>}
             </div>
           )}
+
+          {submitting && <UploadProgress progress={uploadProgress} label={file || cover ? 'Uploading your files' : 'Publishing'} />}
 
           <div className="new-product-actions">
             <button className="btn btn--ghost" disabled={submitting} type="button" onClick={() => submit('draft')}>

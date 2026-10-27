@@ -130,7 +130,7 @@ export default function CartCheckout() {
             <div className="field input-icon">
               <label htmlFor="buyer_email">Email</label>
               <FiMail size={15} />
-              <input id="buyer_email" type="email" required value={checkout.email}
+              <input id="buyer_email" type="email" required readOnly value={checkout.email}
                 onChange={e => setCheckout(c => ({ ...c, email: e.target.value }))} />
             </div>
             <div className="field input-icon">

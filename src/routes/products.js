@@ -12,7 +12,8 @@ const { EBOOKS_ONLY, ACTIVE_CATEGORY_VALUES } = require('../lib/launchScope');
 const { isPromoActive, applyDiscount } = require('../lib/promotions');
 const { addKeys, keyStats, keyForPurchase } = require('../lib/licenseKeys');
 const { runStreamVerification, extractClaimedPageCount } = require('../lib/contentVerification');
-const { optimizeImage } = require('../lib/imageProcessing');
+const { optimizeImage, detectImageMime } = require('../lib/imageProcessing');
+const { normalizeExternalUrl } = require('../lib/safeUrl');
 const storage = require('../lib/storage');
 const { sendEmail } = require('../lib/notify');
 const { syncSubscriptionStatuses } = require('../lib/subscriptions');
@@ -87,14 +88,6 @@ const COVER_IMAGE_TYPES = new Set([
 const PDF_TYPE = 'application/pdf';
 const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
 
-function normalizeCoverMimeType(mimeType) {
-  return {
-    'image/heic': 'image/jpeg',
-    'image/heif': 'image/jpeg',
-    'image/avif': 'image/jpeg',
-    'image/bmp': 'image/jpeg'
-  }[mimeType] || mimeType || 'image/jpeg';
-}
 function productFileFilter(req, file, cb) {
   if (file.fieldname === 'cover') {
     if (COVER_IMAGE_TYPES.has(file.mimetype)) return cb(null, true);
@@ -249,6 +242,43 @@ function parseProductUpload(req, res, next) {
       handleProductUploadError(error, req, res, next);
     });
   });
+}
+
+// Reads the just-streamed cover back from R2, rejects anything that isn't a
+// real decodable image (the multipart Content-Type is client-controlled and
+// the object is published to a public bucket), then stores the optimized
+// bytes with a Content-Type derived from the bytes themselves.
+// Returns null on success, or { status, error } for the caller to send.
+async function processCoverUpload(cover) {
+  try {
+    const sourceBuffer = await storage.getObjectBuffer(cover.key, MAX_COVER_SIZE);
+    const detectedMime = await detectImageMime(sourceBuffer);
+    if (!detectedMime) {
+      return { status: 400, error: 'That cover is not a valid JPEG, PNG, WebP, or GIF image. If it came from an iPhone, export it as JPEG first.' };
+    }
+    let coverBuffer = sourceBuffer;
+    try {
+      coverBuffer = await optimizeImage(sourceBuffer, { maxWidth: 1600, enhance: true });
+    } catch (error) {
+      console.error('[image optimize]', error);
+    }
+    const finalMime = await detectImageMime(coverBuffer) || detectedMime;
+    await storage.uploadBuffer(cover.key, coverBuffer, finalMime);
+    return null;
+  } catch (error) {
+    console.error('[product cover processing]', error);
+    return { status: 502, error: 'Could not process the cover image, try again.' };
+  }
+}
+
+// Best-effort removal of R2 objects that no product row points at any more.
+// A failure only leaves an orphaned file; it must never fail the request.
+function removeStoredObjects(refs) {
+  for (const ref of refs) {
+    const key = storage.keyFromReference(ref);
+    if (!key) continue;
+    storage.deleteObject(key).catch(err => console.error('[storage cleanup]', key, err.message));
+  }
 }
 
 // R2 object keys, prefix says which bucket "folder" and whether it's a
@@ -967,6 +997,10 @@ router.post('/', requireProductUploadAuth, replayProductPublish, parseProductUpl
   }
   const deliverableError = checkDeliverableType(file, category);
   if (deliverableError) return res.status(400).json({ error: deliverableError });
+  const externalLink = external_url ? normalizeExternalUrl(external_url) : null;
+  if (external_url && !externalLink) {
+    return res.status(400).json({ error: 'The external link must be a full http:// or https:// address.' });
+  }
   // A service has nothing to hand over at listing time by design, the
   // work doesn't exist yet, only the seller's portfolio and track record
   // do. What a buyer gets is delivered per-order later (see
@@ -977,7 +1011,7 @@ router.post('/', requireProductUploadAuth, replayProductPublish, parseProductUpl
   // "nothing to hand over yet" shape as a service, different reason.
   // A subscription's content is issues too, same mechanism, same reason.
   const willPublish = status !== 'draft';
-  if (willPublish && !isService && !isSerial && !isSubscription && !file && !external_url && keyList.length === 0) {
+  if (willPublish && !isService && !isSerial && !isSubscription && !file && !externalLink && keyList.length === 0) {
     return res.status(400).json({ error: 'Attach a file, an external link, or paste license keys before publishing. Buyers need something to actually receive.' });
   }
   if ((isService || isSubscription) && pay_what_you_want) {
@@ -1006,21 +1040,10 @@ router.post('/', requireProductUploadAuth, replayProductPublish, parseProductUpl
 
   // Multer streams each incoming file directly to R2. Only the bounded,
   // 10 MB cover is read back for image optimization.
-  try {
-    const sourceBuffer = await storage.getObjectBuffer(cover.key, MAX_COVER_SIZE);
-    let coverBuffer = sourceBuffer;
-    let coverMimeType = normalizeCoverMimeType(cover.mimetype);
-    try {
-      coverBuffer = await optimizeImage(sourceBuffer, { maxWidth: 1600, enhance: true });
-      coverMimeType = normalizeCoverMimeType(cover.mimetype);
-    } catch (error) {
-      console.error('[image optimize]', error);
-    }
-    await storage.uploadBuffer(cover.key, coverBuffer, coverMimeType);
-  } catch (error) {
-    console.error('[product cover processing]', error);
+  const coverFailure = await processCoverUpload(cover);
+  if (coverFailure) {
     releaseProductPublish(req);
-    return res.status(502).json({ error: 'Could not process the cover image, try again.' });
+    return res.status(coverFailure.status).json({ error: coverFailure.error });
   }
   const coverPath = storage.publicUrl(cover.key);
   const previewVideoPath = previewVideo ? storage.publicUrl(previewVideo.key) : null;
@@ -1069,11 +1092,11 @@ router.post('/', requireProductUploadAuth, replayProductPublish, parseProductUpl
     // block on" logic, just applied to speed as well as failure.
     verifyAndRecordFile(productId, req.creator.id, file, title, description)
       .catch(err => console.error('[content verification]', err));
-  } else if (external_url) {
+  } else if (externalLink) {
     db.prepare(`
       INSERT INTO product_files (product_id, kind, external_url)
       VALUES (?, 'external_link', ?)
-    `).run(productId, external_url);
+    `).run(productId, externalLink);
   }
   // Not exclusive with a file, a creator can ship a manual/installer as the
   // file and still have each sale claim its own key from this batch.
@@ -1120,6 +1143,10 @@ router.patch('/:id', requireProductUploadAuth, replayProductPublish, parseProduc
 
   const deliverableError = checkDeliverableType(file, category !== undefined ? category : product.category);
   if (deliverableError) return res.status(400).json({ error: deliverableError });
+  const externalLink = external_url ? normalizeExternalUrl(external_url) : null;
+  if (external_url && !externalLink) {
+    return res.status(400).json({ error: 'The external link must be a full http:// or https:// address.' });
+  }
   if (previewVideo && !VIDEO_TYPES.has(previewVideo.mimetype)) {
     return res.status(400).json({ error: 'The free preview clip must be a video (MP4, WebM, or MOV).' });
   }
@@ -1191,7 +1218,7 @@ router.patch('/:id', requireProductUploadAuth, replayProductPublish, parseProduc
 
   const willPublish = status === 'published';
   if (willPublish && !isService && product.type !== 'serial' && !isSubscription) {
-    const willHaveFile = file || external_url || db.prepare('SELECT 1 FROM product_files WHERE product_id = ?').get(product.id);
+    const willHaveFile = file || externalLink || db.prepare('SELECT 1 FROM product_files WHERE product_id = ?').get(product.id);
     const willHaveKeys = keyStats(product.id).total > 0;
     if (!willHaveFile && !willHaveKeys) {
       return res.status(400).json({ error: 'Attach a file, an external link, or add license keys before publishing. Buyers need something to actually receive.' });
@@ -1200,21 +1227,10 @@ router.patch('/:id', requireProductUploadAuth, replayProductPublish, parseProduc
   if (!reserveProductPublish(req, res)) return;
 
   if (cover) {
-    try {
-      const sourceBuffer = await storage.getObjectBuffer(cover.key, MAX_COVER_SIZE);
-      let coverBuffer = sourceBuffer;
-      let coverMimeType = normalizeCoverMimeType(cover.mimetype);
-      try {
-        coverBuffer = await optimizeImage(sourceBuffer, { maxWidth: 1600, enhance: true });
-        coverMimeType = normalizeCoverMimeType(cover.mimetype);
-      } catch (error) {
-        console.error('[image optimize]', error);
-      }
-      await storage.uploadBuffer(cover.key, coverBuffer, coverMimeType);
-    } catch (error) {
-      console.error('[product cover processing]', error);
+    const coverFailure = await processCoverUpload(cover);
+    if (coverFailure) {
       releaseProductPublish(req);
-      return res.status(502).json({ error: 'Could not process the cover image, try again.' });
+      return res.status(coverFailure.status).json({ error: coverFailure.error });
     }
   }
   const coverPath = cover ? storage.publicUrl(cover.key) : product.cover_path;
@@ -1248,11 +1264,15 @@ router.patch('/:id', requireProductUploadAuth, replayProductPublish, parseProduc
   );
   keepProductUpload(req, cover?.key);
   keepProductUpload(req, previewVideo?.key);
+  if (cover && product.cover_path !== coverPath) removeStoredObjects([product.cover_path]);
+  if (previewVideo && product.preview_video_path !== previewVideoPath) removeStoredObjects([product.preview_video_path]);
 
   // A new file or link replaces the old deliverable outright, one file per
   // product (see getProductFile), so the old row is cleared first.
-  if (file || external_url) {
+  if (file || externalLink) {
+    const replacedFile = db.prepare("SELECT storage_path FROM product_files WHERE product_id = ? AND kind = 'upload'").get(product.id);
     db.prepare('DELETE FROM product_files WHERE product_id = ?').run(product.id);
+    if (replacedFile && replacedFile.storage_path !== fileKey) removeStoredObjects([replacedFile.storage_path]);
     if (file) {
       // The upload was streamed to R2 while multer parsed the request.
       db.prepare(`
@@ -1272,7 +1292,7 @@ router.patch('/:id', requireProductUploadAuth, replayProductPublish, parseProduc
       db.prepare(`
         INSERT INTO product_files (product_id, kind, external_url)
         VALUES (?, 'external_link', ?)
-      `).run(product.id, external_url);
+      `).run(product.id, externalLink);
     }
   }
 
@@ -1309,7 +1329,13 @@ router.delete('/:id', requireAuth, requireCreator, (req, res) => {
     });
   }
 
+  const stored = [
+    product.cover_path, product.preview_video_path,
+    ...db.prepare("SELECT storage_path FROM product_files WHERE product_id = ? AND kind = 'upload'").all(product.id).map(f => f.storage_path),
+    ...db.prepare("SELECT file_path FROM issues WHERE product_id = ? AND kind = 'upload'").all(product.id).map(i => i.file_path)
+  ];
   db.prepare('DELETE FROM products WHERE id = ?').run(product.id);
+  removeStoredObjects(stored);
   res.json({ ok: true });
 });
 
@@ -1347,8 +1373,12 @@ router.post('/:id/issues', requireAuth, requireCreator, upload.single('file'), a
   }
 
   const title = (req.body.title || '').trim();
-  const externalUrl = (req.body.external_url || '').trim();
+  const rawExternalUrl = (req.body.external_url || '').trim();
+  const externalUrl = rawExternalUrl ? normalizeExternalUrl(rawExternalUrl) : '';
   if (!title) return res.status(400).json({ error: 'title is required.' });
+  if (rawExternalUrl && !externalUrl) {
+    return res.status(400).json({ error: 'The link must be a full http:// or https:// address.' });
+  }
 
   const file = req.file;
   if (!file && !externalUrl) {
@@ -1362,10 +1392,10 @@ router.post('/:id/issues', requireAuth, requireCreator, upload.single('file'), a
 
   let kind = 'external_link', filePath = null, originalFilename = null, resolvedExternal = externalUrl || null;
   if (file) {
+    // The streaming storage engine already wrote this file to R2 under
+    // file.key while multer parsed the request; it never sets file.buffer.
     kind = 'upload';
-    const key = objectKey('issue-files', file.originalname);
-    await storage.uploadBuffer(key, file.buffer, file.mimetype);
-    filePath = key;
+    filePath = file.key;
     originalFilename = file.originalname;
     resolvedExternal = null;
   }
@@ -1414,6 +1444,7 @@ router.delete('/:id/issues/:issueId', requireAuth, requireCreator, (req, res) =>
   const issue = db.prepare('SELECT * FROM issues WHERE id = ? AND product_id = ?').get(req.params.issueId, product.id);
   if (!issue) return res.status(404).json({ error: 'Issue not found.' });
   db.prepare('DELETE FROM issues WHERE id = ?').run(issue.id);
+  if (issue.kind === 'upload') removeStoredObjects([issue.file_path]);
   res.json({ ok: true });
 });
 

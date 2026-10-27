@@ -4,6 +4,10 @@ const path = require('path');
 const { randomUUID } = require('crypto');
 const db = require('../db/schema');
 const { requireAuth } = require('../middleware/auth');
+const { accountSecurityLimiter } = require('../middleware/rateLimit');
+const { passwordMatches } = require('../lib/accountSecurity');
+const { isValidEcocashNumber } = require('../services/payment');
+const { sendEmail } = require('../lib/notify');
 const { getVerificationCriteria, checkAndUpdateVerification } = require('../lib/verification');
 const { optimizeImage } = require('../lib/imageProcessing');
 const storage = require('../lib/storage');
@@ -90,8 +94,28 @@ router.post('/', requireAuth, upload.single('avatar'), async (req, res) => {
 
 // PATCH /api/creators/me — edit your own profile. Handle is intentionally
 // not editable here to keep published product links stable.
-router.patch('/me', requireAuth, upload.single('avatar'), async (req, res) => {
+router.patch('/me', accountSecurityLimiter, requireAuth, upload.single('avatar'), async (req, res) => {
   if (!req.creator) return res.status(404).json({ error: 'No creator profile yet.' });
+
+  // The payout number decides where earnings are sent, so changing it is the
+  // single most valuable thing a hijacked session could do. It needs the
+  // account password (and a verified email for accounts without one), is
+  // format-checked, and the account owner is emailed about it.
+  const squash = value => String(value ?? '').replace(/[\s-]+/g, '');
+  const requestedPayout = req.body.payout_ecocash_number === undefined ? undefined : squash(req.body.payout_ecocash_number);
+  const payoutChanging = requestedPayout !== undefined && requestedPayout !== squash(req.creator.payout_ecocash_number);
+  if (payoutChanging) {
+    if (requestedPayout && !isValidEcocashNumber(requestedPayout)) {
+      return res.status(400).json({ error: 'Enter a valid EcoCash number, e.g. 0771234567 or +263771234567.' });
+    }
+    if (req.user.password_hash) {
+      if (!passwordMatches(req.user, req.body.current_password)) {
+        return res.status(403).json({ error: 'Enter your current password to change your payout number.', code: 'REAUTH_REQUIRED' });
+      }
+    } else if (!req.user.email_verified_at) {
+      return res.status(403).json({ error: 'Verify your email before changing your payout number.' });
+    }
+  }
 
   const { name, bio, what_selling, who_for, payout_ecocash_number, payout_bank_details } = req.body;
   // Express 4 doesn't route a rejected promise to the error middleware on
@@ -111,7 +135,8 @@ router.patch('/me', requireAuth, upload.single('avatar'), async (req, res) => {
   db.prepare(`
     UPDATE creators SET
       name = ?, bio = ?, what_selling = ?, who_for = ?, avatar_path = ?,
-      payout_ecocash_number = ?, payout_bank_details = ?
+      payout_ecocash_number = ?, payout_bank_details = ?,
+      payout_changed_at = CASE WHEN ? THEN datetime('now') ELSE payout_changed_at END
     WHERE id = ?
   `).run(
     name ?? req.creator.name,
@@ -119,10 +144,18 @@ router.patch('/me', requireAuth, upload.single('avatar'), async (req, res) => {
     what_selling ?? req.creator.what_selling,
     who_for ?? req.creator.who_for,
     avatarPath,
-    payout_ecocash_number ?? req.creator.payout_ecocash_number,
+    payoutChanging ? (requestedPayout || null) : req.creator.payout_ecocash_number,
     payout_bank_details ? JSON.stringify(JSON.parse(payout_bank_details)) : req.creator.payout_bank_details,
+    payoutChanging ? 1 : 0,
     req.creator.id
   );
+  if (payoutChanging) {
+    sendEmail(
+      req.user.email,
+      'Your SCORPIO payout number was changed',
+      `The payout number on your SCORPIO seller account was just changed. Payouts to a new number are reviewed before they are sent. If this wasn't you, reset your password immediately: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/forgot-password`
+    );
+  }
 
   checkAndUpdateVerification(req.creator.id);
   const creator = db.prepare('SELECT * FROM creators WHERE id = ?').get(req.creator.id);

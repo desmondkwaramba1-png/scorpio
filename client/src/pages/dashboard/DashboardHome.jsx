@@ -1,15 +1,41 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { FiBox, FiCheckCircle, FiBarChart2, FiDollarSign, FiPlus, FiClock } from 'react-icons/fi';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useOutletContext } from 'react-router-dom';
+import {
+  FiBox, FiCheckCircle, FiBarChart2, FiDollarSign, FiPlus, FiClock, FiCheck, FiArrowRight,
+  FiCreditCard, FiShield, FiCompass
+} from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
 import VerificationChecklist from '../../components/VerificationChecklist.jsx';
 
+function greeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function ProgressRing({ done, total }) {
+  const radius = 24;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - (total ? done / total : 0));
+  return (
+    <div className="ring" role="img" aria-label={`${done} of ${total} steps complete`}>
+      <svg width="60" height="60" viewBox="0 0 60 60" aria-hidden="true">
+        <circle cx="30" cy="30" r={radius} className="ring__track" />
+        <circle cx="30" cy="30" r={radius} className="ring__value" strokeDasharray={circumference} strokeDashoffset={offset} />
+      </svg>
+      <span className="ring__label">{done}/{total}</span>
+    </div>
+  );
+}
+
 // DashboardLayout (the parent route) already redirects to /onboarding if
 // there's no creator profile, so this always renders with one.
 export default function DashboardHome() {
-  const { creator } = useAuth();
+  const { user, creator } = useAuth();
+  const { security, startTour } = useOutletContext();
   const [products, setProducts] = useState(null);
   const [insights, setInsights] = useState(null);
   const [insightsError, setInsightsError] = useState(null);
@@ -27,17 +53,39 @@ export default function DashboardHome() {
   const publishedCount = products?.filter(p => p.status === 'published').length ?? '-';
   const productCount = products?.length ?? '-';
 
+  // Security items first: they protect the money, so they sort ahead of
+  // growth items while any of them is still open.
+  const steps = useMemo(() => {
+    const list = [
+      { key: 'email', group: 'security', done: !!user?.email_verified_at, title: 'Verify your email', hint: 'Protects your account and lets you receive sale notices.', to: '/check-email', cta: 'Verify' },
+      { key: 'payout', group: 'security', done: !!creator.payout_ecocash_number, title: 'Add a payout number', hint: 'Where your earnings are sent. Changing it later needs your password.', to: '/dashboard/settings#payouts', cta: 'Add' }
+    ];
+    if (security && !security.has_password) {
+      list.push({ key: 'password', group: 'security', done: false, title: 'Set a password', hint: 'You signed in with a social account. A password lets you secure payouts.', to: '/forgot-password', cta: 'Set up' });
+    }
+    list.push(
+      { key: 'profile', group: 'growth', done: !!creator.avatar_path && !!creator.bio, title: 'Complete your storefront profile', hint: 'A photo and a short bio make buyers trust you faster.', to: '/dashboard/settings#profile', cta: 'Edit' },
+      { key: 'first', group: 'growth', done: typeof productCount === 'number' ? productCount > 0 : true, title: 'Create your first product', hint: 'Add a cover, set a price, attach what buyers receive.', to: '/dashboard/products/new', cta: 'Create' },
+      { key: 'publish', group: 'growth', done: typeof publishedCount === 'number' ? publishedCount > 0 : true, title: 'Publish a product', hint: 'Drafts are invisible. Publish to get a shareable link.', to: '/dashboard/products', cta: 'Open' }
+    );
+    return list;
+  }, [user, creator, security, productCount, publishedCount]);
+
+  const doneCount = steps.filter(s => s.done).length;
+  const openSteps = steps.filter(s => !s.done);
+  const allDone = openSteps.length === 0;
+
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
+    <div className="dash-home">
+      <header className="dash-head">
         <div>
-          <p className="section__eyebrow mono" style={{ marginBottom: 4 }}>YOUR STOREFRONT</p>
-          <h1 style={{ fontSize: '1.5rem' }}>Welcome back, {creator.name}</h1>
+          <p className="section__eyebrow mono">YOUR STOREFRONT</p>
+          <h1>{greeting()}, {creator.name.split(' ')[0]}</h1>
         </div>
         <Link to="/dashboard/products/new" className="btn btn--gold btn--sm">
           <FiPlus size={15} /> New product
         </Link>
-      </div>
+      </header>
 
       <div className="stat-grid">
         <div className="card stat-tile">
@@ -69,41 +117,49 @@ export default function DashboardHome() {
       )}
 
       {insights?.awaiting_action_count > 0 && (
-        <Link to="/dashboard/orders" className="card card--pad" style={{
-          marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12,
-          borderColor: 'var(--gold)', background: 'var(--gold-tint)'
-        }}>
-          <FiClock size={18} color="var(--gold-ink, var(--gold))" style={{ flexShrink: 0 }} />
+        <Link to="/dashboard/orders" className="dash-alert">
+          <FiClock size={18} aria-hidden="true" />
           <div>
-            <p style={{ fontWeight: 600 }}>
-              {insights.awaiting_action_count} service order{insights.awaiting_action_count === 1 ? '' : 's'} waiting on you to deliver
-            </p>
-            <p className="muted" style={{ fontSize: '.85rem' }}>That money is held until you mark it delivered and the buyer confirms.</p>
+            <p>{insights.awaiting_action_count} service order{insights.awaiting_action_count === 1 ? '' : 's'} waiting on you to deliver</p>
+            <small>That money is held until you mark it delivered and the buyer confirms.</small>
           </div>
+          <FiArrowRight size={16} aria-hidden="true" />
         </Link>
       )}
 
+      <section className="card health" aria-labelledby="health-title">
+        <div className="health__head">
+          <ProgressRing done={doneCount} total={steps.length} />
+          <div>
+            <h2 id="health-title">{allDone ? 'Your store is set up and secure' : 'Finish setting up your store'}</h2>
+            <p className="muted">
+              {allDone
+                ? 'Everything essential is done. Keep an eye on Orders and your Wallet.'
+                : `${openSteps.length} step${openSteps.length === 1 ? '' : 's'} left. Security steps come first because they protect your earnings.`}
+            </p>
+          </div>
+        </div>
+        <ul className="health__list">
+          {steps.map(step => (
+            <li key={step.key} className={`health__item${step.done ? ' health__item--done' : ''}`}>
+              <span className="health__tick" aria-hidden="true">{step.done ? <FiCheck size={13} /> : (step.group === 'security' ? <FiShield size={12} /> : null)}</span>
+              <div className="health__text">
+                <p>{step.title}{step.group === 'security' && !step.done && <em>Security</em>}</p>
+                {!step.done && <small>{step.hint}</small>}
+              </div>
+              {!step.done && <Link to={step.to} className="health__cta">{step.cta} <FiArrowRight size={13} /></Link>}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <div className="dash-quick">
+        <Link to="/dashboard/wallet" className="dash-quick__item"><FiCreditCard size={18} /><span><b>Wallet</b><small>Balance and payouts</small></span></Link>
+        <Link to="/dashboard/insights" className="dash-quick__item"><FiBarChart2 size={18} /><span><b>Insights</b><small>What is selling</small></span></Link>
+        <button type="button" className="dash-quick__item" onClick={startTour}><FiCompass size={18} /><span><b>Quick tour</b><small>Find your way around</small></span></button>
+      </div>
+
       <VerificationChecklist />
-
-      {!creator.payout_ecocash_number && (
-        <div className="card card--pad" style={{ marginBottom: 20 }}>
-          <p style={{ fontWeight: 600, marginBottom: 6 }}>Add a payout number</p>
-          <p className="muted" style={{ fontSize: '.9rem', marginBottom: 14 }}>
-            You need an EcoCash number on file before you can withdraw earnings.
-          </p>
-          <Link to="/dashboard/settings" className="btn btn--ghost" style={{ fontSize: '.85rem' }}>Add payout details</Link>
-        </div>
-      )}
-
-      {productCount === 0 && (
-        <div className="card card--pad">
-          <p style={{ fontWeight: 600, marginBottom: 6 }}>List your first product</p>
-          <p className="muted" style={{ fontSize: '.9rem', marginBottom: 14 }}>
-            Add a cover, set a price, and get a link you can share.
-          </p>
-          <Link to="/dashboard/products/new" className="btn btn--gold" style={{ fontSize: '.85rem' }}>New product</Link>
-        </div>
-      )}
     </div>
   );
 }

@@ -605,7 +605,7 @@ img{max-width:100%;display:block;}
 .nav__inner{display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:6px 20px;gap:16px;}
 .nav__brand{display:flex;align-items:center;gap:9px;flex-shrink:0;justify-self:start;}
 .nav__name{
-  font-weight:650;font-size:1.12rem;letter-spacing:-.03em;line-height:1;
+  font-family:'Alex Brush',cursive;font-weight:400;font-size:2rem;line-height:1;
   color:var(--accent);text-shadow:0 0 16px rgba(var(--accent-rgb),.5);
 }
 
@@ -825,7 +825,7 @@ img{max-width:100%;display:block;}
 .splash__scorpion.is-glowing{filter:drop-shadow(0 4px 14px rgba(11,16,32,.16));animation:splash-pulse 2.6s ease-in-out .9s infinite;}
 .splash__name{
   position:relative;z-index:1;
-  font-weight:650;font-size:2rem;letter-spacing:-.03em;line-height:1;color:var(--ink);
+  font-family:'Alex Brush',cursive;font-weight:400;font-size:3.2rem;line-height:1;color:#E86F1F;
   margin:0;
   opacity:0;transform:translateY(8px);transition:opacity .7s ease .9s, transform .7s ease .9s;
 }

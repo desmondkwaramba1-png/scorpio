@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import scorpioArtwork from '../../../images/WhatsApp Image 2026-10-07 at 08.57.14.jpeg';
 
 const SEEN_KEY = 'scorpio_splash_seen';
 
@@ -10,8 +11,8 @@ export default function SplashScreen() {
   useEffect(() => {
     if (phase !== 'showing') return undefined;
     sessionStorage.setItem(SEEN_KEY, '1');
-    const toFade = setTimeout(() => setPhase('leaving'), 650);
-    const toDone = setTimeout(() => setPhase('done'), 880);
+    const toFade = setTimeout(() => setPhase('leaving'), 1200);
+    const toDone = setTimeout(() => setPhase('done'), 1430);
     return () => { clearTimeout(toFade); clearTimeout(toDone); };
   }, []);
 
@@ -20,7 +21,7 @@ export default function SplashScreen() {
   return (
     <div className={`splash${phase === 'leaving' ? ' splash--leaving' : ''}`} aria-hidden="true">
       <div className="splash__content">
-        <img className="splash__mark" src="/brand/mark.svg" alt="" />
+        <img className="splash__mark" src={scorpioArtwork} alt="" />
         <p className="splash__tagline">Your ideas, out in the world.</p>
       </div>
     </div>

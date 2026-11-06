@@ -109,7 +109,6 @@ export default function Nav() {
       )}
       <div className="wrap nav__inner">
         <Link to="/" className="nav__brand">
-          <img className="nav__mark" src="/brand/mark.svg" alt="" />
           <span className="nav__name">Scorpio</span>
         </Link>
 

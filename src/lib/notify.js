@@ -71,7 +71,7 @@ function renderHtml(subject, body) {
     <tr><td align="center">
       <table role="presentation" width="100%" style="max-width:480px;">
         <tr><td style="padding-bottom:20px;text-align:center;">
-          <span style="font-weight:700;font-size:24px;letter-spacing:-.5px;color:#0B1020;">Scorpio</span>
+          <span style="font-family:Georgia,serif;font-style:italic;font-size:32px;color:#FF8C42;">Scorpio</span>
         </td></tr>
         <tr><td style="background:#FFFFFF;border-radius:14px;padding:32px 28px;box-shadow:0 1px 2px rgba(19,25,33,.06);">
           <h1 style="margin:0 0 16px;color:#0F1111;font-size:20px;line-height:1.35;">${escapeHtml(subject)}</h1>

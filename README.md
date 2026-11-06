@@ -53,9 +53,12 @@ Tokens are at the top of `client/src/index.css` and `admin/src/index.css`.
 
 | Token | Use |
 |---|---|
-| `--chrome` midnight | Nav, hero, footer |
-| `--brand` cobalt | The primary action on a page |
-| `--accent` citron | Highlights on dark surfaces and the Verified seal. Never text on white |
+| `--chrome` dark | Nav, hero, footer |
+| `--brand` orange | The one signature colour: buy buttons, highlights, the Verified seal |
+| `--brand-strong` deep orange | Orange text and icons, because raw orange is too light on white |
+| `--ink` black | Primary actions in seller tools |
 | `--success`, `--warning`, `--red` | Status only, never decoration |
 
-Type is Geist, with Geist Mono for prices. Both are self-hosted through Fontsource, so the app makes no third-party font requests.
+Don't add a second bright colour: it competes with the orange wordmark. The wordmark, logo, splash artwork and icons are fixed brand assets.
+
+Type is Geist, with Geist Mono for prices and Alex Brush for the wordmark. All are self-hosted through Fontsource, so the app makes no third-party font requests.

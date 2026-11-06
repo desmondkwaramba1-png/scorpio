@@ -1,47 +1,47 @@
 :root{
-  /* SCORPIO palette. Midnight chrome keeps the trust-blue the brand asked for;
-     cobalt is the one action colour; citron is a highlight for dark surfaces
-     and badges. Status colours are separate from the brand on purpose, so
-     "paid" reads as good news and an error can't be mistaken for decoration. */
-  --brand:#2554FF;
-  --brand-strong:#1C3FD0;
-  --brand-strong-rgb:37,84,255;
-  --brand-tint:#E9EEFF;
-  --on-brand:#FFFFFF;
-  --chrome:#0B1020;
-  --link-ink:#1C3FD0;
-  --accent:#D7F24B;
-  --accent-dark:#C3E02F;
-  --accent-tint:#F4FAD2;
-  --accent-rgb:215,242,75;
-  --accent-ink:#4B5B00;
-  /* Icons that sit on page content: citron disappears on white. */
-  --accent-icon:var(--brand);
+  /* SCORPIO palette: neutrals plus one signature colour, the orange of the
+     wordmark. Any second bright colour competes with the logo, so there isn't
+     one. Black carries primary actions in seller tools. Green and red are
+     status only, so "paid" reads as good news and errors stay unmistakable. */
+  --brand:#FF8C42;
+  /* Darker orange for text and icons: raw --brand is too light to read on white. */
+  --brand-strong:#B8470B;
+  --brand-strong-rgb:184,71,11;
+  --brand-tint:#FFF1E6;
+  --on-brand:#131921;
+  --chrome:#131921;
+  --link-ink:#B8470B;
+  --accent:#FF8C42;
+  --accent-dark:#F57A2B;
+  --accent-tint:#FFF1E6;
+  --accent-rgb:255,140,66;
+  --accent-ink:#8A3A0A;
+  --accent-icon:#B8470B;
   --success:#0B7A4B;
   --success-tint:#E3F6EC;
   --warning:#9A5B00;
   --warning-tint:#FFF3DC;
   --star:#F59E0B;
-  --ink:#0E1424;
-  --ink-dim:#3A4356;
+  --ink:#15171A;
+  --ink-dim:#3A3F45;
   --ink-800:#1C2438;
-  --muted:#586174;
-  --paper:#F6F7FA;
+  --muted:#5C6168;
+  --paper:#F1F2F4;
   --surface:#FFFFFF;
-  --line:#E3E6ED;
+  --line:#E1E3E5;
   --field-bg:#FFFFFF;
   --line-strong:#8A92A3;
   --red:#D4183D;
-  --radius:16px;
+  --radius:12px;
   --radius-sm:10px;
   --max-w:1200px;
   --ink-contrast:#FFFFFF;
-  --skeleton-base:#E9ECF2;
-  --skeleton-shine:#F3F5F9;
+  --skeleton-base:#E4E5E7;
+  --skeleton-shine:#F1F2F4;
 
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px; --sp-8:64px;
 
-  --shadow-1:0 1px 2px rgba(11,16,32,.05);
+  --shadow-1:0 1px 2px rgba(15,18,24,.07);
   --shadow-2:0 2px 4px rgba(11,16,32,.04),0 8px 24px rgba(11,16,32,.07);
   --shadow-3:0 4px 8px rgba(11,16,32,.05),0 20px 48px rgba(11,16,32,.12);
 }
@@ -49,15 +49,15 @@
 /* Dark theme, opt-in from the nav toggle. Nav, hero and footer keep their
    midnight chrome in both themes. */
 :root[data-theme="dark"]{
-  --brand:#7C9CFF;
-  --brand-strong:#A3B8FF;
-  --brand-strong-rgb:124,156,255;
-  --brand-tint:rgba(124,156,255,.15);
-  --on-brand:#0B1020;
-  --link-ink:#A3B8FF;
-  --accent-tint:rgba(215,242,75,.14);
-  --accent-ink:#D7F24B;
-  --accent-icon:#D7F24B;
+  --brand:#FF9A57;
+  --brand-strong:#FFB27F;
+  --brand-strong-rgb:255,154,87;
+  --brand-tint:rgba(255,154,87,.14);
+  --on-brand:#131921;
+  --link-ink:#FFB27F;
+  --accent-tint:rgba(255,154,87,.14);
+  --accent-ink:#FFB27F;
+  --accent-icon:#FF9A57;
   --success:#4ADE9B;
   --success-tint:rgba(74,222,155,.14);
   --warning:#FBBF5A;
@@ -72,7 +72,7 @@
   --field-bg:#1A2133;
   --line-strong:rgba(255,255,255,.26);
   --red:#FF6B81;
-  --ink-contrast:#0B1020;
+  --ink-contrast:#131921;
   --skeleton-base:#1E2638;
   --skeleton-shine:#2A3347;
 
@@ -122,7 +122,7 @@ img{max-width:100%;display:block;}
 .btn--primary{background:var(--ink);color:var(--ink-contrast);}
 .btn--primary:hover{background:var(--ink-dim);transform:translateY(-1px);box-shadow:var(--shadow-2);}
 .btn--cta{background:var(--brand);color:var(--on-brand);}
-.btn--cta:hover{background:var(--brand-strong);}
+.btn--cta:hover{background:var(--accent-dark);}
 .btn--ghost{background:transparent;color:var(--ink);border-color:var(--line);}
 .btn--ghost:hover{border-color:var(--brand-strong);color:var(--brand-strong);}
 .btn--sm{padding:.6rem 1.1rem;font-size:.85rem;min-height:38px;}
@@ -525,7 +525,7 @@ img{max-width:100%;display:block;}
        (navy, plum, rose, orange) happens to land under a given word — the
        gradient stays fully vivid past ~60% where nothing needs to be read. */
     linear-gradient(100deg, rgba(8,10,15,.6) 0%, rgba(8,10,15,.28) 38%, transparent 62%),
-    linear-gradient(120deg, #0B1020 0%, #3d1f3d 28%, #8a3050 52%, #d1522f 76%, var(--accent) 100%);
+    linear-gradient(120deg, #131921 0%, #3d1f3d 28%, #8a3050 52%, #d1522f 76%, var(--accent) 100%);
 }
 .shop-hero__badge{
   display:inline-flex;align-items:center;gap:7px;
@@ -618,7 +618,7 @@ img{max-width:100%;display:block;}
   transition:background .15s ease, color .15s ease;min-width:52px;
 }
 .nav__icon-link svg{font-size:1.35rem;}
-.nav__icon-link:hover{background:rgba(37,84,255,.12);color:#fff;}
+.nav__icon-link:hover{background:rgba(255,140,66,.12);color:#fff;}
 .nav__icon-link--active{color:#fff;}
 .nav__icon-link--active::after{
   content:'';position:absolute;bottom:0;left:14px;right:14px;height:3px;
@@ -655,7 +655,7 @@ img{max-width:100%;display:block;}
 .nav__account > .nav__icon-link.nav__icon-link--active{background:rgba(var(--accent-rgb),.16);}
 .nav__account-menu{
   position:absolute;top:calc(100% + 8px);right:0;min-width:180px;z-index:60;
-  background:#141B30;border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-sm);
+  background:#1A222D;border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-sm);
   box-shadow:var(--shadow-3);padding:6px;
   animation:fade-in-up .18s cubic-bezier(.22,.7,.3,1) both;
 }
@@ -675,7 +675,7 @@ img{max-width:100%;display:block;}
     radial-gradient(1px 1px at 82% 15%, rgba(255,255,255,.5) 0, transparent 60%),
     radial-gradient(1.5px 1.5px at 70% 55%, rgba(255,255,255,.6) 0, transparent 60%),
     radial-gradient(1px 1px at 30% 70%, rgba(255,255,255,.4) 0, transparent 60%),
-    radial-gradient(900px 480px at 50% -10%, rgba(37,84,255,.18), transparent 65%),
+    radial-gradient(900px 480px at 50% -10%, rgba(255,140,66,.18), transparent 65%),
     var(--chrome);
   padding:76px 0 96px;
 }
@@ -804,7 +804,7 @@ img{max-width:100%;display:block;}
 .splash::before{
   content:'';position:absolute;left:50%;top:44%;width:520px;height:520px;
   transform:translate(-50%,-50%);pointer-events:none;
-  background:radial-gradient(circle, rgba(37,84,255,.14) 0%, rgba(37,84,255,.04) 45%, transparent 72%);
+  background:radial-gradient(circle, rgba(255,140,66,.14) 0%, rgba(255,140,66,.04) 45%, transparent 72%);
 }
 .splash--leaving{opacity:0;pointer-events:none;}
 .splash__floater{

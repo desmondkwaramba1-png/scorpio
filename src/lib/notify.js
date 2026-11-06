@@ -27,15 +27,15 @@ function renderHtml(subject, body) {
 
   const buttonHtml = ctaUrl ? `
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 20px;">
-      <tr><td style="border-radius:999px;background:#2554FF;">
-        <a href="${escapeHtml(ctaUrl)}" style="display:inline-block;padding:13px 28px;color:#FFFFFF;font-weight:600;font-size:15px;text-decoration:none;border-radius:999px;">
+      <tr><td style="border-radius:999px;background:#FF8C42;">
+        <a href="${escapeHtml(ctaUrl)}" style="display:inline-block;padding:13px 28px;color:#131921;font-weight:700;font-size:15px;text-decoration:none;border-radius:999px;">
           Continue
         </a>
       </td></tr>
     </table>
     <p style="margin:0 0 16px;color:#565959;font-size:13px;word-break:break-all;">
       Or paste this link into your browser:<br>
-      <a href="${escapeHtml(ctaUrl)}" style="color:#1C3FD0;">${escapeHtml(ctaUrl)}</a>
+      <a href="${escapeHtml(ctaUrl)}" style="color:#B8470B;">${escapeHtml(ctaUrl)}</a>
     </p>` : '';
 
   // The button renders right where the link actually was in the original

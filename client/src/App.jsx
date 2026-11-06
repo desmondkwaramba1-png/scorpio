@@ -67,6 +67,8 @@ function RouteFallback() {
 
 export default function App() {
   const { pathname } = useLocation();
+  // Setting up a store gets the whole screen, with nothing to wander off to.
+  const focused = pathname === '/onboarding';
   useEffect(() => {
     const title = titleForPath(pathname);
     if (title) document.title = title;
@@ -110,7 +112,7 @@ export default function App() {
     <>
       <SplashScreen />
       <a href="#main-content" className="skip-link">Skip to content</a>
-      <Nav />
+      {!focused && <Nav />}
       <main id="main-content" tabIndex={-1}>
       <ErrorBoundary>
         <Suspense fallback={<RouteFallback />}>
@@ -175,7 +177,7 @@ export default function App() {
         </Suspense>
       </ErrorBoundary>
       </main>
-      <Footer />
+      {!focused && <Footer />}
       {connectionStatus && <OfflineScreen
         status={connectionStatus}
         checking={checkingConnection}

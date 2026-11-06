@@ -56,12 +56,12 @@ function render({ title, description, image, url, type = 'website' }) {
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(description)}">
 <meta name="twitter:image" content="${esc(image)}">
-<meta name="theme-color" content="#0B1020">
+<meta name="theme-color" content="#131921">
 <meta http-equiv="refresh" content="0; url=${esc(url)}">
 <script>window.location.replace(${JSON.stringify(url)});</script>
 </head>
-<body style="margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0B1020;color:#fff;display:flex;min-height:100vh;align-items:center;justify-content:center">
-<p style="text-align:center">Opening on SCORPIO&hellip;<br><a style="color:#D7F24B" href="${esc(url)}">Continue</a></p>
+<body style="margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#131921;color:#fff;display:flex;min-height:100vh;align-items:center;justify-content:center">
+<p style="text-align:center">Opening on SCORPIO&hellip;<br><a style="color:#FF8C42" href="${esc(url)}">Continue</a></p>
 </body>
 </html>`;
 }

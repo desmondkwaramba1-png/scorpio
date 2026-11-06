@@ -8,7 +8,9 @@ export default function ProtectedRoute({ children, allowUnverified = false }) {
   if (loading) {
     return <div className="wrap" style={{ padding: '80px 20px' }}><p style={{ color: 'var(--muted)' }}>Loading...</p></div>;
   }
-  if (!user) return <Navigate to="/login" replace />;
+  // Both redirects carry the destination, so nobody loses their place.
+  const here = encodeURIComponent(location.pathname + location.search);
+  if (!user) return <Navigate to={`/login?next=${here}`} replace />;
   if (!user.terms_accepted_at && location.pathname !== '/accept-terms') {
     return <Navigate to="/accept-terms" replace />;
   }
@@ -35,7 +37,7 @@ export default function ProtectedRoute({ children, allowUnverified = false }) {
   // order history and downloading what they already paid for (or didn't
   // pay for), not a higher-trust action like running a storefront.
   if (!allowUnverified && !user.email_verified_at && location.pathname !== '/check-email') {
-    return <Navigate to="/check-email" replace />;
+    return <Navigate to={`/check-email?next=${here}`} replace />;
   }
   return children;
 }

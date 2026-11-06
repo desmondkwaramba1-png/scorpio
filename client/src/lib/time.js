@@ -19,3 +19,9 @@ export function timeAgo(sqliteDatetime) {
   const years = Math.floor(months / 12);
   return `${years} year${years === 1 ? '' : 's'} ago`;
 }
+
+// "6 Nov 2026" in the reader's own timezone.
+export function formatDate(sqliteDatetime) {
+  if (!sqliteDatetime) return '';
+  return parseSqlDate(sqliteDatetime).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}

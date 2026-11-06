@@ -94,7 +94,7 @@ export default function Checkout() {
         <p className="muted" style={{ marginBottom: 24 }}>
           An account is how you'll get back to what you buy: downloads, video, everything, saved to your library.
         </p>
-        <Link to={`/login?role=buyer&next=${encodeURIComponent(location.pathname)}`} className="btn btn--gold">
+        <Link to={`/login?role=buyer&next=${encodeURIComponent(location.pathname)}`} className="btn btn--cta">
           Log in or create an account
         </Link>
         <p style={{ marginTop: 16 }}>
@@ -104,13 +104,24 @@ export default function Checkout() {
     );
   }
 
+  if (product.already_purchased && product.type !== 'subscription') {
+    return (
+      <div className="wrap center-page" style={{ maxWidth: 440, padding: '20px' }}>
+        <FiShield size={32} color="var(--success)" style={{ marginBottom: 14 }} />
+        <h1 style={{ fontSize: '1.4rem', marginBottom: 10 }}>You already own this</h1>
+        <p className="muted" style={{ marginBottom: 24 }}>It's waiting in your library, so there's no need to pay again.</p>
+        <Link to="/account" className="btn btn--cta">Open my library</Link>
+      </div>
+    );
+  }
+
   if (!user.email_verified_at) {
     return (
       <div className="wrap center-page" style={{ maxWidth: 440, padding: '20px' }}>
-        <FiShield size={32} color="var(--gold)" style={{ marginBottom: 14 }} />
+        <FiShield size={32} color="var(--accent-icon)" style={{ marginBottom: 14 }} />
         <h1 style={{ fontSize: '1.4rem', marginBottom: 10 }}>Verify your email before paying</h1>
         <p className="muted" style={{ marginBottom: 24 }}>Verification protects your account and keeps your purchases linked to you for future downloads.</p>
-        <Link to={`/check-email?next=${encodeURIComponent(location.pathname)}`} className="btn btn--gold">Verify email</Link>
+        <Link to={`/check-email?next=${encodeURIComponent(location.pathname)}`} className="btn btn--cta">Verify email</Link>
       </div>
     );
   }
@@ -132,17 +143,17 @@ export default function Checkout() {
               {product.category && CATEGORY_LABELS[product.category] && (
                 <span className="badge badge--category">{CATEGORY_LABELS[product.category]}</span>
               )}
-              {product.promo_active && <span className="badge badge--gold">{product.discount_percent}% off</span>}
+              {product.promo_active && <span className="badge badge--highlight">{product.discount_percent}% off</span>}
             </div>
-            <p style={{ fontWeight: 700, fontSize: '1.1rem', lineHeight: 1.25 }}>{product.title}</p>
+            <h1 style={{ fontWeight: 700, fontSize: '1.1rem', lineHeight: 1.25 }}>{product.title}</h1>
             <p className="mono" style={{ fontWeight: 700, marginTop: 4 }}>
               {product.promo_active ? (
                 <>
                   <span style={{ color: 'var(--muted)', textDecoration: 'line-through', fontWeight: 500, marginRight: 8 }}>{price}</span>
-                  <span style={{ color: 'var(--green-glow)' }}>{discountedPrice}</span>
+                  <span style={{ color: 'var(--brand-strong)' }}>{discountedPrice}</span>
                 </>
               ) : (
-                <span style={{ color: 'var(--green-glow)' }}>{product.pay_what_you_want && !isFree ? `From ${price}` : price}</span>
+                <span style={{ color: 'var(--brand-strong)' }}>{product.pay_what_you_want && !isFree ? `From ${price}` : price}</span>
               )}
               {product.type === 'serial' && (
                 <span className="muted" style={{ fontSize: '.78rem', fontWeight: 500 }}> once, unlocks every issue</span>
@@ -183,7 +194,7 @@ export default function Checkout() {
               <div className="field input-icon">
                 <label htmlFor="buyer_phone">EcoCash number</label>
                 <FiPhone size={15} />
-                <input id="buyer_phone" required value={checkout.phone} placeholder="0780070488"
+                <input id="buyer_phone" type="tel" inputMode="tel" autoComplete="tel" required value={checkout.phone} placeholder="07X XXX XXXX"
                   onChange={e => setCheckout(c => ({ ...c, phone: e.target.value }))} />
               </div>
             )}
@@ -216,7 +227,7 @@ export default function Checkout() {
             )}
 
             {status === 'failed' && <p className="error-text">{checkoutError || "Payment didn't go through. Try again."}</p>}
-            <button className="btn btn--gold btn--block" disabled={status === 'submitting'} type="submit">
+            <button className="btn btn--cta btn--block" disabled={status === 'submitting'} type="submit">
               {status === 'submitting' ? (isFree ? 'Getting it...' : 'Sending EcoCash prompt...')
                 : isFree ? 'Get it now, free'
                 : product.type === 'service' ? `Order for ${price}`

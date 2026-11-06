@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useCart } from '../context/CartContext.jsx';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FiUser, FiMail, FiPhone, FiSmartphone, FiArrowLeft, FiLogIn, FiZap, FiLock, FiShield } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -9,6 +10,7 @@ export default function CartCheckout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { refreshCount } = useCart();
   const [items, setItems] = useState(null);
   const [error, setError] = useState(null);
   const [checkout, setCheckout] = useState({ name: '', email: '', phone: '' });
@@ -35,6 +37,7 @@ export default function CartCheckout() {
       // so this only changes how long a still-working request gets before
       // being wrongly reported as failed.
       const data = await api.post('/api/cart/checkout', checkout, 30000);
+      refreshCount();
       navigate(`/payment/return?order_id=${data.order_id}${data.checking_payment_status ? '&checking=1' : ''}`);
     } catch (err) {
       setCheckoutError(err.message);
@@ -49,7 +52,7 @@ export default function CartCheckout() {
       <div className="wrap center-page" style={{ maxWidth: 420, padding: '20px' }}>
         <FiLogIn size={32} color="var(--muted)" style={{ marginBottom: 14 }} />
         <h1 style={{ fontSize: '1.4rem', marginBottom: 10 }}>Log in to check out</h1>
-        <Link to={`/login?role=buyer&next=${encodeURIComponent(location.pathname)}`} className="btn btn--gold">
+        <Link to={`/login?role=buyer&next=${encodeURIComponent(location.pathname)}`} className="btn btn--cta">
           Log in or create an account
         </Link>
       </div>
@@ -59,10 +62,10 @@ export default function CartCheckout() {
   if (!user.email_verified_at) {
     return (
       <div className="wrap center-page" style={{ maxWidth: 440, padding: '20px' }}>
-        <FiShield size={32} color="var(--gold)" style={{ marginBottom: 14 }} />
+        <FiShield size={32} color="var(--accent-icon)" style={{ marginBottom: 14 }} />
         <h1 style={{ fontSize: '1.4rem', marginBottom: 10 }}>Verify your email before paying</h1>
         <p className="muted" style={{ marginBottom: 24 }}>Verification protects your account and keeps your purchases linked to you for future downloads.</p>
-        <Link to={`/check-email?next=${encodeURIComponent(location.pathname)}`} className="btn btn--gold">Verify email</Link>
+        <Link to={`/check-email?next=${encodeURIComponent(location.pathname)}`} className="btn btn--cta">Verify email</Link>
       </div>
     );
   }
@@ -100,7 +103,7 @@ export default function CartCheckout() {
       </Link>
 
       <div className="card card--pad">
-        <p style={{ fontWeight: 700, marginBottom: 12 }}>{items.length} item{items.length === 1 ? '' : 's'}</p>
+        <h1 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 12 }}>Checkout: {items.length} item{items.length === 1 ? '' : 's'}</h1>
         <div style={{ display: 'grid', gap: 8, marginBottom: 18, paddingBottom: 18, borderBottom: '1px solid var(--line)' }}>
           {items.map(p => (
             <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.88rem' }}>
@@ -113,7 +116,7 @@ export default function CartCheckout() {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 18 }}>
           <span style={{ fontWeight: 700 }}>Total</span>
-          <span className="mono" style={{ fontWeight: 700, color: 'var(--green-glow)' }}>{totalPrice}</span>
+          <span className="mono" style={{ fontWeight: 700, color: 'var(--brand-strong)' }}>{totalPrice}</span>
         </div>
 
         {currencies.size > 1 ? (
@@ -136,7 +139,7 @@ export default function CartCheckout() {
             <div className="field input-icon">
               <label htmlFor="buyer_phone">EcoCash number</label>
               <FiPhone size={15} />
-              <input id="buyer_phone" required value={checkout.phone} placeholder="0780070488"
+              <input id="buyer_phone" type="tel" inputMode="tel" autoComplete="tel" required value={checkout.phone} placeholder="07X XXX XXXX"
                 onChange={e => setCheckout(c => ({ ...c, phone: e.target.value }))} />
             </div>
 
@@ -151,7 +154,7 @@ export default function CartCheckout() {
             </ul>
 
             {status === 'failed' && <p className="error-text">{checkoutError || "Payment didn't go through. Try again."}</p>}
-            <button className="btn btn--gold btn--block" disabled={status === 'submitting'} type="submit">
+            <button className="btn btn--cta btn--block" disabled={status === 'submitting'} type="submit">
               {status === 'submitting' ? 'Sending EcoCash prompt...' : `Pay ${totalPrice}`}
             </button>
             <p className="muted" style={{ fontSize: '.76rem', textAlign: 'center', marginTop: 10 }}>

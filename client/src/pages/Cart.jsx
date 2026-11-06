@@ -35,7 +35,7 @@ export default function Cart() {
       <div className="wrap center-page" style={{ maxWidth: 420, padding: '20px' }}>
         <FiShoppingCart size={32} color="var(--muted)" style={{ marginBottom: 14 }} />
         <h1 style={{ fontSize: '1.4rem', marginBottom: 10 }}>Log in to see your cart</h1>
-        <Link to="/login?role=buyer&next=/cart" className="btn btn--gold">Log in or create an account</Link>
+        <Link to="/login?role=buyer&next=/cart" className="btn btn--cta">Log in or create an account</Link>
       </div>
     );
   }
@@ -61,7 +61,7 @@ export default function Cart() {
   return (
     <div className="wrap" style={{ maxWidth: 680, padding: '40px 20px 80px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <FiShoppingCart size={22} color="var(--green)" />
+        <FiShoppingCart size={22} color="var(--brand)" />
         <h1 style={{ fontSize: '1.6rem' }}>Your cart</h1>
       </div>
       <p className="muted" style={{ marginBottom: 28 }}>
@@ -75,7 +75,7 @@ export default function Cart() {
           <p className="muted" style={{ fontSize: '.88rem', marginTop: 4, marginBottom: 16 }}>
             Find something worth having and it'll show up here.
           </p>
-          <Link to="/discover" className="btn btn--gold btn--sm">
+          <Link to="/discover" className="btn btn--cta btn--sm">
             <FiCompass size={14} /> Browse the marketplace
           </Link>
         </div>
@@ -103,10 +103,10 @@ export default function Cart() {
                     {p.promo_active ? (
                       <>
                         <span style={{ color: 'var(--muted)', textDecoration: 'line-through', fontWeight: 500, fontSize: '.85rem', marginRight: 6 }}>{price}</span>
-                        <span style={{ color: 'var(--green-glow)' }}>{discounted}</span>
+                        <span style={{ color: 'var(--brand-strong)' }}>{discounted}</span>
                       </>
                     ) : (
-                      <span style={{ color: 'var(--green-glow)' }}>{price}</span>
+                      <span style={{ color: 'var(--brand-strong)' }}>{price}</span>
                     )}
                   </p>
                   <button onClick={() => remove(p.id)} className="btn btn--ghost btn--sm cart-item__remove" title="Remove from cart" aria-label="Remove from cart">
@@ -130,7 +130,7 @@ export default function Cart() {
             </div>
             <button
               onClick={() => navigate('/checkout')}
-              className="btn btn--gold btn--block"
+              className="btn btn--cta btn--block"
               disabled={currencies.size > 1}
             >
               <FiLock size={15} /> Checkout &mdash; {formatMoney(total, items[0].currency)}

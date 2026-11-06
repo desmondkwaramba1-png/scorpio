@@ -81,7 +81,7 @@ function ReportCard({ report, onResolve }) {
       </div>
 
       {error && <p className="error-text">{error}</p>}
-      <button className="btn btn--gold btn--sm" onClick={resolve} disabled={submitting}>
+      <button className="btn btn--cta btn--sm" onClick={resolve} disabled={submitting}>
         {submitting ? 'Saving...' : 'Mark resolved'}
       </button>
     </div>
@@ -110,7 +110,7 @@ export default function Reports() {
   return (
     <div>
       {resolvedFlash && (
-        <p className="card card--pad" style={{ color: 'var(--green-glow)', fontWeight: 600, marginBottom: 16 }}>Marked resolved.</p>
+        <p className="card card--pad" style={{ color: 'var(--brand-strong)', fontWeight: 600, marginBottom: 16 }}>Marked resolved.</p>
       )}
       {reports.length === 0 ? (
         <div className="empty-state"><FiMessageSquare size={22} color="var(--muted)" style={{ marginBottom: 8 }} /><strong>No open reports.</strong></div>

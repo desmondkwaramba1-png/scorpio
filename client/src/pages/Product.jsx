@@ -85,12 +85,12 @@ function IssueRow({ iss, focused }) {
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
           {isExternal ? (
-            <a href={iss.view_url} target="_blank" rel="noopener noreferrer" className="btn btn--gold btn--sm">
+            <a href={iss.view_url} target="_blank" rel="noopener noreferrer" className="btn btn--cta btn--sm">
               <FiPlay size={13} /> {label}
             </a>
           ) : (
             <>
-              <button type="button" onClick={() => setExpanded(e => !e)} className="btn btn--gold btn--sm">
+              <button type="button" onClick={() => setExpanded(e => !e)} className="btn btn--cta btn--sm">
                 {expanded ? <FiCheck size={13} /> : <FiPlay size={13} />} {expanded ? 'Close' : label}
               </button>
               <a href={`/api/downloads/issue/${iss.id}`} className="btn btn--ghost btn--sm" title="Download instead">
@@ -357,6 +357,7 @@ export default function Product() {
 
   return (
     <div className="product-layout wrap">
+      <div className="product-layout__main">
       {/* Its own grid area now (see .product-layout's grid-template-areas),
           not the top of the "main content" column — on mobile that's what
           actually lets the buy panel land right after it, real page space
@@ -387,7 +388,7 @@ export default function Product() {
             <span className="badge badge--category" style={{ marginBottom: 0 }}>{CATEGORY_LABELS[product.category]}</span>
           )}
           {product.promo_active && (
-            <span className="badge badge--gold">{product.discount_percent}% off</span>
+            <span className="badge badge--highlight">{product.discount_percent}% off</span>
           )}
         </div>
         <h1 style={{ fontSize: '1.6rem', lineHeight: 1.25, marginTop: 10 }}>{product.title}</h1>
@@ -403,7 +404,7 @@ export default function Product() {
 
         {(product.quantity_sold > 0 || (product.quantity_limit !== null && !soldOut) || (product.total_keys > 0 && !soldOut)) && (
           <p className="product-card__sold" style={{ marginTop: 6, fontSize: '.85rem' }}>
-            {product.quantity_sold > 0 && `${product.quantity_sold} people have bought this`}
+            {product.quantity_sold > 0 && `${product.quantity_sold} ${product.quantity_sold === 1 ? 'person has' : 'people have'} bought this`}
             {product.quantity_sold > 0 && (product.quantity_limit !== null || product.total_keys > 0) && ' · '}
             {product.quantity_limit !== null && !soldOut && `${product.quantity_limit - product.quantity_sold} left`}
             {product.total_keys > 0 && !soldOut && `${product.unclaimed_keys} key${product.unclaimed_keys === 1 ? '' : 's'} left`}
@@ -446,8 +447,8 @@ export default function Product() {
             )}
             {product.portfolio_url && (
               <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-                {product.portfolio_url.split('\n').map(u => u.trim()).filter(Boolean).map((url, i) => (
-                  <a key={url} href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '.9rem', fontWeight: 600, color: 'var(--green-glow)' }}>
+                {product.portfolio_url.split('\n').map(u => u.trim()).filter(u => /^https?:\/\//i.test(u)).map((url, i) => (
+                  <a key={url} href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '.9rem', fontWeight: 600, color: 'var(--brand-strong)' }}>
                     Portfolio {product.portfolio_url.includes('\n') ? i + 1 : ''} →
                   </a>
                 ))}
@@ -466,7 +467,7 @@ export default function Product() {
         <Link to={`/@${product.creator_handle}`} style={{ marginTop: 28, display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
-            background: product.creator_avatar ? `url(${product.creator_avatar}) center/cover` : 'var(--green-dark)'
+            background: product.creator_avatar ? `url(${product.creator_avatar}) center/cover` : 'var(--chrome)'
           }} />
           <span style={{ fontWeight: 600, fontSize: '.95rem' }}>{product.creator_name}</span>
           {!!product.creator_verified && <Seal />}
@@ -475,7 +476,7 @@ export default function Product() {
         {product.creator_bio && <p className="muted" style={{ marginTop: 10, fontSize: '.92rem', lineHeight: 1.6 }}>{product.creator_bio}</p>}
 
         {product.status === 'draft' && (
-          <span className="badge badge--gold" style={{ marginTop: 18, display: 'inline-flex' }}>DRAFT (only visible to you)</span>
+          <span className="badge badge--highlight" style={{ marginTop: 18, display: 'inline-flex' }}>DRAFT (only visible to you)</span>
         )}
 
         {/* Was gated to 'serial' only — a subscription's content arrives
@@ -522,6 +523,7 @@ export default function Product() {
           <EngagementBar product={product} onCommentClick={() => commentsRef.current?.scrollIntoView({ behavior: 'smooth' })} />
         </div>
       </div>
+      </div>
 
       <div className="buy-panel">
         <div className="card card--pad">
@@ -536,10 +538,10 @@ export default function Product() {
                 {product.promo_active ? (
                   <>
                     <span style={{ color: 'var(--muted)', textDecoration: 'line-through', fontWeight: 500, marginRight: 8 }}>{price}</span>
-                    <span style={{ color: 'var(--green-glow)' }}>{discountedPrice}</span>
+                    <span style={{ color: 'var(--brand-strong)' }}>{discountedPrice}</span>
                   </>
                 ) : (
-                  <span style={{ color: 'var(--green-glow)' }}>{product.pay_what_you_want ? `From ${price}` : price}</span>
+                  <span style={{ color: 'var(--brand-strong)' }}>{product.pay_what_you_want ? `From ${price}` : price}</span>
                 )}
                 {product.type === 'serial' && (
                   <span className="muted" style={{ fontSize: '.78rem', fontWeight: 500 }}> once, unlocks every issue</span>
@@ -609,13 +611,13 @@ export default function Product() {
                 </div>
               ) : ['serial', 'subscription'].includes(product.type) ? (
                 <>
-                  <div className="trust-line" style={{ color: 'var(--green-glow)', fontWeight: 600 }}>
+                  <div className="trust-line" style={{ color: 'var(--brand-strong)', fontWeight: 600 }}>
                     <FiCheck size={16} /><span>You already own this.</span>
                   </div>
                   {product.issues && product.issues.length > 0 ? (
                     <button
                       type="button"
-                      className="btn btn--gold btn--block"
+                      className="btn btn--cta btn--block"
                       onClick={() => {
                         setFocusIssueId(product.issues[0].id);
                         document.getElementById('issues-section')?.scrollIntoView({ behavior: 'smooth' });
@@ -634,16 +636,16 @@ export default function Product() {
                 </>
               ) : (
                 <>
-                  <div className="trust-line" style={{ color: 'var(--green-glow)', fontWeight: 600 }}>
+                  <div className="trust-line" style={{ color: 'var(--brand-strong)', fontWeight: 600 }}>
                     <FiCheck size={16} /><span>You own this product. Access it here or download a copy.</span>
                   </div>
                   {product.owned_access?.is_external && product.owned_access.view_url && (
-                    <a href={product.owned_access.view_url} target="_blank" rel="noopener noreferrer" className="btn btn--gold btn--block">
+                    <a href={product.owned_access.view_url} target="_blank" rel="noopener noreferrer" className="btn btn--cta btn--block">
                       <FiExternalLink size={15} /> Open your content
                     </a>
                   )}
                   {product.owned_access?.view_url && !product.owned_access.is_external && (
-                    <button type="button" className="btn btn--gold btn--block" onClick={() => setOwnedContentOpen(open => !open)}>
+                    <button type="button" className="btn btn--cta btn--block" onClick={() => setOwnedContentOpen(open => !open)}>
                       {ownedContentOpen ? <FiX size={15} /> : product.owned_access.is_video || product.owned_access.is_audio ? <FiPlay size={15} /> : <FiBookOpen size={15} />}
                       {ownedContentOpen ? 'Close content' : product.owned_access.is_video ? 'Watch now' : product.owned_access.is_audio ? 'Listen now' : 'Read now'}
                     </button>
@@ -676,7 +678,7 @@ export default function Product() {
             </>
           ) : isOwner ? (
             <>
-              <button onClick={shareProduct} className="btn btn--gold btn--block">
+              <button onClick={shareProduct} className="btn btn--cta btn--block">
                 {copied ? <><FiCheck size={15} /> Link copied</> : <><FiShare2 size={15} /> Share this product</>}
               </button>
               <Link to={`/dashboard/products/${product.id}/edit`} className="btn btn--ghost btn--block" style={{ marginTop: 10 }}>
@@ -699,7 +701,7 @@ export default function Product() {
                 <p className="error-text">Sold out.</p>
               ) : (
                 <>
-                  <Link to={checkoutUrl} className="btn btn--gold btn--block">
+                  <Link to={checkoutUrl} className="btn btn--cta btn--block">
                     {buyLabel}
                   </Link>
                   {!product.pay_what_you_want && product.price_minor !== 0 && product.type !== 'service' && (

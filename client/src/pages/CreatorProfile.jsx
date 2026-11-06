@@ -61,7 +61,18 @@ export default function CreatorProfile() {
     noindex: handle?.startsWith('demo-')
   });
 
-  if (error) return <div className="wrap center-page" style={{ padding: 20 }}><p className="error-text">{error}</p></div>;
+  if (error) {
+    return (
+      <div className="not-found wrap">
+        <h1>{error}</h1>
+        <p className="muted">The link may be old, or this storefront may have closed.</p>
+        <div className="not-found__actions">
+          <Link to="/creators" className="btn btn--cta">Meet the creators</Link>
+          <Link to="/discover" className="btn btn--ghost">Browse products</Link>
+        </div>
+      </div>
+    );
+  }
 
   if (!creator) {
     return (
@@ -105,7 +116,7 @@ export default function CreatorProfile() {
               aria-label={`View ${creator.name}'s full profile picture`}
             />
           ) : (
-            <div className="creator-header__avatar" style={{ background: 'var(--gold)' }}>
+            <div className="creator-header__avatar" style={{ background: 'var(--accent)' }}>
               {creator.name.charAt(0).toUpperCase()}
             </div>
           )}

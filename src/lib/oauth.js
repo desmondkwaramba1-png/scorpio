@@ -40,7 +40,9 @@ const PROVIDERS = {
       return {
         providerId: data.id,
         email: data.email || null,
-        emailVerified: !!data.email,
+        // The Graph API doesn't say whether this address was confirmed, so it
+        // is never treated as proof of ownership.
+        emailVerified: false,
         name: data.name,
         avatarUrl: data.picture?.data?.url || null
       };

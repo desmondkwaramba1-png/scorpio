@@ -230,7 +230,7 @@ export default function PdfReader({ src, title, downloadUrl, onClose }) {
             <FiAlertCircle size={30} />
             <p>{error}</p>
             <div className="reader__state-actions">
-              {downloadUrl && <a href={downloadUrl} className="btn btn--gold btn--sm"><FiDownload size={14} /> Download instead</a>}
+              {downloadUrl && <a href={downloadUrl} className="btn btn--cta btn--sm"><FiDownload size={14} /> Download instead</a>}
               <button type="button" className="btn btn--ghost btn--sm" onClick={onClose}>Close</button>
             </div>
           </div>

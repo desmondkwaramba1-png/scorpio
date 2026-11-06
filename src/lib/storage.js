@@ -143,6 +143,13 @@ async function getPresignedUrl(key, { expiresInSeconds = 300, contentDisposition
   }), { expiresIn: expiresInSeconds });
 }
 
+// Dispute evidence can hold receipts and personal details, so it is only ever
+// handed out as a short-lived link to the two parties and the admin.
+async function evidenceUrl(key) {
+  try { return await getPresignedUrl(key, { expiresInSeconds: 600 }); }
+  catch (err) { console.error('[evidence url]', err.message); return null; }
+}
+
 // Product rows hold either a bare R2 key (private files) or a full public
 // URL (covers, previews). Anything else - legacy /uploads paths, bundled seed
 // art - is not ours to delete, so it maps to null.
@@ -163,6 +170,7 @@ async function deleteObject(key) {
 }
 
 module.exports = {
+  evidenceUrl,
   isConfigured, uploadBuffer, uploadStream, getObjectStream, getObjectBuffer,
   publicUrl, getPresignedUrl, deleteObject, keyFromReference
 };

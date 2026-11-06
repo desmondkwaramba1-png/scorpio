@@ -13,9 +13,9 @@ function formatDate(sqliteDatetime) {
 }
 
 const FULFILLMENT_LABEL = {
-  awaiting_delivery: { text: 'Awaiting delivery', className: 'badge--gold' },
-  delivered: { text: 'Delivered, awaiting buyer', className: 'badge--gold' },
-  released: { text: 'Released to you', className: 'badge--green' },
+  awaiting_delivery: { text: 'Awaiting delivery', className: 'badge--highlight' },
+  delivered: { text: 'Delivered, awaiting buyer', className: 'badge--highlight' },
+  released: { text: 'Released to you', className: 'badge--success' },
   disputed: { text: 'Disputed', className: 'badge--neutral' },
   refunded: { text: 'Refunded to buyer', className: 'badge--neutral' }
 };
@@ -61,7 +61,7 @@ function DeliverForm({ purchaseId, onDelivered }) {
         <input id={`deliver-file-${purchaseId}`} type="file" onChange={e => setFile(e.target.files[0] || null)} />
       </div>
       {error && <p className="error-text" style={{ marginBottom: 10 }}>{error}</p>}
-      <button className="btn btn--gold btn--sm" disabled={submitting} type="submit">
+      <button className="btn btn--cta btn--sm" disabled={submitting} type="submit">
         {submitting ? 'Marking delivered...' : 'Mark delivered'}
       </button>
     </form>
@@ -95,7 +95,7 @@ function OrderRow({ o, creator, currentUserId, onUpdate }) {
           {label && <span className={`badge ${label.className}`}>{label.text}</span>}
           <span className="mono" style={{ fontWeight: 600, fontSize: '.9rem' }}>{formatMoney(o.amount_minor, o.currency)}</span>
           {fulfillment === 'awaiting_delivery' && (
-            <button className="btn btn--gold btn--sm" onClick={() => setDelivering(d => !d)}>
+            <button className="btn btn--cta btn--sm" onClick={() => setDelivering(d => !d)}>
               {delivering ? 'Cancel' : 'Mark delivered'}
             </button>
           )}
@@ -180,7 +180,7 @@ export default function Orders() {
 
       <div className="card card--pad" style={{ marginBottom: 24 }}>
         <p style={{ fontWeight: 600, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 7 }}>
-          <FiTrendingUp size={15} color="var(--green-glow)" /> Running fast this week
+          <FiTrendingUp size={15} color="var(--brand-strong)" /> Running fast this week
         </p>
         {data.trending.length === 0 && <p className="muted" style={{ fontSize: '.9rem' }}>No orders in the last 7 days yet.</p>}
         {data.trending.length > 0 && (

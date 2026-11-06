@@ -6,7 +6,7 @@ import {
 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { api } from '../../lib/api';
-import { formatMoney } from '../../lib/money';
+import { formatMoney, formatTotals } from '../../lib/money';
 import VerificationChecklist from '../../components/VerificationChecklist.jsx';
 
 function greeting() {
@@ -82,7 +82,7 @@ export default function DashboardHome() {
           <p className="section__eyebrow mono">YOUR STOREFRONT</p>
           <h1>{greeting()}, {creator.name.split(' ')[0]}</h1>
         </div>
-        <Link to="/dashboard/products/new" className="btn btn--gold btn--sm">
+        <Link to="/dashboard/products/new" className="btn btn--cta btn--sm">
           <FiPlus size={15} /> New product
         </Link>
       </header>
@@ -103,7 +103,7 @@ export default function DashboardHome() {
         </div>
         <div className="card stat-tile">
           <span className="stat-tile__label"><FiDollarSign size={13} /> Revenue</span>
-          <span className="stat-tile__value">{insights ? formatMoney(insights.revenue_minor, insights.currency) : '-'}</span>
+          <span className="stat-tile__value">{insights ? formatTotals(insights.revenue_by_currency) : '-'}</span>
         </div>
         <div className="card stat-tile">
           <span className="stat-tile__label"><FiBarChart2 size={13} /> Orders</span>

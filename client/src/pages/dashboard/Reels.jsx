@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import FileUpload from '../../components/FileUpload.jsx';
 import { FiTrash2, FiEye, FiUploadCloud } from 'react-icons/fi';
 import { api } from '../../lib/api';
 
@@ -83,8 +84,7 @@ export default function Reels() {
         <form onSubmit={submit} style={{ maxWidth: 480 }}>
           <div className="field">
             <label htmlFor="reel-video">Video</label>
-            <input id="reel-video" type="file" accept="video/mp4,video/webm,video/quicktime" onChange={handleVideo}
-              style={{ padding: '.6rem' }} />
+            <FileUpload id="reel-video" accept="video/mp4,video/webm,video/quicktime" onChange={handleVideo} label="Choose a video" />
             <small>MP4, WebM, or MOV. Up to 60MB. A short 30-60 second clip works best.</small>
             {videoPreview && (
               <video src={videoPreview} controls style={{ width: '100%', maxHeight: 320, marginTop: 10, borderRadius: 'var(--radius-sm)', background: '#000' }} />

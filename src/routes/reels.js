@@ -4,6 +4,7 @@ const path = require('path');
 const { randomUUID } = require('crypto');
 const db = require('../db/schema');
 const { requireAuth, requireCreator } = require('../middleware/auth');
+const { counterLimiter } = require('../middleware/rateLimit');
 const storage = require('../lib/storage');
 
 const router = express.Router();
@@ -31,7 +32,7 @@ const FEED_SELECT = `
          p.slug AS product_slug, p.title AS product_title, p.price_minor, p.currency, p.cover_path AS product_cover
   FROM reels r
   JOIN creators c ON c.id = r.creator_id
-  LEFT JOIN products p ON p.id = r.product_id
+  LEFT JOIN products p ON p.id = r.product_id AND p.status = 'published' AND p.review_status = 'clear'
 `;
 
 function withLikeState(reels, userId) {
@@ -126,7 +127,7 @@ router.delete('/:id/like', requireAuth, (req, res) => {
 // POST /api/reels/:id/view — a lightweight, honest view counter (no login
 // required, same reasoning as product share-clicks in products.js: this
 // counts "a player started playing it," not a verified watch-through).
-router.post('/:id/view', (req, res) => {
+router.post('/:id/view', counterLimiter, (req, res) => {
   const reel = db.prepare('SELECT id FROM reels WHERE id = ?').get(req.params.id);
   if (!reel) return res.status(404).json({ error: 'Reel not found.' });
   db.prepare('UPDATE reels SET view_count = view_count + 1 WHERE id = ?').run(reel.id);

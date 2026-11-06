@@ -2,8 +2,29 @@ const express = require('express');
 const db = require('../db/schema');
 const storage = require('../lib/storage');
 const { requireAuth } = require('../middleware/auth');
+const { syncSubscriptionStatuses } = require('../lib/subscriptions');
 
 const router = express.Router();
+
+// Same rules as the product page. A serial is paid for once, a subscription
+// only opens while it is active, and the seller can always open their own.
+function canOpenIssue(user, issue) {
+  const product = db.prepare('SELECT type, creator_id FROM products WHERE id = ?').get(issue.product_id);
+  if (!product) return false;
+  if (db.prepare('SELECT 1 FROM creators WHERE id = ? AND user_id = ?').get(product.creator_id, user.id)) return true;
+  if (product.type === 'subscription') {
+    syncSubscriptionStatuses();
+    return !!db.prepare(`
+      SELECT 1 FROM subscriptions s JOIN buyers b ON b.id = s.buyer_id
+      WHERE b.user_id = ? AND s.product_id = ? AND s.status = 'active'
+    `).get(user.id, issue.product_id);
+  }
+  return !!db.prepare(`
+    SELECT 1 FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
+    WHERE b.user_id = ? AND pu.product_id = ? AND pu.payment_status = 'paid'
+      AND COALESCE(pu.fulfillment_status, '') != 'refunded'
+  `).get(user.id, issue.product_id);
+}
 
 // GET /api/downloads/:token — no login required by design: this is the
 // link that goes out by email/WhatsApp and has to work for a buyer on a
@@ -146,12 +167,7 @@ router.get('/issue/:issueId', requireAuth, async (req, res) => {
   const issue = db.prepare('SELECT * FROM issues WHERE id = ?').get(req.params.issueId);
   if (!issue) return res.status(404).send('This issue could not be found.');
 
-  const owns = db.prepare(`
-    SELECT 1 FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
-    WHERE b.user_id = ? AND pu.product_id = ? AND pu.payment_status = 'paid'
-      AND COALESCE(pu.fulfillment_status, '') != 'refunded'
-  `).get(req.user.id, issue.product_id);
-  if (!owns) return res.status(403).send("You don't have access to this issue.");
+  if (!canOpenIssue(req.user, issue)) return res.status(403).send("You don't have access to this issue.");
 
   if (issue.kind === 'external_link') {
     return res.redirect(issue.external_url);
@@ -175,12 +191,7 @@ router.get('/issue/:issueId/stream', requireAuth, async (req, res) => {
   const issue = db.prepare('SELECT * FROM issues WHERE id = ?').get(req.params.issueId);
   if (!issue) return res.status(404).send('This issue could not be found.');
 
-  const owns = db.prepare(`
-    SELECT 1 FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
-    WHERE b.user_id = ? AND pu.product_id = ? AND pu.payment_status = 'paid'
-      AND COALESCE(pu.fulfillment_status, '') != 'refunded'
-  `).get(req.user.id, issue.product_id);
-  if (!owns) return res.status(403).send("You don't have access to this issue.");
+  if (!canOpenIssue(req.user, issue)) return res.status(403).send("You don't have access to this issue.");
   if (issue.kind === 'external_link' || !issue.file_path) return res.status(404).send('No document is attached to this issue.');
   return streamDocument(req, res, issue.file_path, issue.original_filename);
 });
@@ -195,12 +206,7 @@ router.get('/issue/:issueId/view', requireAuth, async (req, res) => {
   const issue = db.prepare('SELECT * FROM issues WHERE id = ?').get(req.params.issueId);
   if (!issue) return res.status(404).send('This issue could not be found.');
 
-  const owns = db.prepare(`
-    SELECT 1 FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
-    WHERE b.user_id = ? AND pu.product_id = ? AND pu.payment_status = 'paid'
-      AND COALESCE(pu.fulfillment_status, '') != 'refunded'
-  `).get(req.user.id, issue.product_id);
-  if (!owns) return res.status(403).send("You don't have access to this issue.");
+  if (!canOpenIssue(req.user, issue)) return res.status(403).send("You don't have access to this issue.");
 
   if (issue.kind === 'external_link') {
     return res.redirect(issue.external_url);

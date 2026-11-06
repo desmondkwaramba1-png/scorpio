@@ -42,13 +42,13 @@ export default function Sellers() {
                 <td data-label="Email">{s.email}</td>
                 <td data-label="Phone">{s.phone || '—'}</td>
                 <td data-label="Products">{s.published_count} / {s.product_count}</td>
-                <td data-label="Available" className="mono" style={{ color: 'var(--green-glow)', fontWeight: 600 }}>{formatMoney(s.available_minor, 'USD')}</td>
+                <td data-label="Available" className="mono" style={{ color: 'var(--brand-strong)', fontWeight: 600 }}>{formatMoney(s.available_minor, 'USD')}</td>
                 <td data-label="Held (escrow)" className="mono muted">{formatMoney(s.escrowed_minor, 'USD')}</td>
                 <td data-label="Payout number">{s.payout_ecocash_number
                   ? <span className="mono">{s.payout_ecocash_number}</span>
                   : <span className="badge badge--neutral">None on file</span>}
                 </td>
-                <td data-label="Verified">{s.verified ? <span className="badge badge--green">Verified</span> : <span className="badge badge--neutral">Not yet</span>}</td>
+                <td data-label="Verified">{s.verified ? <span className="badge badge--success">Verified</span> : <span className="badge badge--neutral">Not yet</span>}</td>
                 <td data-label="Joined" className="muted">{s.created_at}</td>
               </tr>
             ))}

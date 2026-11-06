@@ -6,6 +6,7 @@ module.exports = [{
     sourceType: "script",
     globals: {}
   },
+  linterOptions: { reportUnusedDisableDirectives: true },
   rules: {
     "eqeqeq": "error"
   }

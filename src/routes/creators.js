@@ -1,6 +1,5 @@
 const express = require('express');
 const multer = require('multer');
-const path = require('path');
 const { randomUUID } = require('crypto');
 const db = require('../db/schema');
 const { requireAuth } = require('../middleware/auth');
@@ -10,7 +9,7 @@ const { isValidEcocashNumber } = require('../services/payment');
 const { sendEmail } = require('../lib/notify');
 const { issuePayoutCode, consumePayoutCode, TTL_MINUTES } = require('../lib/payoutCodes');
 const { getVerificationCriteria, checkAndUpdateVerification } = require('../lib/verification');
-const { optimizeImage } = require('../lib/imageProcessing');
+const { prepareImage } = require('../lib/imageProcessing');
 const storage = require('../lib/storage');
 
 const router = express.Router();
@@ -21,10 +20,9 @@ const upload = multer({
 });
 
 async function uploadAvatar(file) {
-  const key = `avatars/${randomUUID()}${path.extname(file.originalname)}`;
-  let buffer = file.buffer;
-  try { buffer = await optimizeImage(file.buffer, { maxWidth: 480, enhance: true }); } catch (err) { console.error('[image optimize]', err); }
-  await storage.uploadBuffer(key, buffer, file.mimetype);
+  const image = await prepareImage(file.buffer, { maxWidth: 480, enhance: true });
+  const key = `avatars/${randomUUID()}${image.ext}`;
+  await storage.uploadBuffer(key, image.buffer, image.mime);
   return storage.publicUrl(key);
 }
 
@@ -43,18 +41,23 @@ const RESERVED_HANDLES = new Set([
   'blog', 'admin'
 ]);
 
+// An allow-list on purpose: a new private column stays private by default.
 function publicCreator(row) {
   if (!row) return row;
-  const { payout_ecocash_number, payout_bank_details, ...pub } = row;
-  return pub;
+  const { id, handle, name, bio, avatar_path, verified, verified_at, created_at } = row;
+  return { id, handle, name, bio, avatar_path, verified, verified_at, created_at };
 }
 
 // POST /api/creators — onboarding. Logged-in only, one creator profile per
 // user. what_selling and who_for are the qualification questions: light
 // friction, real signal, asked once.
 router.post('/', requireAuth, upload.single('avatar'), async (req, res) => {
-  const { handle, name, bio, what_selling, who_for, payout_ecocash_number, payout_bank_details } = req.body;
+  const { handle, name, bio, what_selling, who_for } = req.body;
+  const payoutNumber = String(req.body.payout_ecocash_number ?? '').replace(/[\s-]+/g, '');
 
+  if (payoutNumber && !isValidEcocashNumber(payoutNumber)) {
+    return res.status(400).json({ error: 'Enter a valid EcoCash number, e.g. 0771234567 or +263771234567.' });
+  }
   if (!handle || !name || !what_selling || !who_for) {
     return res.status(400).json({ error: 'handle, name, what_selling, and who_for are required.' });
   }
@@ -74,18 +77,18 @@ router.post('/', requireAuth, upload.single('avatar'), async (req, res) => {
     const avatarPath = req.file ? await uploadAvatar(req.file) : null;
     const result = db.prepare(`
       INSERT INTO creators
-        (user_id, handle, name, bio, what_selling, who_for, avatar_path, payout_ecocash_number, payout_bank_details)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (user_id, handle, name, bio, what_selling, who_for, avatar_path, payout_ecocash_number)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       req.user.id, handle, name, bio || null, what_selling, who_for, avatarPath,
-      payout_ecocash_number || null,
-      payout_bank_details ? JSON.stringify(JSON.parse(payout_bank_details)) : null
+      payoutNumber || null
     );
 
     checkAndUpdateVerification(result.lastInsertRowid);
     const creator = db.prepare('SELECT * FROM creators WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(creator);
   } catch (err) {
+    if (err.badImage) return res.status(400).json({ error: err.message });
     if (err.message.includes('UNIQUE') && err.message.includes('handle')) {
       return res.status(409).json({ error: 'That handle is already taken.' });
     }
@@ -128,7 +131,7 @@ router.patch('/me', accountSecurityLimiter, requireAuth, upload.single('avatar')
     }
   }
 
-  const { name, bio, what_selling, who_for, payout_ecocash_number, payout_bank_details } = req.body;
+  const { name, bio, what_selling, who_for } = req.body;
   // Express 4 doesn't route a rejected promise to the error middleware on
   // its own (that's Express 5 behavior) - an unguarded await here that
   // rejects (a real R2 network hiccup, not hypothetical) used to leave the
@@ -140,13 +143,13 @@ router.patch('/me', accountSecurityLimiter, requireAuth, upload.single('avatar')
   try {
     avatarPath = req.file ? await uploadAvatar(req.file) : req.creator.avatar_path;
   } catch (err) {
-    return res.status(502).json({ error: 'Could not upload that photo, try again.' });
+    return res.status(err.badImage ? 400 : 502).json({ error: err.badImage ? err.message : 'Could not upload that photo, try again.' });
   }
 
   db.prepare(`
     UPDATE creators SET
       name = ?, bio = ?, what_selling = ?, who_for = ?, avatar_path = ?,
-      payout_ecocash_number = ?, payout_bank_details = ?,
+      payout_ecocash_number = ?,
       payout_changed_at = CASE WHEN ? THEN datetime('now') ELSE payout_changed_at END
     WHERE id = ?
   `).run(
@@ -156,7 +159,6 @@ router.patch('/me', accountSecurityLimiter, requireAuth, upload.single('avatar')
     who_for ?? req.creator.who_for,
     avatarPath,
     payoutChanging ? (requestedPayout || null) : req.creator.payout_ecocash_number,
-    payout_bank_details ? JSON.stringify(JSON.parse(payout_bank_details)) : req.creator.payout_bank_details,
     payoutChanging ? 1 : 0,
     req.creator.id
   );
@@ -244,11 +246,16 @@ router.get('/:handle', (req, res) => {
            EXISTS(SELECT 1 FROM product_likes WHERE product_id = p.id AND user_id = ?) AS liked_by_me,
            EXISTS(SELECT 1 FROM cart_items WHERE product_id = p.id AND user_id = ?) AS in_cart
     FROM products p
-    WHERE p.creator_id = ? AND p.status = 'published'
+    WHERE p.creator_id = ? AND p.status = 'published' AND p.review_status = 'clear'
     ORDER BY p.created_at DESC
   `).all(req.user ? req.user.id : 0, req.user ? req.user.id : 0, creator.id);
 
-  res.json({ ...publicCreator(creator), avg_rating: ratingAgg.avg_rating, review_count: ratingAgg.review_count, products });
+  res.json({
+    ...publicCreator(creator),
+    avg_rating: ratingAgg.avg_rating,
+    review_count: ratingAgg.review_count,
+    products: products.map(({ review_status, flag_reason, ...product }) => product)
+  });
 });
 
 module.exports = router;

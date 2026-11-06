@@ -46,9 +46,13 @@ const orderLookupLimiter = rateLimit({
 // ADMIN_KEY is the entire access control for /api/admin/* (see admin.js) —
 // timingSafeEqual already closes the timing side-channel, this closes the
 // brute-force one, so a leaked/weak key can't just be hammered forever.
+// Only wrong keys count, and the right key is never blocked: this exists to stop
+// guessing, so someone guessing from a shared proxy address must not be able to
+// lock the real admin out. Required here because routes/admin.js loads this file.
 const adminLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   limit: 60,
+  skip: req => require('../routes/admin').isValidAdminKey(req.headers['x-admin-key']),
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many admin requests. Try again in a few minutes.' }
@@ -77,4 +81,38 @@ const accountSecurityLimiter = rateLimit({
   message: { error: 'Too many security changes. Try again in a few minutes.' }
 });
 
-module.exports = { accountSecurityLimiter, loginLimiter, authLimiter, checkoutLimiter, reportLimiter, orderLookupLimiter, adminLimiter };
+// Signed-in actions are limited per account, not per address, so people who
+// share a carrier or proxy address never use up each other's allowance.
+const perAccountKey = req => (req.user ? `user:${req.user.id}` : req.ip);
+
+// Comments, likes and other things that write public content.
+const engagementLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 30,
+  keyGenerator: perAccountKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'You are doing that a lot. Try again in a few minutes.' }
+});
+
+// Order and product reports from signed-in users.
+const accountReportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  keyGenerator: perAccountKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many reports sent. Try again later.' }
+});
+
+// Share clicks and reel views are anonymous counters. Past the cap the request
+// still succeeds, it just stops counting, so a real visitor never sees an error.
+const counterLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.json({ ok: true, counted: false })
+});
+
+module.exports = { engagementLimiter, accountReportLimiter, counterLimiter, accountSecurityLimiter, loginLimiter, authLimiter, checkoutLimiter, reportLimiter, orderLookupLimiter, adminLimiter };

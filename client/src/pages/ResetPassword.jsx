@@ -39,7 +39,7 @@ export default function ResetPassword() {
   if (!token) {
     return (
       <AuthShell cardStyle={{ textAlign: 'center' }}>
-        <h1 style={{ fontSize: '1.5rem', marginBottom: 10 }}>This link is missing its token</h1>
+        <h1 style={{ fontSize: '1.5rem', marginBottom: 10 }}>This reset link isn't complete</h1>
         <p className="muted" style={{ marginBottom: 24 }}>Use the reset link from your email, or request a new one.</p>
         <Link to="/forgot-password" className="btn btn--primary">Request a new link</Link>
       </AuthShell>

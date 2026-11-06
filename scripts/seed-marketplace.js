@@ -14,8 +14,14 @@
  * Demo products are real, published, and buyable — covers are the committed
  * gradient set under /brand/seed/, and the download redirects to a real
  * sample PDF. A buyer of a demo product gets that PDF.
+ *
+ * For local and staging data only: it refuses to add data when NODE_ENV is
+ * production. --remove still works there, to clean up. Each run generates its
+ * own password, and demo sellers get no payout number, so nobody can log in
+ * with a known password and no money can be sent to a made-up number.
  */
 
+const { randomBytes } = require('crypto');
 const bcrypt = require('bcryptjs');
 const db = require('../src/db/schema');
 const { checkAndUpdateVerification } = require('../src/lib/verification');
@@ -24,7 +30,7 @@ const TARGET_PRODUCTS = Number(process.env.SEED_COUNT || 200);
 const NUM_CREATORS = 24;
 const COVERS = Array.from({ length: 24 }, (_, i) => `/brand/seed/cover-${i + 1}.png`);
 const SAMPLE_FILE = 'https://www.scorpio.co.zw/brand/seed/sample-guide.pdf';
-const PASSWORD = 'scorpiodemo2026';
+const PASSWORD = randomBytes(18).toString('base64url');
 const DEMO_EMAIL_DOMAIN = '@demo.scorpio.co.zw';
 
 const FIRST = ['Tendai', 'Rutendo', 'Farai', 'Nyasha', 'Tapiwa', 'Chipo', 'Kudzai', 'Tafara', 'Rumbidzai', 'Simba', 'Panashe', 'Tinashe', 'Ropafadzo', 'Munashe', 'Anesu', 'Takudzwa', 'Vimbai', 'Batsirai', 'Shamiso', 'Tanaka', 'Fadzai', 'Wadzanai', 'Blessing', 'Prosper'];
@@ -107,6 +113,11 @@ if (REMOVE) {
   process.exit(0);
 }
 
+if (process.env.NODE_ENV === 'production') {
+  console.error('Refusing to add demo data to production. Use --remove to clean up.');
+  process.exit(1);
+}
+
 if (FRESH && existingDemo) {
   console.log(`Removed ${removeDemoData()} previous demo creators and their products.`);
 } else if (existingDemo) {
@@ -161,7 +172,7 @@ const run = db.transaction(() => {
       ures.lastInsertRowid, handle, name, `${handle}${DEMO_EMAIL_DOMAIN}`, bio,
       'Practical digital guides, templates and short courses.',
       'Zimbabweans starting or running a small business or side hustle.',
-      COVERS[c % COVERS.length], `07${rint(70, 78)} ${rint(100, 999)} ${rint(1000, 9999)}`,
+      COVERS[c % COVERS.length], null,
       rint(5, 120)
     );
     const creatorId = cres.lastInsertRowid;

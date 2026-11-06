@@ -234,7 +234,7 @@ export default function EditProduct() {
           <p className="section__eyebrow mono">MANAGE YOUR LISTING</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <h1 style={{ fontSize: '1.5rem' }}>Edit product</h1>
-            <span className={`badge ${product.status === 'published' ? 'badge--green' : 'badge--neutral'}`}>{product.status}</span>
+            <span className={`badge ${product.status === 'published' ? 'badge--success' : 'badge--neutral'}`}>{product.status}</span>
           </div>
           <p className="muted" style={{ marginTop: 6 }}>Update the details, check the buyer preview, then save or publish again.</p>
         </div>

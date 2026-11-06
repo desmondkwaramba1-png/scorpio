@@ -68,12 +68,12 @@ export default function DisputeThread({ purchaseId, currentUserId, disputeStatus
   return (
     <div className="card dispute-thread">
       <div className="dispute-thread__header">
-        <h3 className="dispute-thread__title">
+        <h2 className="dispute-thread__title">
           <FiLock size={16} /> Case Chat
           <span className={`badge ${disputeStatus === 'open' ? 'badge--red' : 'badge--neutral'}`}>
             {disputeStatus}
           </span>
-        </h3>
+        </h2>
         <p className="dispute-thread__reason">Reason: {caseReason}</p>
         <p className="dispute-thread__how"><strong>How this works:</strong> You, the creator, and SCORPIO can read this case. Reply here while it is open; the chat becomes read-only after SCORPIO resolves the dispute.</p>
         <p className="dispute-thread__policy">Keep contact on SCORPIO. Phone numbers, email addresses, and links are blocked. Use attachments only as case evidence.</p>

@@ -130,7 +130,7 @@ export default function Settings() {
                 <span className="settings-row__label">Email</span>
                 <span className="settings-row__value" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                   {user?.email}
-                  <span className={`badge ${user?.email_verified_at ? 'badge--green' : 'badge--neutral'}`} style={{ fontSize: '.68rem' }}>
+                  <span className={`badge ${user?.email_verified_at ? 'badge--success' : 'badge--neutral'}`} style={{ fontSize: '.68rem' }}>
                     {user?.email_verified_at ? 'Verified' : 'Unverified'}
                   </span>
                 </span>
@@ -152,14 +152,14 @@ export default function Settings() {
                       style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', border: 0 }} />
                     <div style={{
                       width: 56, height: 56, borderRadius: '50%',
-                      background: avatarUrl ? `url(${avatarUrl}) center/cover` : 'var(--green-tint)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--green-glow)'
+                      background: avatarUrl ? `url(${avatarUrl}) center/cover` : 'var(--brand-tint)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand-strong)'
                     }}>
                       {!avatarUrl && <FiUser size={24} />}
                     </div>
                     <div style={{
                       position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, borderRadius: '50%',
-                      background: 'var(--gold)', color: 'var(--green-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'var(--accent)', color: 'var(--chrome)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       border: '2px solid var(--surface)'
                     }}>
                       <FiCamera size={10} />
@@ -167,7 +167,7 @@ export default function Settings() {
                   </label>
                   <div>
                     <p style={{ fontWeight: 600, fontSize: '.9rem' }}>Profile photo</p>
-                    <label htmlFor="avatar" className="muted" style={{ fontSize: '.82rem', fontWeight: 600, cursor: 'pointer', color: 'var(--green-glow)' }}>
+                    <label htmlFor="avatar" className="muted" style={{ fontSize: '.82rem', fontWeight: 600, cursor: 'pointer', color: 'var(--brand-strong)' }}>
                       {avatar ? 'Photo updated, save to apply' : (creator.avatar_path ? 'Change photo' : 'Choose a photo')}
                     </label>
                   </div>
@@ -278,7 +278,7 @@ export default function Settings() {
 
           {error && <p className="error-text" style={{ marginTop: 16 }}>{error}</p>}
           {saved && (
-            <p style={{ color: 'var(--green-glow)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, marginTop: 16 }}>
+            <p style={{ color: 'var(--brand-strong)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, marginTop: 16 }}>
               <FiCheck size={15} /> Saved.
             </p>
           )}
@@ -299,14 +299,14 @@ export default function Settings() {
           </p>
           <div className="card card--pad">
             {/* Matches the upload control's own no-avatar state just
-                above (FiUser on --green-tint) - this preview used to be a
+                above (FiUser on --brand-tint) - this preview used to be a
                 plain blank circle with no fallback content at all when no
                 avatar was set, inconsistent with its own sibling control
                 a few lines up in this same file. */}
             <div style={{
               width: 56, height: 56, borderRadius: '50%', marginBottom: 14,
-              background: avatarUrl ? `url(${avatarUrl}) center/cover` : 'var(--green-tint)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--green-glow)'
+              background: avatarUrl ? `url(${avatarUrl}) center/cover` : 'var(--brand-tint)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand-strong)'
             }}>
               {!avatarUrl && <FiUser size={22} />}
             </div>

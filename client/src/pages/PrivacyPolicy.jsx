@@ -8,7 +8,7 @@ function Section({ icon: Icon, title, children }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
         <span style={{
           width: 32, height: 32, borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'var(--gold-tint)', color: 'var(--gold-ink)'
+          background: 'var(--accent-tint)', color: 'var(--accent-ink)'
         }}>
           <Icon size={16} />
         </span>

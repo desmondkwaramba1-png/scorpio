@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { safeNext } from '../lib/safeNext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FiShoppingBag, FiShoppingCart } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -12,7 +13,7 @@ export default function OAuthComplete() {
   const { refresh } = useAuth();
   const [asking, setAsking] = useState(false);
 
-  const next = searchParams.get('next');
+  const next = safeNext(searchParams.get('next'));
   const roleParam = searchParams.get('role');
   const presetRole = roleParam === 'buyer' || roleParam === 'creator' ? roleParam : null;
   const isNew = searchParams.get('is_new') === '1';

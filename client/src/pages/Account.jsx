@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { FiDownload, FiRefreshCw, FiUser, FiPackage, FiCompass, FiPlay, FiX, FiCamera, FiKey, FiCopy, FiCheck, FiShield, FiAlertTriangle, FiExternalLink, FiClock, FiDollarSign, FiRepeat, FiBookOpen } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api';
-import { formatMoney } from '../lib/money';
+import { formatMoney, formatTotals } from '../lib/money';
 import { timeAgo } from '../lib/time';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 import ReportProblem from '../components/ReportProblem.jsx';
@@ -16,9 +16,9 @@ function formatDate(sqliteDatetime) {
 }
 
 const FULFILLMENT_LABEL = {
-  awaiting_delivery: { text: 'In progress', className: 'badge--gold' },
-  delivered: { text: 'Awaiting your OK', className: 'badge--gold' },
-  released: { text: 'Completed', className: 'badge--green' },
+  awaiting_delivery: { text: 'In progress', className: 'badge--highlight' },
+  delivered: { text: 'Awaiting your OK', className: 'badge--highlight' },
+  released: { text: 'Completed', className: 'badge--success' },
   disputed: { text: 'Under review', className: 'badge--neutral' },
   refunded: { text: 'Refunded', className: 'badge--neutral' }
 };
@@ -127,12 +127,12 @@ function ServiceStatus({ purchaseId, service: initial, currentUserId, onUpdate }
       {stillWaiting && (
         <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
           {service.fulfillment_status === 'delivered' && service.delivery && deliveryChecked && (
-            <button onClick={confirm} disabled={submitting} className="btn btn--gold btn--sm">
+            <button onClick={confirm} disabled={submitting} className="btn btn--cta btn--sm">
               <FiCheck size={13} /> Confirm, all good
             </button>
           )}
           {service.fulfillment_status === 'delivered' && !service.delivery && (
-            <button onClick={confirm} disabled={submitting} className="btn btn--gold btn--sm">
+            <button onClick={confirm} disabled={submitting} className="btn btn--cta btn--sm">
               <FiCheck size={13} /> Confirm, all good
             </button>
           )}
@@ -183,7 +183,7 @@ function ServiceStatus({ purchaseId, service: initial, currentUserId, onUpdate }
 }
 
 const SUBSCRIPTION_STATUS_LABEL = {
-  active: { text: 'Active', className: 'badge--green' },
+  active: { text: 'Active', className: 'badge--success' },
   lapsed: { text: 'Lapsed', className: 'badge--neutral' },
   canceled: { text: 'Canceled', className: 'badge--neutral' }
 };
@@ -247,7 +247,7 @@ function SubscriptionRow({ subscription, onUpdate, onRenewed }) {
         <div style={{ display: 'flex', gap: 14, alignItems: 'center', minWidth: 0 }}>
           <div style={{
             width: 48, height: 48, borderRadius: 8, flexShrink: 0,
-            background: subscription.product_cover_path ? `url(${subscription.product_cover_path}) center/cover` : 'var(--green-tint)'
+            background: subscription.product_cover_path ? `url(${subscription.product_cover_path}) center/cover` : 'var(--brand-tint)'
           }} />
           <div style={{ minWidth: 0 }}>
             <Link to={productUrl} style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
@@ -289,7 +289,7 @@ function SubscriptionRow({ subscription, onUpdate, onRenewed }) {
           <FiBookOpen size={13} /> View issues
         </Link>
         {subscription.renewable && !showRenewForm && (
-          <button onClick={() => setShowRenewForm(true)} className="btn btn--gold btn--sm">
+          <button onClick={() => setShowRenewForm(true)} className="btn btn--cta btn--sm">
             <FiRefreshCw size={13} /> Renew
           </button>
         )}
@@ -306,11 +306,11 @@ function SubscriptionRow({ subscription, onUpdate, onRenewed }) {
             <div className="field input-icon" style={{ flex: '1 1 180px', marginBottom: 0 }}>
               <label htmlFor={`renew-phone-${subscription.id}`}>EcoCash number</label>
               <FiPhone size={15} />
-              <input id={`renew-phone-${subscription.id}`} required value={phone} placeholder="0780070488"
+              <input id={`renew-phone-${subscription.id}`} required value={phone} placeholder="07X XXX XXXX"
                 onChange={e => setPhone(e.target.value)} />
             </div>
           )}
-          <button className="btn btn--gold btn--sm" disabled={renewing} type="submit">
+          <button className="btn btn--cta btn--sm" disabled={renewing} type="submit">
             {renewing ? (isFreeSub ? 'Renewing...' : 'Sending EcoCash prompt...') : 'Confirm renewal'}
           </button>
         </form>
@@ -336,7 +336,7 @@ function SeriesRow({ purchase, currentUserId, onUpdate }) {
         <div style={{ display: 'flex', gap: 14, alignItems: 'center', minWidth: 0 }}>
           <div style={{
             width: 48, height: 48, borderRadius: 8, flexShrink: 0,
-            background: purchase.product_cover_path ? `url(${purchase.product_cover_path}) center/cover` : 'var(--green-tint)'
+            background: purchase.product_cover_path ? `url(${purchase.product_cover_path}) center/cover` : 'var(--brand-tint)'
           }} />
           <div style={{ minWidth: 0 }}>
             <Link to={productUrl} style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
@@ -460,11 +460,11 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId, autoOpen
             </span>
           ) : (
             <>
-              <span className={`badge ${purchase.payment_status === 'paid' ? 'badge--green' : 'badge--neutral'}`}>
+              <span className={`badge ${purchase.payment_status === 'paid' ? 'badge--success' : 'badge--neutral'}`}>
                 {{ paid: 'Paid', pending: 'Waiting for payment', failed: 'Payment not completed' }[purchase.payment_status] || purchase.payment_status}
               </span>
               {purchase.payment_status === 'pending' && purchase.payment_reference && (
-                <Link to={`/payment/return?order_id=${purchase.payment_reference}`} style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--green-glow)' }}>
+                <Link to={`/payment/return?order_id=${purchase.payment_reference}`} style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--brand-strong)' }}>
                   Check payment
                 </Link>
               )}
@@ -479,11 +479,11 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId, autoOpen
         </Link>
         <div className="order-card__actions">
           {purchase.view_url && purchase.is_external ? (
-            <a href={purchase.view_url} target="_blank" rel="noopener noreferrer" className="btn btn--gold btn--sm">
+            <a href={purchase.view_url} target="_blank" rel="noopener noreferrer" className="btn btn--cta btn--sm">
               <FiExternalLink size={14} /> Open
             </a>
           ) : purchase.view_url && (
-            <button type="button" onClick={() => setWatching(w => !w)} className="btn btn--gold btn--sm">
+            <button type="button" onClick={() => setWatching(w => !w)} className="btn btn--cta btn--sm">
               {watching ? <FiX size={14} /> : purchase.is_video || purchase.is_audio ? <FiPlay size={14} /> : <FiBookOpen size={14} />}
               {watching ? 'Close' : purchase.is_video ? 'Watch now' : purchase.is_audio ? 'Listen now' : 'Read now'}
             </button>
@@ -524,9 +524,9 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId, autoOpen
       {purchase.license_key && (
         <div className="order-card__license">
           <span className="mono">
-            <FiKey size={13} color="var(--gold)" /> {purchase.license_key}
+            <FiKey size={13} color="var(--accent-icon)" /> {purchase.license_key}
           </span>
-          <button onClick={copyKey} className="btn btn--ghost btn--sm" style={keyCopied ? { color: 'var(--green-glow)' } : undefined}>
+          <button onClick={copyKey} className="btn btn--ghost btn--sm" style={keyCopied ? { color: 'var(--brand-strong)' } : undefined}>
             {keyCopied ? <FiCheck size={13} /> : <FiCopy size={13} />} {keyCopied ? 'Copied' : 'Copy'}
           </button>
         </div>
@@ -548,6 +548,7 @@ function OrderRow({ purchase, onResend, onServiceUpdate, currentUserId, autoOpen
             <ReportProblem
               purchaseId={purchase.id}
               hasOpenReport={purchase.has_open_report}
+              startOpen
               onReported={reason => onServiceUpdate?.(purchase.id, { fulfillment_status: 'disputed', dispute: { status: 'open', reason } })}
             />
           ) : (
@@ -621,40 +622,44 @@ export default function Account() {
   }
 
   const paidPurchases = purchases?.filter(p => p.payment_status === 'paid') || [];
-  const totalSpent = paidPurchases.reduce((sum, p) => sum + p.amount_minor, 0);
+  const spentByCurrency = paidPurchases
+    .filter(p => p.fulfillment_status !== 'refunded')
+    .reduce((totals, p) => ({ ...totals, [p.currency]: (totals[p.currency] || 0) + p.amount_minor }), {});
   const seriesPurchases = paidPurchases.filter(p => p.product_type === 'serial');
   const inProgress = paidPurchases.filter(p => p.service && !['released', 'refunded'].includes(p.service.fulfillment_status));
   const needsAttention = inProgress.filter(p =>
     p.service.fulfillment_status === 'delivered' ||
     (p.service.expected_by && new Date(p.service.expected_by) < new Date())
   );
-  const rest = purchases?.filter(p => !needsAttention.includes(p)) || [];
+  // A declined attempt isn't something you own, so it doesn't belong in a library.
+  const rest = purchases?.filter(p => !needsAttention.includes(p) && p.payment_status !== 'failed') || [];
   const acquiredPurchase = acquiredPurchaseId ? purchases?.find(p => p.id === acquiredPurchaseId) : null;
 
   return (
     <div className="wrap" style={{ padding: '40px 20px 80px', maxWidth: 760 }}>
       {acquiredPurchase && (
-        <div className="card card--pad" style={{ marginBottom: 20, borderColor: 'var(--green-glow)' }} role="status">
+        <div className="card card--pad" style={{ marginBottom: 20, borderColor: 'var(--brand-strong)' }} role="status">
           <strong>Your product is ready.</strong>
           <p className="muted" style={{ marginTop: 4 }}>It is opened below. You can read, watch, or download it from your library.</p>
         </div>
       )}
       {avatarError && <p className="error-text" style={{ marginBottom: 12 }}>{avatarError}</p>}
       <div className="card card--pad" style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-        <label htmlFor="avatar-upload" style={{ position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
-          <input id="avatar-upload" type="file" accept="image/*" onChange={handleAvatarChange}
+        <h1 className="sr-only">Your library</h1>
+          <label htmlFor="avatar-upload" style={{ position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
+          <input id="avatar-upload" type="file" accept="image/*" aria-label="Change your profile photo" onChange={handleAvatarChange}
             style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', border: 0 }} />
           <div style={{
             width: 64, height: 64, borderRadius: '50%',
-            background: user?.avatar_url ? `url(${user.avatar_url}) center/cover` : 'var(--green-tint)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--green-glow)',
+            background: user?.avatar_url ? `url(${user.avatar_url}) center/cover` : 'var(--brand-tint)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--brand-strong)',
             opacity: uploadingAvatar ? .5 : 1
           }}>
             {!user?.avatar_url && <FiUser size={26} />}
           </div>
           <div style={{
             position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderRadius: '50%',
-            background: 'var(--gold)', color: 'var(--green-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'var(--accent)', color: 'var(--chrome)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             border: '2px solid var(--surface)'
           }}>
             <FiCamera size={11} />
@@ -674,7 +679,7 @@ export default function Account() {
           </div>
           <div className="card stat-tile">
             <span className="stat-tile__label"><FiDollarSign size={13} /> Spent</span>
-            <span className="mono stat-tile__value">{formatMoney(totalSpent, 'USD')}</span>
+            <span className="mono stat-tile__value">{formatTotals(spentByCurrency)}</span>
           </div>
           <div className="card stat-tile">
             <span className="stat-tile__label"><FiClock size={13} /> In progress</span>
@@ -694,7 +699,7 @@ export default function Account() {
         <div className="empty-state">
           <FiCompass size={26} color="var(--muted)" style={{ marginBottom: 10 }} />
           <strong>No purchases yet.</strong>
-          <Link to="/discover" style={{ color: 'var(--green)', fontWeight: 600 }}>Browse the marketplace</Link>
+          <Link to="/discover" style={{ color: 'var(--brand)', fontWeight: 600 }}>Browse the marketplace</Link>
         </div>
       )}
 
@@ -769,7 +774,7 @@ export default function Account() {
 
       {!creator && (
         <p className="muted" style={{ fontSize: '.82rem', marginTop: 20, textAlign: 'center' }}>
-          Also selling something? <Link to="/onboarding" style={{ color: 'var(--green)', fontWeight: 600 }}>Start a storefront</Link>
+          Also selling something? <Link to="/onboarding" style={{ color: 'var(--brand)', fontWeight: 600 }}>Start a storefront</Link>
         </p>
       )}
     </div>

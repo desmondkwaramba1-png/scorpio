@@ -132,6 +132,10 @@ async function request(path, { method = 'GET', body, timeoutMs = DEFAULT_TIMEOUT
       options.headers['X-CSRF-Token'] = await getCsrfToken();
       continue;
     }
+    // Exactly requireAuth's message: wrong-password replies are 401s as well.
+    if (res.status === 401 && data?.error === 'Log in to continue.' && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('scorpio:session-expired'));
+    }
     if (!res.ok) {
       const error = new Error(data?.error || 'Something went wrong.');
       error.status = res.status;

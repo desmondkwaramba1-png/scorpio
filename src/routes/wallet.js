@@ -15,7 +15,7 @@ router.get('/me', requireAuth, requireCreator, (req, res) => {
     FROM purchases pu
     JOIN products p ON p.id = pu.product_id
     JOIN buyers b ON b.id = pu.buyer_id
-    WHERE p.creator_id = ?
+    WHERE p.creator_id = ? AND pu.payment_status = 'paid' AND pu.amount_minor > 0
     ORDER BY pu.created_at DESC
   `).all(req.creator.id);
 

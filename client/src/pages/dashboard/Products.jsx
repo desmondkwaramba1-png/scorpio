@@ -44,7 +44,7 @@ export default function Products() {
       {products && products.length === 0 && (
         <div className="empty-state">
           <strong>No products yet.</strong>
-          <Link to="/dashboard/products/new" style={{ color: 'var(--green)', fontWeight: 600 }}>Create your first product</Link>
+          <Link to="/dashboard/products/new" style={{ color: 'var(--brand)', fontWeight: 600 }}>Create your first product</Link>
         </div>
       )}
       {products && products.length > 0 && filtered.length === 0 && (
@@ -76,14 +76,17 @@ export default function Products() {
                 style={p.cover_path ? { backgroundImage: `url(${p.cover_path})` } : undefined}
               >
                 {!p.cover_path && p.title.charAt(0).toUpperCase()}
-                <span className={`badge ${p.status === 'published' ? 'badge--green' : 'badge--neutral'}`}
+                <span className={`badge ${p.status === 'published' ? 'badge--success' : 'badge--neutral'}`}
                   style={{ position: 'absolute', top: 10, right: 10 }}>
-                  {p.status}
+                  {p.status === 'published' ? 'Published' : 'Draft'}
                 </span>
+                  {p.review_status === 'flagged' && (
+                    <span className="badge badge--warning" title={p.flag_reason || undefined}>Under review: hidden from the store</span>
+                  )}
               </div>
               <div className="product-card__body">
                 <p className="product-card__title">{p.title}</p>
-                <p className="mono product-card__price">{formatMoney(p.price_minor, p.currency)}</p>
+                <p className="mono product-card__price">{(p.price_minor === 0 ? 'Free' : formatMoney(p.price_minor, p.currency))}</p>
 
                 {p.type === 'service' ? (
                   <p className="muted" style={{ fontSize: '.78rem', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>

@@ -7,9 +7,9 @@ export default function AuthShell({ children, wide = false, cardStyle }) {
     <div className="auth-page">
       <div className={`auth-shell${wide ? ' auth-shell--wide' : ''}`}>
         <div className="auth-shell__intro" aria-label="Scorpio">
-          <span className="auth-shell__mark">S</span>
+          <img className="auth-shell__logo" src="/brand/mark.svg" alt="" />
           <span className="auth-shell__brand">
-            <strong>SCORPIO</strong>
+            <strong>Scorpio</strong>
             <small>Make something worth finding.</small>
           </span>
         </div>

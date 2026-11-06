@@ -77,4 +77,20 @@ async function detectImageMime(buffer) {
   }
 }
 
-module.exports = { optimizeImage, detectImageMime };
+const EXT_BY_MIME = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif' };
+
+// For every small public image (avatars, blog covers). The bytes decide what
+// this is, never the client's filename or Content-Type, so a page or script
+// renamed to look like a picture can't end up published in the bucket.
+async function prepareImage(buffer, options) {
+  const detected = await detectImageMime(buffer);
+  if (!detected) {
+    throw Object.assign(new Error('That file is not a valid JPEG, PNG, WebP, or GIF image.'), { badImage: true });
+  }
+  let output = buffer;
+  try { output = await optimizeImage(buffer, options); } catch (err) { console.error('[image optimize]', err); }
+  const mime = await detectImageMime(output) || detected;
+  return { buffer: output, mime, ext: EXT_BY_MIME[mime] };
+}
+
+module.exports = { optimizeImage, detectImageMime, prepareImage };

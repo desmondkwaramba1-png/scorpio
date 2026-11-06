@@ -8,7 +8,7 @@ export function Stars({ value, size = 14 }) {
   return (
     <span style={{ display: 'inline-flex', gap: 1 }}>
       {[1, 2, 3, 4, 5].map(n => (
-        <FiStar key={n} size={size} fill={n <= rounded ? 'var(--gold)' : 'none'} color="var(--gold)" />
+        <FiStar key={n} size={size} fill={n <= rounded ? 'var(--star)' : 'none'} color="var(--accent-icon)" />
       ))}
     </span>
   );
@@ -27,7 +27,7 @@ function StarInput({ value, onChange }) {
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, lineHeight: 0 }}
           aria-label={`${n} star${n === 1 ? '' : 's'}`}
         >
-          <FiStar size={22} fill={n <= (hover || value) ? 'var(--gold)' : 'none'} color="var(--gold)" />
+          <FiStar size={22} fill={n <= (hover || value) ? 'var(--star)' : 'none'} color="var(--accent-icon)" />
         </button>
       ))}
     </span>
@@ -119,7 +119,7 @@ const ReviewsSection = forwardRef(function ReviewsSection({ productSlug }, ref) 
           <div key={r.id} style={{ display: 'flex', gap: 10 }}>
             <div style={{
               width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-              background: r.avatar_url ? `url(${r.avatar_url}) center/cover` : 'var(--green-tint)'
+              background: r.avatar_url ? `url(${r.avatar_url}) center/cover` : 'var(--brand-tint)'
             }} />
             <div style={{ minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

@@ -43,7 +43,7 @@ export default function EngagementBar({ product, onCommentClick }) {
   async function recordShare(channel) {
     try {
       const data = await api.post(`/api/products/${product.id}/share`, { channel });
-      setShareCount(data.share_count);
+      if (typeof data.share_count === 'number') setShareCount(data.share_count);
     } catch {
       // the share itself already happened; the counter is best-effort
     }
@@ -96,7 +96,7 @@ export default function EngagementBar({ product, onCommentClick }) {
       <div ref={menuRef} style={{ position: 'relative' }}>
         <button onClick={handleShareClick} aria-label={copied ? 'Link copied' : 'Share'} style={{
           display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer',
-          color: copied ? 'var(--green-glow)' : 'var(--muted)', fontSize: '.9rem', fontWeight: 600, padding: 0
+          color: copied ? 'var(--brand-strong)' : 'var(--muted)', fontSize: '.9rem', fontWeight: 600, padding: 0
         }}>
           {copied ? <FiCheck /> : <FiShare2 />} {copied ? 'Copied' : (shareCount > 0 && shareCount)}
         </button>

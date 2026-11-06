@@ -4,7 +4,8 @@ const path = require('path');
 const { PassThrough } = require('node:stream');
 const { randomUUID } = require('crypto');
 const db = require('../db/schema');
-const { requireAuth, requireCreator } = require('../middleware/auth');
+const { requireAuth, requireCreator, requireVerified } = require('../middleware/auth');
+const { engagementLimiter, counterLimiter } = require('../middleware/rateLimit');
 const { toMinor } = require('../lib/money');
 const { checkAndUpdateVerification } = require('../lib/verification');
 const { CATEGORY_VALUES } = require('../lib/categories');
@@ -303,6 +304,21 @@ function withPromo(product, keyCounts) {
   return product;
 }
 
+// The moderation note is for the seller and admin only.
+function withoutReviewNotes({ review_status, flag_reason, ...product }) {
+  return product;
+}
+
+// Portfolio links are seller-written and shown to buyers as links, so each line
+// has to be a real http(s) address.
+function cleanPortfolioUrls(raw) {
+  if (typeof raw !== 'string' || !raw.trim()) return { value: null };
+  const lines = raw.split('\n').map(line => line.trim()).filter(Boolean);
+  const urls = lines.map(normalizeExternalUrl);
+  if (urls.some(url => !url)) return { error: 'Portfolio links must be full http:// or https:// addresses, one per line.' };
+  return { value: urls.join('\n') };
+}
+
 function slugify(title) {
   return title
     .toLowerCase()
@@ -353,11 +369,14 @@ async function verifyAndRecordFile(productId, creatorId, file, title, descriptio
   `).run(result.hash, result.detectedMime, result.pageCount, productId);
 
   if (flags.length > 0) {
+    // Only the new upload is flagged. Flagged listings leave the store, so
+    // flagging the original too would let anyone delist a rival by uploading a
+    // copy of their file.
     db.prepare("UPDATE products SET review_status = 'flagged', flag_reason = ? WHERE id = ?")
       .run(flags.join(' '), productId);
-    if (duplicate) {
-      db.prepare("UPDATE products SET review_status = 'flagged', flag_reason = ? WHERE id = ? AND review_status = 'clear'")
-        .run(`Identical file also listed by another creator (product #${productId}).`, duplicate.id);
+    const seller = db.prepare('SELECT u.email FROM creators c JOIN users u ON u.id = c.user_id WHERE c.id = ?').get(creatorId);
+    if (seller?.email) {
+      sendEmail(seller.email, `"${title}" is under review`, `An automatic check flagged this listing, so it's hidden from the store until we've looked at it.\n\nWhat it found: ${flags.join(' ')}\n\nIf this looks wrong, upload the correct file or reply to this email: ${FRONTEND_URL}/dashboard/products`);
     }
   }
 }
@@ -403,7 +422,7 @@ function loadProductMetrics(productId, userId) {
 // sort=new|price_asc|price_desc|popular|bestselling, limit (homepage rails).
 router.get('/', (req, res) => {
   const { type, q, sort, limit, category } = req.query;
-  const clauses = ["p.status = 'published'"];
+  const clauses = ["p.status = 'published'", "p.review_status = 'clear'"];
   const uid = req.user ? req.user.id : 0;
   const params = [uid, uid];
 
@@ -438,8 +457,9 @@ router.get('/', (req, res) => {
     params.push(...ACTIVE_CATEGORY_VALUES);
   }
   if (q) {
-    clauses.push('p.title LIKE ?');
-    params.push(`%${q}%`);
+    // People search for a topic or a creator, not only an exact title.
+    clauses.push('(p.title LIKE ? OR p.description LIKE ? OR c.name LIKE ?)');
+    params.push(`%${q}%`, `%${q}%`, `%${q}%`);
   }
 
   const orderBy = {
@@ -461,11 +481,11 @@ router.get('/', (req, res) => {
     `${FEED_SELECT} WHERE ${clauses.join(' AND ')} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
   ).all(...params);
 
-  res.json(products.map(product => withPromo(product, {
+  res.json(products.map(product => withoutReviewNotes(withPromo(product, {
     total: product.total_keys,
     unclaimed: product.unclaimed_keys,
     claimed: product.total_keys - product.unclaimed_keys
-  })));
+  }))));
 });
 
 // GET /api/products/mine, the logged-in creator's own products, any status.
@@ -497,8 +517,15 @@ router.get('/:slug', (req, res) => {
   if (!product) return res.status(404).json({ error: 'Product not found.' });
 
   const isOwner = req.creator && req.creator.id === product.creator_id;
-  if (product.status !== 'published' && !isOwner) {
-    return res.status(404).json({ error: 'Product not found.' });
+  // An unpublished or flagged listing is out of the store, but anyone who paid
+  // for it keeps its page. Their library links here, and a serial's issues live here.
+  if ((product.status !== 'published' || product.review_status === 'flagged') && !isOwner) {
+    const bought = req.user && db.prepare(`
+      SELECT 1 FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
+      WHERE b.user_id = ? AND pu.product_id = ? AND pu.payment_status = 'paid'
+        AND COALESCE(pu.fulfillment_status, '') != 'refunded'
+    `).get(req.user.id, product.id);
+    if (!bought) return res.status(404).json({ error: 'Product not found.' });
   }
 
   if (product.type === 'serial' || product.type === 'subscription') {
@@ -627,9 +654,12 @@ router.get('/:slug', (req, res) => {
       WHERE b.user_id = ? AND s.product_id = ?
     `).get(req.user.id, product.id) || null;
   }
+  // The link IS the paid content for link-based products, so it only goes to
+  // the seller or someone who has bought it.
+  const canSeeDeliverable = isOwner || !!product.already_purchased;
   product.files = db.prepare(
     'SELECT id, kind, external_url, original_filename FROM product_files WHERE product_id = ?'
-  ).all(product.id);
+  ).all(product.id).map(file => (canSeeDeliverable ? file : { ...file, external_url: null }));
 
   const productMetrics = loadProductMetrics(product.id, req.user ? req.user.id : 0);
   product.like_count = Number(productMetrics.like_count || 0);
@@ -639,11 +669,11 @@ router.get('/:slug', (req, res) => {
   product.review_count = Number(productMetrics.review_count || 0);
   product.liked_by_me = !!productMetrics.liked_by_me;
 
-  res.json(withPromo(product));
+  res.json(isOwner ? withPromo(product) : withoutReviewNotes(withPromo(product)));
 });
 
 // POST /api/products/:id/like, toggles the current user's like.
-router.post('/:id/like', requireAuth, (req, res) => {
+router.post('/:id/like', requireAuth, engagementLimiter, (req, res) => {
   const product = db.prepare('SELECT id FROM products WHERE id = ?').get(req.params.id);
   if (!product) return res.status(404).json({ error: 'Product not found.' });
 
@@ -662,20 +692,25 @@ router.post('/:id/like', requireAuth, (req, res) => {
 
 // GET /api/products/:id/comments
 router.get('/:id/comments', (req, res) => {
+  const viewerId = req.user ? req.user.id : 0;
   const comments = db.prepare(`
-    SELECT pc.id, pc.body, pc.created_at, u.username, u.avatar_url
+    SELECT pc.id, pc.body, pc.created_at, u.username, u.avatar_url,
+           (pc.user_id = ? OR c.user_id = ?) AS can_delete
     FROM product_comments pc
     JOIN users u ON u.id = pc.user_id
+    JOIN products p ON p.id = pc.product_id
+    JOIN creators c ON c.id = p.creator_id
     WHERE pc.product_id = ?
     ORDER BY pc.created_at ASC
-  `).all(req.params.id);
+  `).all(viewerId, viewerId, req.params.id);
   res.json(comments);
 });
 
 // POST /api/products/:id/comments
-router.post('/:id/comments', requireAuth, (req, res) => {
+router.post('/:id/comments', requireVerified, engagementLimiter, (req, res) => {
   const { body } = req.body;
-  if (!body || !body.trim()) return res.status(400).json({ error: 'Comment cannot be empty.' });
+  if (typeof body !== 'string' || !body.trim()) return res.status(400).json({ error: 'Comment cannot be empty.' });
+  if (body.trim().length > 1000) return res.status(400).json({ error: 'Keep comments under 1000 characters.' });
 
   const product = db.prepare('SELECT id FROM products WHERE id = ?').get(req.params.id);
   if (!product) return res.status(404).json({ error: 'Product not found.' });
@@ -687,14 +722,32 @@ router.post('/:id/comments', requireAuth, (req, res) => {
     SELECT pc.id, pc.body, pc.created_at, u.username, u.avatar_url
     FROM product_comments pc JOIN users u ON u.id = pc.user_id WHERE pc.id = ?
   `).get(result.lastInsertRowid);
-  res.status(201).json(comment);
+  res.status(201).json({ ...comment, can_delete: 1 });
+});
+
+// DELETE /api/products/:id/comments/:commentId, by whoever wrote it or the
+// seller whose listing it sits on.
+router.delete('/:id/comments/:commentId', requireAuth, (req, res) => {
+  const comment = db.prepare(`
+    SELECT pc.id, pc.user_id, c.user_id AS seller_user_id
+    FROM product_comments pc
+    JOIN products p ON p.id = pc.product_id
+    JOIN creators c ON c.id = p.creator_id
+    WHERE pc.id = ? AND pc.product_id = ?
+  `).get(req.params.commentId, req.params.id);
+  if (!comment) return res.status(404).json({ error: 'Comment not found.' });
+  if (comment.user_id !== req.user.id && comment.seller_user_id !== req.user.id) {
+    return res.status(403).json({ error: "You can't remove this comment." });
+  }
+  db.prepare('DELETE FROM product_comments WHERE id = ?').run(comment.id);
+  res.json({ ok: true });
 });
 
 // POST /api/products/:id/share, counts a share-button click. No login
 // required (same as every share button on the web, this counts intent to
 // share, not a confirmed post on the other platform, there's no way for
 // any site to verify that from a share link).
-router.post('/:id/share', (req, res) => {
+router.post('/:id/share', counterLimiter, (req, res) => {
   const { channel } = req.body;
   const validChannels = ['native', 'whatsapp', 'facebook', 'instagram', 'tiktok', 'copy_link'];
   if (!validChannels.includes(channel)) {
@@ -748,6 +801,7 @@ router.get('/:slug/reviews', (req, res) => {
         SELECT pu.id FROM purchases pu
         JOIN buyers b ON b.id = pu.buyer_id
         WHERE pu.product_id = ? AND b.user_id = ? AND pu.payment_status = 'paid'
+          AND COALESCE(pu.fulfillment_status, '') != 'refunded'
           AND NOT EXISTS (SELECT 1 FROM product_reviews WHERE purchase_id = pu.id)
         LIMIT 1
       `).get(product.id, req.user.id);
@@ -779,6 +833,7 @@ router.post('/:slug/reviews', requireAuth, (req, res) => {
     SELECT pu.id FROM purchases pu
     JOIN buyers b ON b.id = pu.buyer_id
     WHERE pu.product_id = ? AND b.user_id = ? AND pu.payment_status = 'paid'
+      AND COALESCE(pu.fulfillment_status, '') != 'refunded'
       AND NOT EXISTS (SELECT 1 FROM product_reviews WHERE purchase_id = pu.id)
     ORDER BY pu.created_at ASC LIMIT 1
   `).get(product.id, req.user.id);
@@ -1018,6 +1073,9 @@ router.post('/', requireProductUploadAuth, replayProductPublish, parseProductUpl
     return res.status(400).json({ error: "Services and subscriptions can't be pay-what-you-want. A price the buyer trusts up front is part of what escrow protects, and what makes a subscription's renewal price a fixed, known amount." });
   }
 
+  const portfolio = cleanPortfolioUrls(portfolio_url);
+  if (portfolio.error) return res.status(400).json({ error: portfolio.error });
+
   const isPWYW = pay_what_you_want === 'true' || pay_what_you_want === true;
   const priceMinor = toMinor(price);
   // 0 is allowed, a free listing. Checkout (purchases.js) already treats
@@ -1065,7 +1123,7 @@ router.post('/', requireProductUploadAuth, replayProductPublish, parseProductUpl
     req.creator.id, title, description || null, type, category,
     isPWYW ? (minPriceMinor || 0) : priceMinor, productCurrency, isPWYW ? 1 : 0,
     minPriceMinor, qtyLimit, productStatus, coverPath, slug,
-    isService ? (portfolio_url || null) : null, deliveryDays,
+    isService ? portfolio.value : null, deliveryDays,
     isService ? (service_terms || null) : null, previewVideoPath
   );
 
@@ -1172,6 +1230,11 @@ router.patch('/:id', requireProductUploadAuth, replayProductPublish, parseProduc
   const productCurrency = currency !== undefined
     ? (['USD', 'ZWG'].includes(currency) ? currency : product.currency)
     : product.currency;
+  if (productCurrency !== product.currency && db.prepare('SELECT 1 FROM purchases WHERE product_id = ?').get(product.id)) {
+    return res.status(409).json({ error: "This product already has orders, so its currency can't change. Create a new listing to sell in another currency." });
+  }
+  const portfolio = portfolio_url !== undefined ? cleanPortfolioUrls(portfolio_url) : { value: product.portfolio_url };
+  if (portfolio.error) return res.status(400).json({ error: portfolio.error });
 
   if (category !== undefined && !CATEGORY_VALUES.includes(category)) {
     return res.status(400).json({ error: 'category must be a recognized category.' });
@@ -1256,7 +1319,7 @@ router.patch('/:id', requireProductUploadAuth, replayProductPublish, parseProduc
     coverPath,
     category !== undefined ? category : product.category,
     discountPercent, discountLimit, discountClaimed,
-    isService ? (portfolio_url !== undefined ? portfolio_url : product.portfolio_url) : product.portfolio_url,
+    isService ? portfolio.value : product.portfolio_url,
     isService && delivery_days !== undefined ? (delivery_days ? parseInt(delivery_days, 10) : null) : product.delivery_days,
     isService ? (service_terms !== undefined ? service_terms : product.service_terms) : product.service_terms,
     previewVideoPath,

@@ -30,7 +30,7 @@ export default function DocumentViewer({ src, title, downloadUrl }) {
         </p>
       </div>
       <div className="doc-card__actions">
-        <button type="button" className="btn btn--gold btn--sm" onClick={() => setOpen(true)}>
+        <button type="button" className="btn btn--cta btn--sm" onClick={() => setOpen(true)}>
           <FiBookOpen size={14} /> {saved && saved.page > 1 ? 'Continue reading' : 'Start reading'}
         </button>
         {downloadUrl && <a href={downloadUrl} className="btn btn--ghost btn--sm" aria-label="Download a copy"><FiDownload size={14} /></a>}

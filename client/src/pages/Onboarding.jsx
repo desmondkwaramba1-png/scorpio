@@ -200,7 +200,7 @@ export default function Onboarding() {
           </button>
         )}
         {step === STEPS.length - 1 && (
-          <button className="btn btn--gold" style={{ flex: 1 }} type="button" onClick={submit} disabled={submitting}>
+          <button className="btn btn--cta" style={{ flex: 1 }} type="button" onClick={submit} disabled={submitting}>
             {submitting ? 'Creating...' : 'Create my storefront'}
           </button>
         )}

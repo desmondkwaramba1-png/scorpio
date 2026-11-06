@@ -6,8 +6,8 @@ import { SITE_ORIGIN } from '../lib/site';
 
 const STATUS_LABEL = {
   draft: { text: 'Draft', className: 'badge--neutral' },
-  pending_review: { text: 'Pending review', className: 'badge--gold' },
-  published: { text: 'Published', className: 'badge--green' },
+  pending_review: { text: 'Pending review', className: 'badge--highlight' },
+  published: { text: 'Published', className: 'badge--success' },
   rejected: { text: 'Rejected', className: 'badge--neutral' }
 };
 
@@ -44,9 +44,9 @@ export default function Blog() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
         <p className="muted" style={{ fontSize: '.88rem' }}>
           {posts.length} post{posts.length === 1 ? '' : 's'}
-          {pendingCount > 0 && <> &middot; <strong style={{ color: 'var(--gold-ink)' }}>{pendingCount} awaiting review</strong></>}
+          {pendingCount > 0 && <> &middot; <strong style={{ color: 'var(--accent-ink)' }}>{pendingCount} awaiting review</strong></>}
         </p>
-        <Link to="/blog/new" className="btn btn--gold btn--sm">New post</Link>
+        <Link to="/blog/new" className="btn btn--cta btn--sm">New post</Link>
       </div>
 
       {posts.length === 0 ? (
@@ -55,7 +55,7 @@ export default function Blog() {
         <div className="table-wrap">
           <table className="admin-table">
             <thead>
-              <tr><th></th><th>Title</th><th>Status</th><th>Author</th><th>Date</th><th></th></tr>
+              <tr><th><span className="sr-only">Cover</span></th><th>Title</th><th>Status</th><th>Author</th><th>Date</th><th><span className="sr-only">Actions</span></th></tr>
             </thead>
             <tbody>
               {posts.map(post => {
@@ -85,7 +85,7 @@ export default function Blog() {
                           real post (title, rendered body, the product it
                           links) and deciding from there. */}
                       {post.status === 'pending_review' ? (
-                        <Link to={`/blog/${post.id}/edit`} className="btn btn--gold btn--sm"><FiEye size={13} /> Review</Link>
+                        <Link to={`/blog/${post.id}/edit`} className="btn btn--cta btn--sm"><FiEye size={13} /> Review</Link>
                       ) : (
                         <Link to={`/blog/${post.id}/edit`} className="btn btn--ghost btn--sm">Edit</Link>
                       )}

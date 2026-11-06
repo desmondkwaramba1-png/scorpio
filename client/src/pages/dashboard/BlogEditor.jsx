@@ -127,8 +127,8 @@ export default function DashboardBlogEditor() {
       <h1 style={{ fontSize: '1.5rem', marginBottom: 6 }}>{isEdit ? 'Edit post' : 'New post'}</h1>
 
       {notice && (
-        <div className="card card--pad" style={{ marginBottom: 20, borderColor: 'var(--green-glow)' }}>
-          <span style={{ color: 'var(--green-glow)', fontWeight: 600 }}>{NOTICE_TEXT[notice] || 'Saved.'}</span>
+        <div className="card card--pad" style={{ marginBottom: 20, borderColor: 'var(--brand-strong)' }}>
+          <span style={{ color: 'var(--brand-strong)', fontWeight: 600 }}>{NOTICE_TEXT[notice] || 'Saved.'}</span>
         </div>
       )}
 

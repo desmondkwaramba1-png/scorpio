@@ -4,13 +4,20 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "seed": "node src/db/seed.js",
+    "seed": "node scripts/seed-marketplace.js",
     "start": "node src/server.js",
     "dev": "node src/server.js",
-    "test": "node -e \"require('http').get('http://localhost:4000/api/health', res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>{const ok=JSON.parse(d).status==='ok';process.exit(ok?0:1);});}).on('error',()=>process.exit(1));\"",
+    "lint": "eslint src scripts",
+    "test": "npm run test:fund-holds && npm run test:content-verification && npm run test:integrity && npm run test:payment && npm run test:upload-tokens && npm run test:security",
     "test:fund-holds": "node scripts/test-fund-holds.js",
     "test:content-verification": "node scripts/test-content-verification.js",
-    "test:integrity": "node scripts/test-marketplace-integrity.js"
+    "test:integrity": "node scripts/test-marketplace-integrity.js",
+    "test:payment": "node scripts/test-payment-gateway.js",
+    "test:upload-tokens": "node scripts/test-product-upload-tokens.js",
+    "test:security": "node scripts/test-security-regressions.js"
+  },
+  "engines": {
+    "node": ">=20 <25"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1128.0",

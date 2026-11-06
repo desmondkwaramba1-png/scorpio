@@ -82,12 +82,12 @@ function AdminShell() {
 
   return (
     <div className="wrap" style={{ padding: '32px 20px 80px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <h1 style={{ fontSize: '1.5rem' }}>SCORPIO Admin</h1>
         <button onClick={clearKey} className="btn btn--ghost btn--sm"><FiLogOut size={14} /> Lock</button>
-      </div>
+      </header>
 
-      <nav className="tabs" style={{ marginBottom: 24 }}>
+      <nav className="tabs" style={{ marginBottom: 24 }} aria-label="Admin sections">
         {TABS.map(([to, label, Icon]) => (
           <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) =>
             'tab' + (isActive ? ' tab--active' : '')}
@@ -97,6 +97,7 @@ function AdminShell() {
         ))}
       </nav>
 
+      <main>
       <Routes>
         <Route path="/" element={<Overview />} />
         <Route path="/sellers" element={<Sellers />} />
@@ -109,6 +110,7 @@ function AdminShell() {
         <Route path="/blog/new" element={<BlogEditor />} />
         <Route path="/blog/:id/edit" element={<BlogEditor />} />
       </Routes>
+      </main>
     </div>
   );
 }

@@ -13,12 +13,18 @@ router.get('/me', requireAuth, requireCreator, (req, res) => {
   sweepAutoReleases();
   const creatorId = req.creator.id;
 
-  const totals = db.prepare(`
-    SELECT COUNT(*) AS order_count, COALESCE(SUM(pu.amount_minor), 0) AS revenue_minor
-    FROM purchases pu
-    JOIN products p ON p.id = pu.product_id
-    WHERE p.creator_id = ? AND pu.payment_status = 'paid'
-  `).get(creatorId);
+  // A refund is not revenue, and USD and ZiG are never added together.
+  const KEPT = `pu.payment_status = 'paid' AND COALESCE(pu.fulfillment_status, '') != 'refunded'`;
+  const orderCount = db.prepare(`
+    SELECT COUNT(*) AS n FROM purchases pu JOIN products p ON p.id = pu.product_id
+    WHERE p.creator_id = ? AND ${KEPT}
+  `).get(creatorId).n;
+  const revenueByCurrency = Object.fromEntries(db.prepare(`
+    SELECT pu.currency, SUM(pu.amount_minor) AS n FROM purchases pu JOIN products p ON p.id = pu.product_id
+    WHERE p.creator_id = ? AND ${KEPT} AND pu.amount_minor > 0
+    GROUP BY pu.currency
+  `).all(creatorId).map(row => [row.currency, row.n]));
+  const chartCurrency = revenueByCurrency.USD !== undefined ? 'USD' : Object.keys(revenueByCurrency)[0] || 'USD';
 
   // Same "held vs actually yours" split wallet.js shows, from the same
   // function — this used to reimplement the math inline, gross minus
@@ -38,20 +44,26 @@ router.get('/me', requireAuth, requireCreator, (req, res) => {
     WHERE p.creator_id = ? AND pu.payment_status = 'paid' AND pu.fulfillment_status = 'awaiting_delivery'
   `).get(creatorId).n;
 
-  const revenueByDay = db.prepare(`
-    SELECT date(pu.created_at) AS day, COALESCE(SUM(pu.amount_minor), 0) AS revenue_minor, COUNT(*) AS orders
+  // Every one of the last 30 days, including quiet ones, so the chart shows real
+  // time passing instead of stretching a single sale across the whole width.
+  const dayRows = new Map(db.prepare(`
+    SELECT date(pu.created_at) AS day, SUM(pu.amount_minor) AS revenue_minor, COUNT(*) AS orders
     FROM purchases pu
     JOIN products p ON p.id = pu.product_id
-    WHERE p.creator_id = ? AND pu.payment_status = 'paid'
-    GROUP BY day ORDER BY day ASC
-  `).all(creatorId);
+    WHERE p.creator_id = ? AND ${KEPT} AND pu.currency = ? AND pu.created_at >= datetime('now', '-30 days')
+    GROUP BY day
+  `).all(creatorId, chartCurrency).map(row => [row.day, row]));
+  const revenueByDay = Array.from({ length: 30 }, (_, index) => {
+    const day = new Date(Date.now() - (29 - index) * 864e5).toISOString().slice(0, 10);
+    return dayRows.get(day) || { day, revenue_minor: 0, orders: 0 };
+  });
 
   const topProducts = db.prepare(`
-    SELECT p.id, p.title, p.slug, COUNT(*) AS order_count, COALESCE(SUM(pu.amount_minor), 0) AS revenue_minor
+    SELECT p.id, p.title, p.slug, pu.currency, COUNT(*) AS order_count, COALESCE(SUM(pu.amount_minor), 0) AS revenue_minor
     FROM purchases pu
     JOIN products p ON p.id = pu.product_id
-    WHERE p.creator_id = ? AND pu.payment_status = 'paid'
-    GROUP BY p.id ORDER BY revenue_minor DESC LIMIT 5
+    WHERE p.creator_id = ? AND ${KEPT}
+    GROUP BY p.id, pu.currency ORDER BY order_count DESC, revenue_minor DESC LIMIT 5
   `).all(creatorId);
 
   const productCounts = db.prepare(`
@@ -60,9 +72,9 @@ router.get('/me', requireAuth, requireCreator, (req, res) => {
   `).get(creatorId);
 
   res.json({
-    currency: 'USD',
-    order_count: totals.order_count,
-    revenue_minor: totals.revenue_minor,
+    currency: chartCurrency,
+    order_count: orderCount,
+    revenue_by_currency: revenueByCurrency,
     available_minor: availableMinor,
     escrowed_minor: escrowed,
     awaiting_action_count: awaitingActionCount,

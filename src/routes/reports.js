@@ -3,7 +3,7 @@
 const express = require('express');
 const db = require('../db/schema');
 const { requireAuth } = require('../middleware/auth');
-const { reportLimiter } = require('../middleware/rateLimit');
+const { reportLimiter, accountReportLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
@@ -14,7 +14,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // it), anyone else, 403. Which one they are becomes reporter_role,
 // stored so the admin queue can show "buyer says" vs "seller says"
 // without re-deriving it.
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, accountReportLimiter, (req, res) => {
   const purchaseId = Number(req.body.purchase_id);
   const reason = (req.body.reason || '').trim();
   if (!purchaseId) return res.status(400).json({ error: 'purchase_id is required.' });
@@ -55,10 +55,10 @@ router.post('/', requireAuth, (req, res) => {
 // misleading, before ever buying it. Any logged-in user except the
 // product's own owner (reporting your own listing makes no sense, use
 // the dashboard to edit or unpublish it instead).
-router.post('/product', requireAuth, (req, res) => {
+router.post('/product', requireAuth, accountReportLimiter, (req, res) => {
   const productId = Number(req.body.product_id);
   const reason = (req.body.reason || '').trim();
-  const seriousClaim = req.body.serious_claim === true || req.body.serious_claim === 'true';
+  const seriousClaimRequested = req.body.serious_claim === true || req.body.serious_claim === 'true';
   if (!productId) return res.status(400).json({ error: 'product_id is required.' });
   if (!reason) return res.status(400).json({ error: 'Describe the problem.' });
   if (reason.length > 2000) return res.status(400).json({ error: 'Keep it under 2000 characters.' });
@@ -76,6 +76,16 @@ router.post('/product', requireAuth, (req, res) => {
   const existing = db.prepare(`SELECT id FROM reports WHERE product_id = ? AND reporter_user_id = ? AND status = 'open'`)
     .get(productId, req.user.id);
   if (existing) return res.status(409).json({ error: 'You already have an open report on this product.' });
+
+  // A serious claim holds the seller's money, so only someone with a verified
+  // email who actually bought the product can trigger that. Anyone else's report
+  // still reaches the admin queue as a normal report, and a human decides.
+  const verifiedBuyer = !!req.user.email_verified_at && !!db.prepare(`
+    SELECT 1 FROM purchases pu JOIN buyers b ON b.id = pu.buyer_id
+    WHERE b.user_id = ? AND pu.product_id = ? AND pu.payment_status = 'paid' AND pu.amount_minor > 0
+      AND COALESCE(pu.fulfillment_status, '') != 'refunded'
+  `).get(req.user.id, productId);
+  const seriousClaim = seriousClaimRequested && verifiedBuyer;
 
   const reporterRole = req.creator ? 'creator' : 'buyer';
   const result = db.prepare(`

@@ -40,7 +40,7 @@ export default function Reels() {
     return (
       <div className="wrap" style={{ padding: '60px 20px 80px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <FiFilm size={22} color="var(--green)" />
+          <FiFilm size={22} color="var(--brand)" />
           <h1 style={{ fontSize: '1.8rem' }}>Reels</h1>
         </div>
         <div className="empty-state" style={{ marginTop: 20 }}>

@@ -10,7 +10,8 @@ const { checkoutLimiter, orderLookupLimiter } = require('../middleware/rateLimit
 const { requireVerified, requireAuth, requireCreator } = require('../middleware/auth');
 const { createDownloadToken, getActiveTokenForPurchase, productHasFile, getProductFile, isVideoFilename, isAudioFilename } = require('../lib/downloads');
 const { keyForPurchase } = require('../lib/licenseKeys');
-const { isSoldOut } = require('../lib/stock');
+const { isSoldOut, promoSlotOpen } = require('../lib/stock');
+const { buyerOwnsProduct } = require('../lib/ownership');
 const { buyerForUser } = require('../lib/buyers');
 const { reconcileForUser } = require('../lib/reconcilePayments');
 const { normalizeExternalUrl } = require('../lib/safeUrl');
@@ -19,6 +20,10 @@ const { sendEmail } = require('../lib/notify');
 const { markPurchasePaid, markPurchaseFailed } = require('../lib/purchaseCompletion');
 const storage = require('../lib/storage');
 const { hasOffPlatformContact } = require('../lib/disputeMessagePolicy');
+
+// A double tap or a second tab must not send a second EcoCash prompt. Short on
+// purpose: someone who missed the first prompt can still try again.
+const DUPLICATE_CHECKOUT_SECONDS = 45;
 
 const router = express.Router();
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -83,7 +88,11 @@ function fileAccessFor(purchase) {
 // awaiting_delivery order any time — see POST /:id/dispute), just surfaced
 // so a buyer knows when they're reasonably justified in doing so.
 function serviceStatusFor(purchase) {
-  if (purchase.product_type !== 'service' || !purchase.fulfillment_status) return null;
+  if (!purchase.fulfillment_status) return null;
+  // Any order can end up in a case, so a digital order in dispute or refunded
+  // needs the same case details, or the buyer loses the chat on refresh.
+  const inCase = ['disputed', 'refunded'].includes(purchase.fulfillment_status);
+  if (purchase.product_type !== 'service' && !inCase) return null;
   const delivery = deliveryFor(purchase.id);
   const dispute = disputeFor(purchase.id);
   let expectedBy = null;
@@ -327,7 +336,7 @@ router.post('/', checkoutLimiter, requireVerified, async (req, res) => {
     return res.status(400).json({ error: 'product_slug is required.' });
   }
 
-  const product = db.prepare("SELECT * FROM products WHERE slug = ? AND status = 'published'").get(product_slug);
+  const product = db.prepare("SELECT * FROM products WHERE slug = ? AND status = 'published' AND review_status = 'clear'").get(product_slug);
   if (!product) return res.status(404).json({ error: 'Product not found.' });
 
   // No self-purchase: paying yourself minus the platform fee is pure fee-
@@ -344,6 +353,20 @@ router.post('/', checkoutLimiter, requireVerified, async (req, res) => {
   const buyer = buyerForUser(req.user, name);
   if (!buyer) return res.status(409).json({ error: 'This email is already attached to another account. Contact support.' });
 
+  if (buyerOwnsProduct(buyer.id, product)) {
+    return res.status(409).json({ error: 'You already own this. Find it in your library.', already_owned: true });
+  }
+
+  const inFlight = db.prepare(`
+    SELECT payment_reference FROM purchases
+    WHERE buyer_id = ? AND product_id = ? AND payment_status = 'pending' AND payment_reference IS NOT NULL
+      AND created_at >= datetime('now', ?)
+    ORDER BY id DESC LIMIT 1
+  `).get(buyer.id, product.id, `-${DUPLICATE_CHECKOUT_SECONDS} seconds`);
+  if (inFlight) {
+    return res.status(200).json({ order_id: inFlight.payment_reference, ecocash_status: 'CHECKING', checking_payment_status: true });
+  }
+
   if (isSoldOut(product, { excludeBuyerId: buyer.id })) {
     return res.status(409).json({ error: 'This product is sold out.' });
   }
@@ -355,7 +378,7 @@ router.post('/', checkoutLimiter, requireVerified, async (req, res) => {
     if (amountMinor === null || amountMinor < (product.min_price_minor || 0)) {
       return res.status(400).json({ error: 'amount must meet the minimum price.' });
     }
-  } else if (isPromoActive(product)) {
+  } else if (isPromoActive(product) && promoSlotOpen(product, buyer.id)) {
     // Re-checked here, not just trusted from what the buyer saw on the
     // product page — a "first X buyers" cap can fill up between page load
     // and checkout, and the charge has to reflect reality either way.
@@ -374,14 +397,14 @@ router.post('/', checkoutLimiter, requireVerified, async (req, res) => {
   if (!isFree) {
     if (!phone) return res.status(400).json({ error: 'phone is required.' });
     if (!isValidSenderPhone(phone)) {
-      return res.status(400).json({ error: 'Enter a valid EcoCash number, e.g. 0780070488 or +263780070488.' });
+      return res.status(400).json({ error: 'Enter a valid EcoCash number, e.g. 07XXXXXXXX or +2637XXXXXXXX.' });
     }
   }
 
   const insert = db.prepare(`
-    INSERT INTO purchases (buyer_id, product_id, amount_minor, currency, payment_status, discount_applied, fee_minor, net_minor)
-    VALUES (?, ?, ?, ?, 'pending', ?, 0, 0)
-  `).run(buyer.id, product.id, amountMinor, product.currency, discountApplied ? 1 : 0);
+    INSERT INTO purchases (buyer_id, product_id, amount_minor, currency, payment_status, discount_applied, fee_minor, net_minor, payer_phone)
+    VALUES (?, ?, ?, ?, 'pending', ?, 0, 0, ?)
+  `).run(buyer.id, product.id, amountMinor, product.currency, discountApplied ? 1 : 0, isFree ? null : phone);
   const purchaseId = insert.lastInsertRowid;
 
   if (isFree) {
@@ -443,6 +466,11 @@ router.get('/status/:orderId', orderLookupLimiter, async (req, res) => {
 
   if (purchases.length === 0) return res.status(404).json({ error: 'Order not found.' });
 
+  // Anyone holding the order id can see whether it was paid, because that id
+  // sits in the page URL. The goods themselves go only to the buyer's account.
+  const isBuyer = !!req.user && !!db.prepare('SELECT 1 FROM buyers WHERE id = ? AND user_id = ?')
+    .get(purchases[0].buyer_id, req.user.id);
+
   const latestIssueStmt = db.prepare(
     'SELECT issue_number, title, published_at FROM issues WHERE product_id = ? ORDER BY issue_number DESC LIMIT 1'
   );
@@ -466,6 +494,7 @@ router.get('/status/:orderId', orderLookupLimiter, async (req, res) => {
 
   res.json({
     status,
+    login_required: !isBuyer,
     currency: purchases[0].currency,
     total_amount_minor: current.reduce((sum, p) => sum + p.amount_minor, 0),
     items: current.map((p, i) => ({
@@ -475,9 +504,9 @@ router.get('/status/:orderId', orderLookupLimiter, async (req, res) => {
       product_type: p.product_type,
       amount_minor: p.amount_minor,
       currency: p.currency,
-      ...fileAccessFor(p),
-      service: serviceStatusFor(p),
-      latest_issue: ['serial', 'subscription'].includes(p.product_type) && p.payment_status === 'paid'
+      ...(isBuyer ? fileAccessFor(p) : { download_url: null, view_url: null, is_video: false, is_audio: false, is_external: false, license_key: null }),
+      service: isBuyer ? serviceStatusFor(p) : null,
+      latest_issue: isBuyer && ['serial', 'subscription'].includes(p.product_type) && p.payment_status === 'paid'
         ? latestIssueStmt.get(p.product_id) || null
         : null
     }))
@@ -510,98 +539,6 @@ router.post('/dischub/callback', orderLookupLimiter, async (req, res) => {
   }
 
   res.json({ ok: true });
-});
-
-// Helper to get purchase and check authorization for dispute actions.
-// Returns { purchase, dispute, role } or null if a response was already sent.
-function getAuthorizedDispute(req, res) {
-  const purchase = db.prepare('SELECT * FROM purchases WHERE id = ?').get(req.params.id);
-  if (!purchase) { res.status(404).json({ error: 'Order not found.' }); return null; }
-  
-  const buyer = db.prepare('SELECT user_id FROM buyers WHERE id = ?').get(purchase.buyer_id);
-  const product = db.prepare('SELECT creator_id FROM products WHERE id = ?').get(purchase.product_id);
-  if (!product) { res.status(404).json({ error: 'Product not found.' }); return null; }
-  const creator = db.prepare('SELECT user_id FROM creators WHERE id = ?').get(product.creator_id);
-  
-  let role = null;
-  if (buyer && buyer.user_id === req.user.id) role = 'buyer';
-  else if (creator && creator.user_id === req.user.id) role = 'seller';
-  
-  if (!role) { res.status(403).json({ error: 'Not authorized for this dispute.' }); return null; }
-  
-  const dispute = disputeFor(purchase.id);
-  if (!dispute) { res.status(404).json({ error: 'No dispute found for this order.' }); return null; }
-  
-  return { purchase, dispute, role };
-}
-
-// GET /api/purchases/:id/dispute/messages
-router.get('/:id/dispute/messages', requireAuth, (req, res) => {
-  const auth = getAuthorizedDispute(req, res);
-  if (!auth) return; // already sent response
-  const { dispute } = auth;
-  
-  const messages = db.prepare('SELECT * FROM dispute_messages WHERE dispute_id = ? ORDER BY created_at ASC').all(dispute.id);
-  const evidence = db.prepare('SELECT * FROM dispute_evidence WHERE dispute_id = ? ORDER BY created_at ASC').all(dispute.id);
-  
-  // Mix them into a single timeline
-  const timeline = [
-    ...messages.map(m => ({ type: 'message', ...m })),
-    ...evidence.map(e => ({ type: 'evidence', ...e, storage_path: storage.publicUrl(e.storage_path) }))
-  ].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-  
-  res.json({ timeline, status: dispute.status });
-});
-
-// POST /api/purchases/:id/dispute/messages
-router.post('/:id/dispute/messages', requireAuth, (req, res) => {
-  const auth = getAuthorizedDispute(req, res);
-  if (!auth) return;
-  const { dispute, role } = auth;
-  
-  if (dispute.status !== 'open') {
-    return res.status(400).json({ error: 'This dispute is closed.' });
-  }
-  
-  const body = (req.body.body || '').trim();
-  if (!body) return res.status(400).json({ error: 'Message cannot be empty.' });
-  
-  db.prepare('INSERT INTO dispute_messages (dispute_id, user_id, author_role, body) VALUES (?, ?, ?, ?)')
-    .run(dispute.id, req.user.id, role, body);
-    
-  res.status(201).json({ ok: true });
-});
-
-// POST /api/purchases/:id/dispute/evidence
-const upload = multer({ 
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
-});
-
-router.post('/:id/dispute/evidence', requireAuth, upload.single('file'), async (req, res) => {
-  const auth = getAuthorizedDispute(req, res);
-  if (!auth) return;
-  const { dispute, role } = auth;
-  
-  if (dispute.status !== 'open') {
-    return res.status(400).json({ error: 'This dispute is closed.' });
-  }
-  
-  const file = req.file;
-  if (!file) return res.status(400).json({ error: 'No file uploaded.' });
-  
-  try {
-    const fileKey = 'evidence/' + Date.now() + '-' + file.originalname.replace(/[^a-zA-Z0-9.-]/g, '');
-    await storage.uploadBuffer(fileKey, file.buffer, file.mimetype);
-    
-    db.prepare('INSERT INTO dispute_evidence (dispute_id, user_id, author_role, storage_path, original_filename, mime) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(dispute.id, req.user.id, role, fileKey, file.originalname, file.mimetype);
-      
-    res.status(201).json({ ok: true });
-  } catch (err) {
-    console.error(err);
-    res.status(502).json({ error: 'Failed to upload evidence.' });
-  }
 });
 
 module.exports = router;

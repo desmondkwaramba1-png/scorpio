@@ -118,7 +118,7 @@ export default function BlogPost() {
         >
           <div style={{
             width: 64, height: 64, borderRadius: 'var(--radius-sm)', flexShrink: 0,
-            background: post.featured_product_cover ? `url(${post.featured_product_cover}) center/cover` : 'var(--green-tint)'
+            background: post.featured_product_cover ? `url(${post.featured_product_cover}) center/cover` : 'var(--brand-tint)'
           }} />
           <div style={{ minWidth: 0, flex: 1 }}>
             <p className="muted" style={{ fontSize: '.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 4 }}>Want this?</p>

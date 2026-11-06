@@ -30,4 +30,18 @@ function isSoldOut(product, { excludeBuyerId = null } = {}) {
   return false;
 }
 
-module.exports = { isSoldOut, RESERVATION_MINUTES };
+// A "first N buyers" slot is only counted once payment clears, so checkouts
+// already in progress have to be counted too, or every one of them gets the
+// discount and the cap is overrun.
+function promoSlotOpen(product, excludeBuyerId = null) {
+  if (product.discount_limit === null || product.discount_limit === undefined) return true;
+  const held = db.prepare(`
+    SELECT COUNT(*) AS n FROM purchases
+    WHERE product_id = ? AND payment_status = 'pending' AND discount_applied = 1
+      AND created_at >= datetime('now', ?)
+      AND (? IS NULL OR buyer_id != ?)
+  `).get(product.id, `-${RESERVATION_MINUTES} minutes`, excludeBuyerId, excludeBuyerId).n;
+  return product.discount_claimed + held < product.discount_limit;
+}
+
+module.exports = { isSoldOut, promoSlotOpen, RESERVATION_MINUTES };

@@ -24,30 +24,11 @@
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/svg+xml" href="/brand/mark.svg">
   <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
-  <meta name="theme-color" content="#131921" />
+  <meta name="theme-color" content="#0B1020" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="SCORPIO" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://api.fontshare.com">
-  <!-- Real Lighthouse run measured these two as render-blocking for
-       1000-1500ms combined (the single biggest cause of the slow FCP/LCP
-       and a chunk of the CLS score, the page couldn't paint anything
-       until they resolved). preload fetches them with real priority
-       without blocking render; the stylesheet <link> then applies once
-       loaded via the media="print" swap trick (the standard loadCSS
-       pattern), and the noscript fallback covers a browser with
-       JavaScript off, which never runs the swap. -->
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Alex+Brush&display=swap">
-  <link rel="preload" as="style" href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@800,700,500&display=swap">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Alex+Brush&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-  <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@800,700,500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-  <noscript>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Alex+Brush&display=swap" rel="stylesheet">
-    <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@800,700,500&display=swap" rel="stylesheet">
-  </noscript>
   <!-- Static, not injected by useSEO — present on every response including
        to a crawler that never runs JS, and it's what helps Google tell
        this SCORPIO apart from the zodiac sign, the Mahindra, and every

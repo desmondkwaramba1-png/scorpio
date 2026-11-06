@@ -5,8 +5,8 @@ import { api } from '../../lib/api';
 
 const STATUS_LABEL = {
   draft: { text: 'Draft', className: 'badge--neutral' },
-  pending_review: { text: 'Pending review', className: 'badge--gold' },
-  published: { text: 'Published', className: 'badge--green' },
+  pending_review: { text: 'Pending review', className: 'badge--highlight' },
+  published: { text: 'Published', className: 'badge--success' },
   rejected: { text: 'Changes requested', className: 'badge--neutral' }
 };
 
@@ -58,8 +58,8 @@ export default function DashboardBlog() {
       </p>
 
       {notice && (
-        <div className="card card--pad" style={{ marginBottom: 20, borderColor: 'var(--green-glow)' }}>
-          <span style={{ color: 'var(--green-glow)', fontWeight: 600 }}>{NOTICE_TEXT[notice] || 'Saved.'}</span>
+        <div className="card card--pad" style={{ marginBottom: 20, borderColor: 'var(--brand-strong)' }}>
+          <span style={{ color: 'var(--brand-strong)', fontWeight: 600 }}>{NOTICE_TEXT[notice] || 'Saved.'}</span>
         </div>
       )}
 

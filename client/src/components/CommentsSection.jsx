@@ -29,6 +29,16 @@ const CommentsSection = forwardRef(function CommentsSection({ productId }, ref) 
     }
   }
 
+  async function remove(id) {
+    setError(null);
+    try {
+      await api.delete(`/api/products/${productId}/comments/${id}`);
+      setComments(c => c.filter(comment => comment.id !== id));
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   return (
     <div ref={ref} className="card card--pad" style={{ marginTop: 32 }}>
       <p style={{ fontWeight: 600, marginBottom: 16 }}>Comments {comments ? `(${comments.length})` : ''}</p>
@@ -41,12 +51,15 @@ const CommentsSection = forwardRef(function CommentsSection({ productId }, ref) 
           <div key={c.id} style={{ display: 'flex', gap: 10 }}>
             <div style={{
               width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-              background: c.avatar_url ? `url(${c.avatar_url}) center/cover` : 'var(--green-tint)'
+              background: c.avatar_url ? `url(${c.avatar_url}) center/cover` : 'var(--brand-tint)'
             }} />
-            <div>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontWeight: 600, fontSize: '.85rem' }}>@{c.username}</p>
-              <p style={{ fontSize: '.9rem', lineHeight: 1.5 }}>{c.body}</p>
+              <p style={{ fontSize: '.9rem', lineHeight: 1.5, overflowWrap: 'anywhere' }}>{c.body}</p>
             </div>
+            {!!c.can_delete && (
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => remove(c.id)} aria-label={`Delete comment by ${c.username}`}>Delete</button>
+            )}
           </div>
         ))}
       </div>
@@ -56,7 +69,7 @@ const CommentsSection = forwardRef(function CommentsSection({ productId }, ref) 
           <label htmlFor="comment-body" style={{
             position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', border: 0
           }}>Add a comment</label>
-          <input id="comment-body" value={body} onChange={e => setBody(e.target.value)} placeholder="Add a comment"
+          <input id="comment-body" value={body} maxLength={1000} onChange={e => setBody(e.target.value)} placeholder="Add a comment"
             style={{
               flex: 1, padding: '.7rem .9rem', border: '1.5px solid var(--line-strong)', borderRadius: 'var(--radius-sm)',
               background: 'var(--field-bg)', color: 'var(--ink)', fontSize: '1rem'

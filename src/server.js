@@ -49,10 +49,16 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 // came back "Origin not allowed" while GETs from the same page succeeded.
 const ADMIN_URL = 'https://admin.scorpio.co.zw';
 const ALLOWED_ORIGINS = new Set([
-  FRONTEND_URL, 'http://localhost:5173', 'http://127.0.0.1:5173',
+  FRONTEND_URL,
   'https://scorpio.co.zw', 'https://www.scorpio.co.zw',
-  ADMIN_URL, 'http://localhost:5174', 'http://127.0.0.1:5174'
+  ADMIN_URL
 ]);
+// Local dev servers are only trusted when this isn't production.
+if (process.env.NODE_ENV !== 'production') {
+  for (const origin of ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:5174', 'http://127.0.0.1:5174']) {
+    ALLOWED_ORIGINS.add(origin);
+  }
+}
 // A domain is reachable at both its apex and its www subdomain (Vercel
 // redirects one to the other), so the browser's actual Origin header can be
 // either depending on which one FRONTEND_URL happens to be set to — allow
@@ -73,7 +79,11 @@ const app = express();
 // from X-Forwarded-For and throws ERR_ERL_UNEXPECTED_X_FORWARDED_FOR on
 // every rate-limited request (auth, checkout, reports), confirmed live in
 // production logs.
-app.set('trust proxy', 1);
+//
+// Browser traffic that arrives through the Vercel rewrite has a second hop in
+// front of Fly. If production logs show every req.ip as a Vercel address, set
+// TRUST_PROXY_HOPS=2 so limits apply per visitor instead of per Vercel edge.
+app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS) || 1);
 app.use((req, res, next) => {
   const isProductUploadPath = req.path === '/api/products' ||
     req.path === '/api/products/' ||
@@ -118,16 +128,17 @@ app.use((req, res, next) => {
   }
   next();
 });
-// contentSecurityPolicy: false — this app is a JSON API; the only HTML it
-// serves itself (share.js's link-preview pages, admin's none) is small
-// and trusted, and helmet's default page CSP would block the inline
-// redirect script /share relies on for a browser that somehow lands
-// there. crossOriginResourcePolicy: cross-origin — the frontend is a
+// This app is a JSON API, so nothing it returns should ever load anything.
+// share.js sets its own looser policy for its small link-preview pages.
+// crossOriginResourcePolicy: cross-origin — the frontend is a
 // different origin (Vercel) fetching this API's JSON directly; the
 // default same-origin policy is meant for a server that also serves its
 // own frontend, which this one doesn't.
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    useDefaults: false,
+    directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"], baseUri: ["'none'"] }
+  },
   crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
 app.use(cors({
@@ -172,7 +183,7 @@ function maybeCsrf(req, res, next) {
   // Admin app authenticates with X-Admin-Key, not the buyer/seller
   // session cookie. Requiring a CSRF cookie there blocked every admin
   // mutation (dispute resolve, blog publish) while GETs still worked.
-  if (req.headers['x-admin-key']) return next();
+  if (adminRouter.isValidAdminKey(req.headers['x-admin-key'])) return next();
   csrfProtection(req, res, next);
 }
 
@@ -246,16 +257,21 @@ app.use((err, req, res, next) => {
     logUploadError(403, 'CORS_ORIGIN_REJECTED', 'Origin not allowed.');
     return res.status(403).json({ error: 'Origin not allowed.' });
   }
-  // Covers fileFilter rejections (a plain Error, not a MulterError) and
-  // anything else that slipped past a route's own try/catch — every route
-  // in this app already handles its own expected failures directly, so
-  // whatever reaches here is either that or a real bug. Either way, a
-  // readable 400 beats Express's default HTML crash page hitting a
-  // fetch() call that can only ever expect JSON back.
+  // Plain Errors here are deliberate messages (fileFilter rejections and the
+  // like). Anything else is a real bug: log it, answer 500 so monitoring can
+  // see it, and keep internal details such as SQL errors away from visitors.
   if (err) {
-    logUploadError(400, err.code, err.message);
     console.error(err);
-    return res.status(400).json({ error: err.message || 'Something went wrong with that request.' });
+    if (err.type === 'entity.too.large') return res.status(413).json({ error: 'That request is too large.' });
+    if (typeof err.type === 'string' && /^(entity|request|encoding|charset)\./.test(err.type)) {
+      return res.status(400).json({ error: 'That request could not be read.' });
+    }
+    if (err.name === 'Error' && !err.code && err.message) {
+      logUploadError(400, err.code, err.message);
+      return res.status(400).json({ error: err.message });
+    }
+    logUploadError(500, err.code, err.message);
+    return res.status(500).json({ error: 'Something went wrong on our side. Try again in a moment.' });
   }
   next();
 });

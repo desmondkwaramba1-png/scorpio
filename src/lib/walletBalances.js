@@ -51,7 +51,7 @@ function remainingNetByPurchaseFor(creatorId, paidRows) {
 function balancesFor(creatorId) {
   const rows = db.prepare(`
     SELECT pu.id, pu.amount_minor, pu.payment_status, pu.fulfillment_status,
-           pu.created_at, p.id AS product_id, p.title AS product_title, p.currency
+           pu.created_at, p.id AS product_id, p.title AS product_title, pu.currency
     FROM purchases pu JOIN products p ON p.id = pu.product_id
     WHERE p.creator_id = ?
   `).all(creatorId);
@@ -107,7 +107,7 @@ function balancesFor(creatorId) {
 
     const unpaidBeforeRiskHold = availableNetMinor;
     let riskHoldRemaining = unpaidBeforeRiskHold;
-    const productHolds = riskyProducts.filter(product => product.currency === currency).map(product => {
+    const productHolds = riskyProducts.map(product => {
       const amountMinor = Math.min(productHoldAmounts.get(product.id), riskHoldRemaining);
       riskHoldRemaining -= amountMinor;
       return { product_id: product.id, product_title: product.title, currency, amount_minor: amountMinor };

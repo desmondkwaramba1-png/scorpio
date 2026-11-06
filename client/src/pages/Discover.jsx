@@ -155,7 +155,7 @@ export default function Discover() {
             </select>
           </div>
         </div>
-        {products && !error && <p className="discover-count">{products.length} {products.length === 1 ? 'product' : 'products'}</p>}
+        {products && !error && <p className="discover-count">{hasMore ? 'Showing ' : ''}{products.length} {products.length === 1 ? 'product' : 'products'}</p>}
       </section>
 
       {error && <p className="error-text">{error}</p>}

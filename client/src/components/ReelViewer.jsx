@@ -45,7 +45,7 @@ function ReelSlide({ reel, index, active, muted, paused, liked, likeCount, likeP
         <Link to={`/@${reel.creator_handle}`} className="reel-viewer__creator" onClick={onClose}>
           <span
             className="reel-viewer__creator-avatar"
-            style={{ background: reel.creator_avatar ? `url(${reel.creator_avatar}) center/cover` : 'var(--gold)' }}
+            style={{ background: reel.creator_avatar ? `url(${reel.creator_avatar}) center/cover` : 'var(--accent)' }}
           />
           <span>{reel.creator_name}</span>
           {!!reel.creator_verified && <Seal />}

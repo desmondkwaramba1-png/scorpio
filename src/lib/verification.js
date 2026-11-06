@@ -22,7 +22,8 @@ function getVerificationCriteria(creatorId) {
   const paidOrderCount = db.prepare(`
     SELECT COUNT(*) AS n FROM purchases pu
     JOIN products p ON p.id = pu.product_id
-    WHERE p.creator_id = ? AND pu.payment_status = 'paid'
+    WHERE p.creator_id = ? AND pu.payment_status = 'paid' AND pu.amount_minor > 0
+      AND COALESCE(pu.fulfillment_status, '') != 'refunded'
   `).get(creatorId).n;
 
   return {

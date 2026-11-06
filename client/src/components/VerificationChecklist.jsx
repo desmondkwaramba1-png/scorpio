@@ -58,7 +58,7 @@ export default function VerificationChecklist() {
           <div key={c.key} className={`checklist-item${status.criteria[c.key] ? ' checklist-item--done' : ''}`}>
             <span className="checklist-item__icon">{status.criteria[c.key] && <FiCheck size={12} />}</span>
             {c.key === 'email_verified' && !status.criteria[c.key] ? (
-              <Link to="/check-email" style={{ color: 'var(--green-glow)', fontWeight: 600, textDecoration: 'underline' }}>{c.label}</Link>
+              <Link to="/check-email" style={{ color: 'var(--brand-strong)', fontWeight: 600, textDecoration: 'underline' }}>{c.label}</Link>
             ) : (
               <span>{c.label}</span>
             )}

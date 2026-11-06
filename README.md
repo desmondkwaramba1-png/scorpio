@@ -1,46 +1,61 @@
-# ZIMSELAR — Create, Sell, Empower
+# SCORPIO
 
-## Structure
-```
-zimselar/
-  src/           backend (Express + SQLite)
-    db/          schema.js, seed.js
-    routes/      creators, products, purchases
-    services/    payment.js — EcoCash payment integration through Dischub
-  client/        frontend (React + Vite)
-    src/pages/   Marketplace, Sell, NewProduct, Product
-    src/components/  Nav, Seal (verified-creator badge)
-```
+A marketplace for Zimbabwean creators to sell ebooks, templates and courses, with EcoCash checkout.
 
-## Run it (backend)
-```
-cd zimselar
+## How it fits together
+
+| Part | Stack | Hosted on |
+|---|---|---|
+| `src/` API | Express, SQLite (better-sqlite3) | Fly.io, one machine with a volume |
+| `client/` storefront and seller dashboard | React, Vite, PWA | Vercel |
+| `admin/` operations dashboard | React, Vite | Vercel |
+| File storage | Cloudflare R2 | |
+| Payments | EcoCash through Dischub | |
+| Email | Resend | |
+
+## Run it locally
+
+Use Node 20 to 24 (`better-sqlite3` has no prebuilt binary beyond that).
+
+```bash
+cp .env.example .env
 npm install
-npm run seed      # loads Pauline's newspaper as real seed data
-npm start          # runs on :4000
+npm run seed        # optional demo data; prints a one-off password
+npm start           # API on :4000
+
+cd client && npm install && npm run dev   # storefront on :5173
+cd admin && npm install && npm run dev    # admin on :5174
 ```
 
-## Run it (frontend)
+Without R2 configured, uploads return a clear 503. Without `RESEND_API_KEY`, emails print to the console.
+
+## Checks
+
+```bash
+npm run lint
+npm test            # all backend suites, on throwaway databases, nothing external is called
 ```
-cd zimselar/client
-npm install
-npm run dev         # runs on :5173, proxies /api and /uploads to :4000
-```
 
-Run both at once, two terminals. Visit http://localhost:5173.
+CI runs these and builds both frontends on every push to `main` and every pull request. `scripts/test-security-regressions.js` holds a test for each issue found in the November 2026 audit.
 
-## What's built
-- Creator signup with the two qualification questions (`what_selling`, `who_for`)
-- Required cover image on every product — no product without one
-- Marketplace grid, public product/storefront page, checkout flow
-- Seal badge for verified creators (the trust signal, tied to qualification)
-- EcoCash checkout through Dischub: payment prompts are sent to buyers and orders are fulfilled only after gateway confirmation
-- Payment provider requests and status checks are isolated in `src/services/payment.js`
-- Product files stream through the API directly into R2 in bounded multipart chunks, bypassing frontend proxy limits without whole-file RAM buffers or local-disk staging
+## Before going live
 
-## What's next, in order (per our agreed sequencing)
-1. Social layer — a lightweight text/image "story" per product first
-2. Full reels/video — once there's a real creator base worth watching
+- Set `NODE_ENV=production`, a long random `ADMIN_KEY`, and every key in `.env.example`.
+- Never run the demo seed against production. It refuses when `NODE_ENV=production`.
+- With a live Dischub key, every checkout sends a real EcoCash prompt. There is no test mode switch.
+- If production logs show visitors with Vercel addresses, set `TRUST_PROXY_HOPS=2`.
+- `GOOGLE_REDIRECT_URI` must be on the same host that starts sign-in, so the session and OAuth cookies match.
+- Back up the SQLite volume. All orders and payouts live in that one file.
 
-## Design
-Colors pulled from the Zimbabwe flag but used functionally, not literally: green as brand/primary, gold as the accent/CTA color, red reserved for errors only. Sora for headings, Inter for body, JetBrains Mono for prices and labels. The seal badge is the signature element — it ties directly to the qualification questions: a mark that's earned, not decorative.
+## Design system
+
+Tokens are at the top of `client/src/index.css` and `admin/src/index.css`.
+
+| Token | Use |
+|---|---|
+| `--chrome` midnight | Nav, hero, footer |
+| `--brand` cobalt | The primary action on a page |
+| `--accent` citron | Highlights on dark surfaces and the Verified seal. Never text on white |
+| `--success`, `--warning`, `--red` | Status only, never decoration |
+
+Type is Geist, with Geist Mono for prices. Both are self-hosted through Fontsource, so the app makes no third-party font requests.

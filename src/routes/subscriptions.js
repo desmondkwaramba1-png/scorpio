@@ -79,14 +79,14 @@ router.post('/:id/renew', checkoutLimiter, requireAuth, async (req, res) => {
   if (!isFree) {
     if (!phone) return res.status(400).json({ error: 'phone is required.' });
     if (!isValidSenderPhone(phone)) {
-      return res.status(400).json({ error: 'Enter a valid EcoCash number, e.g. 0780070488 or +263780070488.' });
+      return res.status(400).json({ error: 'Enter a valid EcoCash number, e.g. 07XXXXXXXX or +2637XXXXXXXX.' });
     }
   }
 
   const insert = db.prepare(`
-    INSERT INTO purchases (buyer_id, product_id, amount_minor, currency, payment_status, subscription_id)
-    VALUES (?, ?, ?, ?, 'pending', ?)
-  `).run(subscription.buyer_id, subscription.product_id, subscription.price_minor, subscription.currency, subscription.id);
+    INSERT INTO purchases (buyer_id, product_id, amount_minor, currency, payment_status, subscription_id, payer_phone)
+    VALUES (?, ?, ?, ?, 'pending', ?, ?)
+  `).run(subscription.buyer_id, subscription.product_id, subscription.price_minor, subscription.currency, subscription.id, isFree ? null : phone);
   const purchaseId = insert.lastInsertRowid;
 
   if (isFree) {

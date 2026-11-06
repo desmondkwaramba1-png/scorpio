@@ -5,9 +5,9 @@ import { api } from '../lib/api';
 // An order report opens the buyer/seller case chat and holds that order's
 // proceeds. A product-only report goes to the admin review queue; selecting
 // a serious claim reserves the product's unpaid proceeds until resolution.
-export default function ReportProblem({ purchaseId, productId, hasOpenReport, stopPropagation, label, onReported }) {
+export default function ReportProblem({ purchaseId, productId, hasOpenReport, stopPropagation, label, onReported, startOpen = false }) {
   const [reported, setReported] = useState(!!hasOpenReport);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const [reason, setReason] = useState('');
   const [seriousClaim, setSeriousClaim] = useState(false);
   const [submitting, setSubmitting] = useState(false);

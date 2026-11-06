@@ -34,7 +34,7 @@ export default function AcceptTerms() {
   return (
     <div>
       <div className="wrap" style={{ paddingTop: 32 }}>
-        <div className="card card--pad" style={{ background: 'var(--gold-tint)', borderColor: 'var(--gold)' }}>
+        <div className="card card--pad" style={{ background: 'var(--accent-tint)', borderColor: 'var(--accent)' }}>
           <p style={{ fontWeight: 700, marginBottom: 6 }}>One more thing before you continue</p>
           <p className="muted" style={{ fontSize: '.92rem', marginBottom: 16 }}>
             Read the platform terms below, then confirm you agree.

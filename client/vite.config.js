@@ -31,11 +31,11 @@ export default defineConfig({
         name: 'SCORPIO — Create, Sell, Empower',
         short_name: 'SCORPIO',
         description: 'Buy and sell digital products in Zimbabwe. Pay with EcoCash.',
-        // Matches --green-dark (the app's fixed navy chrome, see index.css)
+        // Matches --chrome (the app's fixed navy chrome, see index.css)
         // — the color a browser/OS paints behind the splash/status bar
         // before the page's own CSS has loaded.
-        theme_color: '#131921',
-        background_color: '#131921',
+        theme_color: '#0B1020',
+        background_color: '#0B1020',
         display: 'standalone',
         start_url: '/',
         icons: [
@@ -80,11 +80,12 @@ export default defineConfig({
               }
             },
           {
-            // Product/creator listings: try the network first (prices and
-            // stock need to be real), but don't make someone on a
-            // congested connection wait forever for it — fall back to the
-            // last good response after 4s instead of hanging.
-            urlPattern: ({ url, request }) => request.method === 'GET' && /^\/api\/(products|creators)(\/|\?|$)/.test(url.pathname + url.search),
+            // Public listing feeds only: try the network first (prices and
+            // stock need to be real), but don't make someone on a congested
+            // connection wait forever for it. Single-product and storefront
+            // responses are deliberately excluded: they carry this person's
+            // purchases and download links, and one phone can be shared.
+            urlPattern: ({ url, request }) => request.method === 'GET' && (url.pathname === '/api/products' || url.pathname === '/api/creators'),
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-reads',
@@ -113,15 +114,6 @@ export default defineConfig({
             options: {
               cacheName: 'reader-engine',
               expiration: { maxEntries: 6, maxAgeSeconds: 60 * 60 * 24 * 60 },
-              cacheableResponse: { statuses: [0, 200] }
-            }
-          },
-          {
-            urlPattern: ({ url }) => url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com' || url.hostname === 'api.fontshare.com',
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'fonts',
-              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
               cacheableResponse: { statuses: [0, 200] }
             }
           }

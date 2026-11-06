@@ -1,7 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
-const path = require('path');
 const { randomUUID } = require('crypto');
 const db = require('../db/schema');
 const { sendEmail } = require('../lib/notify');
@@ -12,7 +11,7 @@ const { authLimiter, loginLimiter, accountSecurityLimiter } = require('../middle
 const { loginLockedFor, recordLoginFailure, clearLoginFailures, passwordMatches, passwordProblem } = require('../lib/accountSecurity');
 const { checkAndUpdateVerification } = require('../lib/verification');
 const { linkGuestPurchases } = require('../lib/linkGuestPurchases');
-const { optimizeImage } = require('../lib/imageProcessing');
+const { prepareImage } = require('../lib/imageProcessing');
 const storage = require('../lib/storage');
 
 const router = express.Router();
@@ -34,10 +33,9 @@ const avatarUpload = multer({
 });
 
 async function uploadAvatar(file) {
-  const key = `avatars/${randomUUID()}${path.extname(file.originalname)}`;
-  let buffer = file.buffer;
-  try { buffer = await optimizeImage(file.buffer, { maxWidth: 480, enhance: true }); } catch (err) { console.error('[image optimize]', err); }
-  await storage.uploadBuffer(key, buffer, file.mimetype);
+  const image = await prepareImage(file.buffer, { maxWidth: 480, enhance: true });
+  const key = `avatars/${randomUUID()}${image.ext}`;
+  await storage.uploadBuffer(key, image.buffer, image.mime);
   return storage.publicUrl(key);
 }
 
@@ -74,15 +72,17 @@ router.post('/signup', authLimiter, (req, res) => {
   if (!username || !email || !phone || !password) {
     return res.status(400).json({ error: 'username, email, phone, and password are all required.' });
   }
+  if (![username, email, phone, password].every(value => typeof value === 'string')) {
+    return res.status(400).json({ error: 'That sign-up request could not be read.' });
+  }
   if (!USERNAME_RE.test(username)) {
     return res.status(400).json({ error: 'Username must be 3 to 24 characters: letters, numbers, underscores only.' });
   }
   if (!EMAIL_RE.test(email)) {
     return res.status(400).json({ error: 'Enter a valid email address.' });
   }
-  if (password.length < 8) {
-    return res.status(400).json({ error: 'Password must be at least 8 characters.' });
-  }
+  const signupPasswordProblem = passwordProblem(password, { username, email });
+  if (signupPasswordProblem) return res.status(400).json({ error: signupPasswordProblem });
   if (!terms_accepted) {
     return res.status(400).json({ error: 'You must agree to the Terms to create an account.' });
   }
@@ -227,7 +227,6 @@ router.post('/forgot-password', authLimiter, (req, res) => {
 router.post('/reset-password', authLimiter, (req, res) => {
   const { token, password } = req.body;
   if (!token || !password) return res.status(400).json({ error: 'token and password are required.' });
-  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
 
   const row = db.prepare(
     'SELECT * FROM password_reset_tokens WHERE token = ? AND consumed_at IS NULL'
@@ -235,6 +234,9 @@ router.post('/reset-password', authLimiter, (req, res) => {
   if (!row || new Date(row.expires_at) < new Date()) {
     return res.status(400).json({ error: 'That reset code or link is invalid or has expired.' });
   }
+  const resetUser = db.prepare('SELECT username, email FROM users WHERE id = ?').get(row.user_id);
+  const resetPasswordProblem = passwordProblem(password, resetUser);
+  if (resetPasswordProblem) return res.status(400).json({ error: resetPasswordProblem });
 
   const passwordHash = bcrypt.hashSync(password, 10);
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, row.user_id);
@@ -319,7 +321,7 @@ router.patch('/me', requireAuth, avatarUpload.single('avatar'), async (req, res)
   try {
     avatarUrl = req.file ? await uploadAvatar(req.file) : req.user.avatar_url;
   } catch (err) {
-    return res.status(502).json({ error: 'Could not upload that photo, try again.' });
+    return res.status(err.badImage ? 400 : 502).json({ error: err.badImage ? err.message : 'Could not upload that photo, try again.' });
   }
   const { name } = req.body;
 

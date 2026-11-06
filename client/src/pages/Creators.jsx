@@ -20,7 +20,7 @@ function CreatorCard({ creator }) {
       <div className="creator-card__info">
         <div className="creator-card__name">
           <span>{creator.name}</span>
-          {creator.verified && <FiCheck className="creator-card__verified-icon" size={13} aria-label="Verified creator" />}
+          {!!creator.verified && <FiCheck className="creator-card__verified-icon" size={13} aria-label="Verified creator" />}
         </div>
         <p className="creator-card__handle">@{creator.handle}</p>
         <div className="creator-card__stats">

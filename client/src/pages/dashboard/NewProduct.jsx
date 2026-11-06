@@ -197,7 +197,7 @@ export default function NewProduct() {
             {!coverPreview && form.title.charAt(0).toUpperCase()}
           </div>
           <div className="publish-success__details">
-            <span className="badge badge--green">Published</span>
+            <span className="badge badge--success">Published</span>
             <h2>{publishedProduct.title}</h2>
             <p>{price || 'Free'} <span>on your storefront</span></p>
           </div>

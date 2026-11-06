@@ -1,16 +1,26 @@
 const express = require('express');
 const multer = require('multer');
+const { randomUUID } = require('crypto');
 const db = require('../db/schema');
 const storage = require('../lib/storage');
 const { requireAuth } = require('../middleware/auth');
 const { disputeFor } = require('../lib/escrow');
 const { hasOffPlatformContact } = require('../lib/disputeMessagePolicy');
+const { detectImageMime } = require('../lib/imageProcessing');
 
 const router = express.Router();
 const evidenceUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }
 });
+
+// Screenshots and PDFs cover real evidence. The bytes decide, not the filename.
+async function evidenceType(buffer) {
+  const image = await detectImageMime(buffer);
+  if (image) return { mime: image, ext: { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif' }[image] };
+  if (buffer.subarray(0, 5).toString('latin1') === '%PDF-') return { mime: 'application/pdf', ext: '.pdf' };
+  return null;
+}
 
 function authorizedCase(req, res) {
   const purchase = db.prepare('SELECT * FROM purchases WHERE id = ?').get(req.params.purchaseId);
@@ -39,12 +49,14 @@ function authorizedCase(req, res) {
   return { dispute, role };
 }
 
-router.get('/purchases/:purchaseId', requireAuth, (req, res) => {
+router.get('/purchases/:purchaseId', requireAuth, async (req, res) => {
   const auth = authorizedCase(req, res);
   if (!auth) return;
   const messages = db.prepare('SELECT * FROM dispute_messages WHERE dispute_id = ? ORDER BY id ASC').all(auth.dispute.id);
-  const evidence = db.prepare('SELECT * FROM dispute_evidence WHERE dispute_id = ? ORDER BY id ASC').all(auth.dispute.id)
-    .map(item => ({ ...item, storage_path: storage.publicUrl(item.storage_path) }));
+  const evidence = await Promise.all(
+    db.prepare('SELECT * FROM dispute_evidence WHERE dispute_id = ? ORDER BY id ASC').all(auth.dispute.id)
+      .map(async item => ({ ...item, storage_path: await storage.evidenceUrl(item.storage_path) }))
+  );
   const timeline = [
     ...messages.map(item => ({
       type: 'message',
@@ -107,19 +119,18 @@ router.post('/purchases/:purchaseId/evidence', requireAuth, evidenceUpload.singl
   if (!auth) return;
   if (auth.dispute.status !== 'open') return res.status(409).json({ error: 'This dispute is closed.' });
   if (!req.file) return res.status(400).json({ error: 'Choose a screenshot or file first.' });
-  if (hasOffPlatformContact(req.file.originalname)) {
-    return res.status(400).json({ error: 'Remove phone numbers, email addresses, and links from the evidence filename.' });
-  }
+  const type = await evidenceType(req.file.buffer);
+  if (!type) return res.status(400).json({ error: 'Evidence must be an image (JPEG, PNG, WebP, GIF) or a PDF.' });
   if (!storage.isConfigured()) return res.status(503).json({ error: 'File storage is not configured yet.' });
 
   try {
-    const key = `evidence/${Date.now()}-${req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '')}`;
-    await storage.uploadBuffer(key, req.file.buffer, req.file.mimetype);
+    const key = `evidence/${randomUUID()}${type.ext}`;
+    await storage.uploadBuffer(key, req.file.buffer, type.mime);
     db.prepare(`
       INSERT INTO dispute_evidence
         (dispute_id, user_id, author_role, storage_path, original_filename, mime)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run(auth.dispute.id, req.user.id, auth.role, key, req.file.originalname, req.file.mimetype);
+    `).run(auth.dispute.id, req.user.id, auth.role, key, req.file.originalname, type.mime);
     res.status(201).json({ ok: true });
   } catch (err) {
     console.error('[dispute evidence]', err);

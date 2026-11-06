@@ -27,15 +27,15 @@ function renderHtml(subject, body) {
 
   const buttonHtml = ctaUrl ? `
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 20px;">
-      <tr><td style="border-radius:999px;background:#FF8C42;">
-        <a href="${escapeHtml(ctaUrl)}" style="display:inline-block;padding:13px 28px;color:#131921;font-weight:700;font-size:15px;text-decoration:none;border-radius:999px;">
+      <tr><td style="border-radius:999px;background:#2554FF;">
+        <a href="${escapeHtml(ctaUrl)}" style="display:inline-block;padding:13px 28px;color:#FFFFFF;font-weight:600;font-size:15px;text-decoration:none;border-radius:999px;">
           Continue
         </a>
       </td></tr>
     </table>
     <p style="margin:0 0 16px;color:#565959;font-size:13px;word-break:break-all;">
       Or paste this link into your browser:<br>
-      <a href="${escapeHtml(ctaUrl)}" style="color:#C93659;">${escapeHtml(ctaUrl)}</a>
+      <a href="${escapeHtml(ctaUrl)}" style="color:#1C3FD0;">${escapeHtml(ctaUrl)}</a>
     </p>` : '';
 
   // The button renders right where the link actually was in the original
@@ -66,12 +66,12 @@ function renderHtml(subject, body) {
 
   return `<!doctype html>
 <html>
-<body style="margin:0;padding:0;background:#F0F2F2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F0F2F2;padding:32px 16px;">
+<body style="margin:0;padding:0;background:#F6F7FA;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F7FA;padding:32px 16px;">
     <tr><td align="center">
       <table role="presentation" width="100%" style="max-width:480px;">
         <tr><td style="padding-bottom:20px;text-align:center;">
-          <span style="font-family:Georgia,serif;font-style:italic;font-size:32px;color:#FF8C42;">Scorpio</span>
+          <span style="font-weight:700;font-size:24px;letter-spacing:-.5px;color:#0B1020;">Scorpio</span>
         </td></tr>
         <tr><td style="background:#FFFFFF;border-radius:14px;padding:32px 28px;box-shadow:0 1px 2px rgba(19,25,33,.06);">
           <h1 style="margin:0 0 16px;color:#0F1111;font-size:20px;line-height:1.35;">${escapeHtml(subject)}</h1>

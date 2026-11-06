@@ -12,7 +12,7 @@ export default function ThemeToggle() {
     <div className="card card--pad" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <span style={{
-          width: 34, height: 34, borderRadius: 10, background: 'var(--green-tint)', color: 'var(--green-glow)',
+          width: 34, height: 34, borderRadius: 10, background: 'var(--brand-tint)', color: 'var(--brand-strong)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
         }}>
           {isDark ? <FiMoon size={16} /> : <FiSun size={16} />}

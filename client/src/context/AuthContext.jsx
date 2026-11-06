@@ -34,6 +34,14 @@ export function AuthProvider({ children }) {
     api.warmup().catch(() => {});
   }, [refresh]);
 
+  // A session that ended mid-visit should lead to the login page, which brings
+  // the person back here, not leave them with confusing errors on a dead page.
+  useEffect(() => {
+    const onExpired = () => { setUser(null); setCreator(null); };
+    window.addEventListener('scorpio:session-expired', onExpired);
+    return () => window.removeEventListener('scorpio:session-expired', onExpired);
+  }, []);
+
   async function logout() {
     try {
       await api.post('/api/auth/logout');
@@ -42,6 +50,8 @@ export function AuthProvider({ children }) {
     } finally {
       setUser(null);
       setCreator(null);
+      // Nothing from this person's session may stay on a shared phone.
+      if ('caches' in window) await caches.delete('api-reads').catch(() => {});
     }
   }
 

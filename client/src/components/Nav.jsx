@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { FiCompass, FiUsers, FiGrid, FiUser, FiLogIn, FiLogOut, FiShoppingBag, FiShoppingCart, FiSearch, FiPackage, FiChevronDown, FiMail, FiPlayCircle, FiBookOpen } from 'react-icons/fi';
+import { FiCompass, FiUsers, FiGrid, FiUser, FiLogIn, FiLogOut, FiShoppingBag, FiShoppingCart, FiSearch, FiPackage, FiChevronDown, FiMail, FiPlayCircle, FiBookOpen, FiPlusCircle } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 
@@ -99,7 +99,7 @@ export default function Nav() {
   const showVerifyBanner = !loading && user && !user.email_verified_at && location.pathname !== '/check-email';
 
   return (
-    <nav className="nav">
+    <nav className="nav" aria-label="Main">
       {showVerifyBanner && (
         <div className="wrap nav__verify-banner">
           <FiMail size={14} />
@@ -109,10 +109,11 @@ export default function Nav() {
       )}
       <div className="wrap nav__inner">
         <Link to="/" className="nav__brand">
+          <img className="nav__mark" src="/brand/mark.svg" alt="" />
           <span className="nav__name">Scorpio</span>
         </Link>
 
-        <form onSubmit={submitSearch} className="nav__search">
+        <form onSubmit={submitSearch} className="nav__search" role="search">
           <FiSearch size={14} />
           <input
             value={q} onChange={e => setQ(e.target.value)}
@@ -120,7 +121,7 @@ export default function Nav() {
           />
         </form>
 
-        <div className="nav__icons" style={{ justifySelf: 'end' }}>
+        <div className="nav__icons">
           <NavLink to="/discover" className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')}>
             <FiCompass /> <span>Discover</span>
           </NavLink>
@@ -130,7 +131,7 @@ export default function Nav() {
           <NavLink to="/creators" className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')}>
             <FiUsers /> <span>Creators</span>
           </NavLink>
-          <NavLink to="/blog" className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')}>
+          <NavLink to="/blog" className={({ isActive }) => 'nav__icon-link nav__icon-link--secondary' + (isActive ? ' nav__icon-link--active' : '')}>
             <FiBookOpen /> <span>Blog</span>
           </NavLink>
           {!loading && user && (
@@ -139,15 +140,15 @@ export default function Nav() {
               {count > 0 && <span className="nav__cart-badge">{count}</span>}
             </NavLink>
           )}
-          {!loading && user && <AccountMenu user={user} creator={creator} logout={logout} />}
+          {!loading && user && <AccountMenu user={user} creator={creator} logout={async () => { await logout(); navigate('/'); }} />}
           {!loading && !user && (
             <NavLink to="/login" className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')}>
-              <FiLogIn /> <span>Login</span>
+              <FiLogIn /> <span>Log in</span>
             </NavLink>
           )}
           {!loading && !user && (
             <NavLink to="/login?role=creator" className="nav__icon-link nav__icon-link--cta">
-              <FiShoppingBag /> <span>Start selling</span>
+              <FiPlusCircle /> <span>Sell</span>
             </NavLink>
           )}
         </div>

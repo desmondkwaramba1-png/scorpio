@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { safeNext } from '../lib/safeNext';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { FiShoppingBag, FiShoppingCart, FiEye, FiEyeOff, FiCheck } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
 import { api } from '../lib/api';
@@ -50,10 +51,10 @@ function PasswordField({ id, label, value, onChange, placeholder, hint, minLengt
 
 export default function Login() {
   const navigate = useNavigate();
-  const { refresh } = useAuth();
+  const { refresh, user, creator, loading: authLoading } = useAuth();
   const [searchParams] = useSearchParams();
   const presetRole = searchParams.get('role');
-  const next = searchParams.get('next');
+  const next = safeNext(searchParams.get('next'));
 
   // Role only matters for a brand-new signup (does this new account want
   // to land in onboarding right away?), it's not something a RETURNING
@@ -150,6 +151,13 @@ export default function Login() {
     navigate('/');
   }
 
+  // Someone already logged in has nothing to do here. Not while a form is being
+  // submitted, because afterAuth decides where a fresh login goes.
+  if (!authLoading && user && !submitting) {
+    const wantsStorefront = presetRole === 'creator' && !creator;
+    return <Navigate to={next || (wantsStorefront ? '/onboarding' : creator ? '/dashboard' : '/')} replace />;
+  }
+
   // OAuth login doesn't know in advance whether it'll create a brand-new
   // account or sign into an existing one, so a role picked in the login
   // tab is meaningless either way, afterAuth/OAuthComplete decide purely
@@ -193,6 +201,8 @@ export default function Login() {
       afterAuth(data);
     } catch (err) {
       setError(err.message);
+      // Those fields are on the first step, so that's where to fix them.
+      if (err.status === 409) setSignupStep(0);
     } finally {
       setSubmitting(false);
     }
@@ -236,7 +246,7 @@ export default function Login() {
           {tab === 'signup' && (
             <p className="muted" style={{ fontSize: '.85rem', marginBottom: 16 }}>
               Signing up as a {signupRole === 'creator' ? 'creator' : 'buyer'}.{' '}
-              <button type="button" onClick={() => { setSignupRole(null); setSignupStep(0); }} style={{ background: 'none', border: 'none', padding: 0, color: 'var(--gold-ink)', fontWeight: 600, cursor: 'pointer' }}>
+              <button type="button" onClick={() => { setSignupRole(null); setSignupStep(0); }} style={{ background: 'none', border: 'none', padding: 0, color: 'var(--link-ink)', fontWeight: 600, cursor: 'pointer' }}>
                 change
               </button>
             </p>
@@ -277,7 +287,7 @@ export default function Login() {
                 </a>
               </div>
               <p className="muted" style={{ fontSize: '.78rem', textAlign: 'center', marginTop: -10 }}>
-                Continuing means you'll be asked to agree to the <Link to="/terms" target="_blank" style={{ color: 'var(--green)' }}>terms</Link> on your first visit.
+                Continuing means you'll be asked to agree to the <Link to="/terms" target="_blank" style={{ color: 'var(--brand)' }}>terms</Link> on your first visit.
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0', color: 'var(--muted)', fontSize: '.8rem' }}>
                 <span style={{ flex: 1, height: 1, background: 'var(--line)' }} />
@@ -357,7 +367,7 @@ export default function Login() {
                         onChange={e => setForm(f => ({ ...f, terms: e.target.checked }))}
                         style={{ width: 'auto', marginTop: 3 }} />
                       <span>
-                        I agree to the <Link to="/terms" target="_blank" style={{ color: 'var(--green)', fontWeight: 600 }}>SCORPIO terms</Link>.
+                        I agree to the <Link to="/terms" target="_blank" style={{ color: 'var(--brand)', fontWeight: 600 }}>SCORPIO terms</Link>.
                       </span>
                     </label>
                   </div>

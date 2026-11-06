@@ -175,9 +175,9 @@ export default function DashboardLayout() {
         </div>
       )}
 
-      <main className="dash-main">
+      <div className="dash-main">
         <Outlet context={{ security, refreshSecurity, startTour }} />
-      </main>
+      </div>
     </div>
   );
 }

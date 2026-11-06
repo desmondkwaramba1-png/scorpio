@@ -85,7 +85,7 @@ export default function TourGuide({ run, setRun, storageKey }) {
         // blocked its links. 45 dims the page but leaves the bar usable.
         zIndex: 45,
         scrollOffset: 150,
-        primaryColor: 'var(--green-glow)',
+        primaryColor: 'var(--brand-strong)',
         overlayColor: 'rgba(15,17,17,.48)',
         spotlightPadding: 7,
         spotlightRadius: 9,
@@ -103,7 +103,7 @@ export default function TourGuide({ run, setRun, storageKey }) {
         tooltipContent: { color: 'var(--ink-dim)', lineHeight: 1.55, padding: '8px 18px 12px' },
         tooltipFooter: { padding: '0 18px 16px' },
         buttonPrimary: {
-          backgroundColor: 'var(--green-glow)',
+          backgroundColor: 'var(--brand-strong)',
           borderRadius: 8,
           color: '#fff',
           fontWeight: 700,

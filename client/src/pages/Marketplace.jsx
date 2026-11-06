@@ -8,15 +8,12 @@ import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../lib/launchScope.js';
 import { formatMoney } from '../lib/money';
 import { useAuth } from '../context/AuthContext.jsx';
 
-// Same three promises Product.jsx's own trust-line/buy-benefits already
-// make on every listing page, one level up: a stranger deciding whether
-// to trust this marketplace at all shouldn't have to click into a
-// product first to find out review-before-publish, instant delivery, and
-// buyer protection are real, standing policies, not per-listing copy.
+// Only promises the platform actually keeps. Listings go live straight away and
+// files are checked by automated rules, so this must not claim human review.
 // Short labels only, no sentence each — see the CSS comment on
 // .trust-band for why (a phone-height problem, not a taste one).
 const TRUST_ITEMS = [
-  { icon: FiCheckCircle, title: 'Checked before it goes live' },
+  { icon: FiCheckCircle, title: 'Automatic file checks' },
   { icon: FiZap, title: 'Instant delivery' },
   { icon: FiShield, title: '5-day buyer protection' }
 ];
@@ -30,7 +27,7 @@ const FEATURE_BENEFITS = [
   {
     icon: FiShield,
     title: 'Trust-first buying',
-    text: 'Every listing is reviewed and every purchase is protected, so buyers can move faster with confidence.'
+    text: 'Files are checked automatically, and every purchase comes with 5 days of buyer protection.'
   },
   {
     icon: FiTrendingUp,
@@ -117,7 +114,7 @@ function GettingStarted() {
                 <span><FiUploadCloud size={13} /> Publish</span>
                 <span><FiZap size={13} /> Get paid</span>
               </div>
-              <Link to="/login?role=creator" className="btn btn--gold btn--sm">Start selling <FiChevronRight size={14} /></Link>
+              <Link to="/login?role=creator" className="btn btn--cta btn--sm">Start selling <FiChevronRight size={14} /></Link>
             </div>
           </div>
         </div>
@@ -245,7 +242,7 @@ function CreatorSpotlightSkeleton() {
     <section className="section section--row wrap" aria-hidden="true">
       <div className="rail-head">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <FiUsers size={16} color="var(--green-glow)" />
+          <FiUsers size={16} color="var(--brand-strong)" />
           <h2 className="rail-head__title">Meet the creators</h2>
         </div>
       </div>
@@ -278,7 +275,7 @@ function CreatorSpotlight({ creators, reelsByCreator, onPlay }) {
       <div className="rail-head">
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <FiUsers size={16} color="var(--green-glow)" />
+            <FiUsers size={16} color="var(--brand-strong)" />
             <h2 className="rail-head__title">Meet the creators</h2>
           </div>
           <p className="rail-head__subtitle">Real people behind the listings, not anonymous storefronts.</p>
@@ -292,7 +289,7 @@ function CreatorSpotlight({ creators, reelsByCreator, onPlay }) {
             const avatar = (
               <span
                 className="creator-spotlight__avatar"
-                style={{ background: c.avatar_path ? `url(${c.avatar_path}) center/cover` : 'var(--gold)' }}
+                style={{ background: c.avatar_path ? `url(${c.avatar_path}) center/cover` : 'var(--accent)' }}
               >
                 {!c.avatar_path && c.name.charAt(0).toUpperCase()}
               </span>
@@ -352,7 +349,7 @@ function BlogRail({ posts }) {
       <div className="rail-head">
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <FiBookOpen size={16} color="var(--green-glow)" />
+            <FiBookOpen size={16} color="var(--brand-strong)" />
             <h2 className="rail-head__title">From the blog</h2>
           </div>
           <p className="rail-head__subtitle">Real guides on selling and buying digitally, from the people building this.</p>
@@ -380,7 +377,7 @@ function Rail({ title, subtitle, icon: Icon, link, products }) {
       <div className="rail-head">
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {Icon && <Icon size={16} color="var(--green-glow)" />}
+            {Icon && <Icon size={16} color="var(--brand-strong)" />}
             <h2 className="rail-head__title">{title}</h2>
           </div>
           {subtitle && <p className="rail-head__subtitle">{subtitle}</p>}
@@ -474,11 +471,6 @@ export default function Marketplace() {
     });
   }, []);
 
-  function submitSearch(e) {
-    e.preventDefault();
-    navigate(q ? `/discover?q=${encodeURIComponent(q)}` : '/discover');
-  }
-
   return (
     <div>
       <header className={`shop-hero${showPitch ? '' : ' shop-hero--compact'}`}>
@@ -509,7 +501,7 @@ export default function Marketplace() {
               </h1>
               <p className="shop-hero__sub">
                 {EBOOKS_ONLY
-                  ? "Curated learning, templates, and practical guides from Zimbabwean creators who build what people actually use."
+                  ? "Practical guides, templates, and courses from Zimbabwean creators, paid for with EcoCash."
                   : "Discover ebooks, templates, courses, and tools from people who know their craft. Clear pricing, instant access, and buyer protection built in."}
               </p>
               <div className="shop-hero__meta shop-hero__reveal" style={{ animationDelay: '.2s' }}>
@@ -518,7 +510,7 @@ export default function Marketplace() {
                 <span>Verified sellers</span>
               </div>
               <div className="shop-hero__actions shop-hero__reveal" style={{ animationDelay: '.35s' }}>
-                <Link to="/discover" className="btn btn--gold shop-hero__cta">Browse products</Link>
+                <Link to="/discover" className="btn btn--cta shop-hero__cta">Browse products</Link>
                 <Link to="/login?role=creator" className="shop-hero__browse-btn">
                   Sell your work <FiChevronRight size={14} />
                 </Link>
@@ -527,30 +519,9 @@ export default function Marketplace() {
               <HeroSpotlight products={trending} />
             </>
           ) : (
-            <form onSubmit={submitSearch} className="shop-hero__search">
-              {/* The full pitch above carries a real, visible <h1> — this
-                  compact header (a returning visitor who already dismissed
-                  it) showed none at all, a real page-has-heading-one fail
-                  a screen reader user would hit on every repeat visit, not
-                  just a first-time edge case. Also gave the bar itself
-                  nothing but a floating search field on a flat block, real
-                  visitors reported it read as an empty gap on the page —
-                  this label carries a visible line of real content instead. */}
-              <h1 className="sr-only">SCORPIO, Zimbabwe's marketplace for ebooks, guides, templates and courses</h1>
-              <span className="shop-hero__compact-label">
-                {EBOOKS_ONLY ? 'Guides, templates, and courses from real Zimbabwean creators.' : "Zimbabwe's marketplace for real digital products."}
-              </span>
-              <div className="shop-hero__search-row">
-                <FiSearch size={16} color="var(--muted)" />
-                <input
-                  value={q} onChange={e => setQ(e.target.value)}
-                  placeholder={EBOOKS_ONLY ? 'Search guides, templates, courses...' : 'Search for ebooks, courses, music, templates...'}
-                />
-                <button type="submit" className="shop-hero__search-btn" aria-label="Search">
-                  <FiSearch size={18} />
-                </button>
-              </div>
-            </form>
+            <h1 className="shop-hero__compact-label">
+              {EBOOKS_ONLY ? 'Guides, templates, and courses from real Zimbabwean creators.' : "Zimbabwe's marketplace for real digital products."}
+            </h1>
           )}
           {/* A returning visit means the search bar is here, but nothing
               else - no sign of whether this device even remembers you're
@@ -567,7 +538,7 @@ export default function Marketplace() {
               {!user && (
                 <>
                   <Link to="/login" className="shop-hero__quicklink">
-                    <FiLogIn size={14} /> Sign in
+                    <FiLogIn size={14} /> Log in
                   </Link>
                   <Link to="/login?role=creator" className="shop-hero__quicklink">
                     <FiShoppingBag size={14} /> Sell your own
@@ -585,8 +556,6 @@ export default function Marketplace() {
       </header>
 
       <TrustBand />
-      <FeatureHighlights />
-      <GettingStarted />
 
       {/* Real proof comes before anything else below the hero and trust
           band — a first-time visitor deciding whether this is worth their
@@ -634,6 +603,9 @@ export default function Marketplace() {
         />
       ))}
 
+      <FeatureHighlights />
+      <GettingStarted />
+
       <CreatorSpotlight creators={spotlightCreators} reelsByCreator={reelsByCreator} onPlay={setViewingReels} />
 
       {/* The blog earns a real, prominent spot on the page — just not the
@@ -663,7 +635,7 @@ export default function Marketplace() {
             <p style={{ color: 'rgba(255,255,255,.68)', maxWidth: '46ch', margin: '0 auto 24px' }}>
               No website, no monthly fee. Get paid straight to your EcoCash.
             </p>
-            <Link to="/login?role=creator" className="btn btn--gold">Start selling</Link>
+            <Link to="/login?role=creator" className="btn btn--cta">Start selling</Link>
           </div>
         </section>
       )}

@@ -88,6 +88,25 @@ function resolveDispute(disputeId, resolution, note) {
   // but new downloads from here stop.
   if (resolution === 'refund') {
     db.prepare("UPDATE download_tokens SET expires_at = datetime('now') WHERE purchase_id = ?").run(dispute.purchase_id);
+
+    const purchase = getPurchase(dispute.purchase_id);
+    const product = db.prepare('SELECT type FROM products WHERE id = ?').get(purchase.product_id);
+    if (product?.type === 'subscription') {
+      // Refunded money means the access it paid for ends now.
+      db.prepare(`
+        UPDATE subscriptions SET status = 'canceled', canceled_at = COALESCE(canceled_at, datetime('now')), current_period_end = datetime('now')
+        WHERE id = ? AND status = 'active'
+      `).run(purchase.subscription_id);
+    } else {
+      // The unit and any promo slot go back on sale. License keys stay spent
+      // because the buyer has already seen theirs.
+      db.prepare(`
+        UPDATE products SET
+          quantity_sold = MAX(0, quantity_sold - 1),
+          discount_claimed = CASE WHEN ? THEN MAX(0, discount_claimed - 1) ELSE discount_claimed END
+        WHERE id = ?
+      `).run(purchase.discount_applied ? 1 : 0, purchase.product_id);
+    }
   }
 
   return db.prepare('SELECT * FROM service_disputes WHERE id = ?').get(disputeId);

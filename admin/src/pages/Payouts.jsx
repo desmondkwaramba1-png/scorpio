@@ -36,13 +36,13 @@ function MarkPaidRow({ creator, onPaid }) {
         )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-        <span className="mono" style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--green-glow)' }}>
+        <span className="mono" style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--brand-strong)' }}>
           {formatMoney(creator.available_minor, creator.currency)}
         </span>
         {confirming ? (
           <>
             <button className="btn btn--ghost btn--sm" onClick={() => setConfirming(false)} disabled={submitting}>Cancel</button>
-            <button className="btn btn--gold btn--sm" onClick={confirm} disabled={submitting}>
+            <button className="btn btn--cta btn--sm" onClick={confirm} disabled={submitting}>
               {submitting ? 'Saving...' : `Confirm sent ${formatMoney(creator.available_minor, creator.currency)}`}
             </button>
           </>
@@ -80,7 +80,7 @@ export default function Payouts() {
 
   return (
     <div>
-      <div className="card card--pad" style={{ marginBottom: 24, borderTop: '3px solid var(--gold)' }}>
+      <div className="card card--pad" style={{ marginBottom: 24, borderTop: '3px solid var(--accent)' }}>
         <p className="muted" style={{ fontSize: '.85rem', marginBottom: 4 }}>Total due this cycle</p>
         <div className="admin-payout-totals">
           {Object.entries(Object.keys(data.total_due_by_currency || {}).length ? data.total_due_by_currency : { USD: 0 }).map(([currency, amount]) => (

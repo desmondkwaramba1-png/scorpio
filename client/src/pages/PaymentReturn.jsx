@@ -31,12 +31,12 @@ function ItemRow({ item }) {
         {item.download_url || item.view_url || ['serial', 'subscription'].includes(item.product_type) ? (
           <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '100%' }}>
             {['serial', 'subscription'].includes(item.product_type) && (
-              <Link to={`${productUrl}#issues-section`} className="btn btn--gold btn--sm">
+              <Link to={`${productUrl}#issues-section`} className="btn btn--cta btn--sm">
                 <FiBookOpen size={14} /> View issues
               </Link>
             )}
             {item.view_url && item.is_external && (
-              <a href={item.view_url} target="_blank" rel="noopener noreferrer" className="btn btn--gold btn--sm">
+              <a href={item.view_url} target="_blank" rel="noopener noreferrer" className="btn btn--cta btn--sm">
                 <FiExternalLink size={14} /> Open
               </a>
             )}
@@ -51,7 +51,7 @@ function ItemRow({ item }) {
               </button>
             )}
             {item.download_url && (
-              <a href={item.download_url} className="btn btn--gold btn--sm">
+              <a href={item.download_url} className="btn btn--cta btn--sm">
                 <FiDownload size={14} /> Download now
               </a>
             )}
@@ -86,9 +86,9 @@ function ItemRow({ item }) {
           marginTop: 14, padding: '9px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--field-bg)'
         }}>
           <span className="mono" style={{ fontSize: '.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <FiKey size={13} color="var(--gold)" /> {item.license_key}
+            <FiKey size={13} color="var(--accent-icon)" /> {item.license_key}
           </span>
-          <button onClick={copyKey} className="btn btn--ghost btn--sm" style={keyCopied ? { color: 'var(--green-glow)' } : undefined}>
+          <button onClick={copyKey} className="btn btn--ghost btn--sm" style={keyCopied ? { color: 'var(--brand-strong)' } : undefined}>
             {keyCopied ? <FiCheck size={13} /> : <FiCopy size={13} />} {keyCopied ? 'Copied' : 'Copy'}
           </button>
         </div>
@@ -196,17 +196,22 @@ export default function PaymentReturn() {
   if (data.status === 'paid') {
     return (
       <div className="wrap center-page" style={{ maxWidth: 480, padding: 20 }}>
-        <FiCheckCircle size={40} color="var(--green)" style={{ marginBottom: 14 }} />
+        <FiCheckCircle size={40} color="var(--success)" style={{ marginBottom: 14 }} />
         <h1 style={{ fontSize: '1.4rem', marginBottom: 8 }}>Payment confirmed</h1>
         <p className="muted" style={{ marginBottom: 24 }}>{summary} &middot; {totalPrice}</p>
         <p className="muted" style={{ marginBottom: 16 }}>Your content is ready below. Read or watch it here, or download a copy.</p>
 
         <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-          {data.items.map(item => <ItemRow key={item.product_slug} item={item} />)}
+          {data.login_required ? (
+              <div className="card card--pad">
+                <p style={{ marginBottom: 14 }}>Log in to the account you paid with to open what you bought.</p>
+                <Link to={`/login?next=${encodeURIComponent(`/payment/return?order_id=${orderId}`)}`} className="btn btn--cta">Log in</Link>
+              </div>
+            ) : data.items.map(item => <ItemRow key={item.product_slug} item={item} />)}
         </div>
 
         <p style={{ marginTop: 20 }}>
-          <Link to="/account" style={{ color: 'var(--green)', fontWeight: 600, fontSize: '.9rem' }}>View all your orders</Link>
+          <Link to="/account" style={{ color: 'var(--brand)', fontWeight: 600, fontSize: '.9rem' }}>View all your orders</Link>
         </p>
       </div>
     );

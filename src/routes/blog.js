@@ -1,14 +1,16 @@
 const express = require('express');
 const multer = require('multer');
-const path = require('path');
 const { randomUUID } = require('crypto');
 const db = require('../db/schema');
 const { requireAdmin } = require('./admin');
+const { adminLimiter } = require('../middleware/rateLimit');
 const { requireAuth, requireCreator } = require('../middleware/auth');
-const { optimizeImage } = require('../lib/imageProcessing');
+const { prepareImage } = require('../lib/imageProcessing');
 const storage = require('../lib/storage');
 
 const router = express.Router();
+// The same ADMIN_KEY is accepted here, so guessing it has to be capped here too.
+router.use('/admin', adminLimiter);
 
 // Same stored-XSS reasoning products.js's own COVER_IMAGE_TYPES comment
 // gives: an upload served back out at its own URL with whatever
@@ -24,10 +26,6 @@ const upload = multer({
   fileFilter: coverFileFilter,
   limits: { fileSize: 5 * 1024 * 1024 } // a blog cover, not a product deliverable
 });
-
-function objectKey(prefix, originalname) {
-  return `${prefix}/${randomUUID()}${path.extname(originalname)}`;
-}
 
 // SQLite's own datetime('now') format (e.g. "2026-09-16 06:54:36") -
 // every other timestamp column in this table (created_at, updated_at)
@@ -66,10 +64,9 @@ function uniqueSlug(title, excludeId) {
 }
 
 async function uploadCover(file) {
-  let buffer = file.buffer;
-  try { buffer = await optimizeImage(file.buffer, { maxWidth: 1600, enhance: true }); } catch (err) { console.error('[image optimize]', err); }
-  const key = objectKey('blog-covers', file.originalname);
-  await storage.uploadBuffer(key, buffer, file.mimetype);
+  const image = await prepareImage(file.buffer, { maxWidth: 1600, enhance: true });
+  const key = `blog-covers/${randomUUID()}${image.ext}`;
+  await storage.uploadBuffer(key, image.buffer, image.mime);
   return storage.publicUrl(key);
 }
 
@@ -180,7 +177,7 @@ router.post('/mine', requireAuth, requireCreator, upload.single('cover'), async 
   // a rejected promise to the error middleware on its own.
   if (req.file) {
     try { coverPath = await uploadCover(req.file); }
-    catch (err) { return res.status(502).json({ error: 'Could not upload that cover image, try again.' }); }
+    catch (err) { return res.status(err.badImage ? 400 : 502).json({ error: err.badImage ? err.message : 'Could not upload that cover image, try again.' }); }
   }
 
   const result = db.prepare(`
@@ -222,7 +219,7 @@ router.patch('/mine/:id', requireAuth, requireCreator, upload.single('cover'), a
   // a rejected promise to the error middleware on its own.
   if (req.file) {
     try { coverPath = await uploadCover(req.file); }
-    catch (err) { return res.status(502).json({ error: 'Could not upload that cover image, try again.' }); }
+    catch (err) { return res.status(err.badImage ? 400 : 502).json({ error: err.badImage ? err.message : 'Could not upload that cover image, try again.' }); }
   }
 
   db.prepare(`
@@ -304,7 +301,7 @@ router.post('/admin/posts', requireAdmin, upload.single('cover'), async (req, re
   // a rejected promise to the error middleware on its own.
   if (req.file) {
     try { coverPath = await uploadCover(req.file); }
-    catch (err) { return res.status(502).json({ error: 'Could not upload that cover image, try again.' }); }
+    catch (err) { return res.status(err.badImage ? 400 : 502).json({ error: err.badImage ? err.message : 'Could not upload that cover image, try again.' }); }
   }
 
   const result = db.prepare(`
@@ -344,7 +341,7 @@ router.patch('/admin/posts/:id', requireAdmin, upload.single('cover'), async (re
   // a rejected promise to the error middleware on its own.
   if (req.file) {
     try { coverPath = await uploadCover(req.file); }
-    catch (err) { return res.status(502).json({ error: 'Could not upload that cover image, try again.' }); }
+    catch (err) { return res.status(err.badImage ? 400 : 502).json({ error: err.badImage ? err.message : 'Could not upload that cover image, try again.' }); }
   }
 
   db.prepare(`

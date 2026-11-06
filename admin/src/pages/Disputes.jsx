@@ -10,6 +10,10 @@ function DisputeCard({ dispute, onResolve }) {
   const [error, setError] = useState(null);
 
   async function resolve(resolution) {
+    const question = resolution === 'refund'
+      ? 'Refund the buyer? This takes the money out of the seller\'s balance and can\'t be undone.'
+      : 'Release the payment to the seller? This closes the case and can\'t be undone.';
+    if (!window.confirm(question)) return;
     setSubmitting(resolution);
     setError(null);
     try {
@@ -29,6 +33,7 @@ function DisputeCard({ dispute, onResolve }) {
           <p style={{ fontWeight: 700 }}>{dispute.product_title}</p>
           <p className="muted" style={{ fontSize: '.85rem' }}>
             {dispute.buyer_name || dispute.buyer_email} bought from {dispute.seller_name} ({dispute.seller_handle}) &middot; {formatMoney(dispute.amount_minor, dispute.currency)}
+          {dispute.payer_phone && <p className="muted" style={{ fontSize: '.85rem' }}>Paid from EcoCash number <strong className="mono">{dispute.payer_phone}</strong>. Send any refund there.</p>}
           </p>
           <p className="dispute-hold-summary">
             Order proceeds held: <strong>{formatMoney(dispute.order_funds_held_minor || 0, dispute.currency)}</strong>
@@ -77,7 +82,7 @@ function DisputeCard({ dispute, onResolve }) {
         <button className="btn btn--sm" style={{ background: 'var(--red)', color: 'var(--ink-contrast)' }} onClick={() => resolve('refund')} disabled={!!submitting}>
           {submitting === 'refund' ? 'Saving...' : 'Refund buyer'}
         </button>
-        <button className="btn btn--gold btn--sm" onClick={() => resolve('release')} disabled={!!submitting}>
+        <button className="btn btn--cta btn--sm" onClick={() => resolve('release')} disabled={!!submitting}>
           {submitting === 'release' ? 'Saving...' : 'Release to seller'}
         </button>
       </div>
@@ -107,7 +112,7 @@ export default function Disputes() {
   return (
     <div>
       {resolvedNote && (
-        <p className="card card--pad" style={{ color: 'var(--green-glow)', fontWeight: 600, marginBottom: 16 }}>{resolvedNote}</p>
+        <p className="card card--pad" style={{ color: 'var(--brand-strong)', fontWeight: 600, marginBottom: 16 }}>{resolvedNote}</p>
       )}
       {disputes.length === 0 ? (
         <div className="empty-state"><FiAlertTriangle size={22} color="var(--muted)" style={{ marginBottom: 8 }} /><strong>No open disputes.</strong></div>

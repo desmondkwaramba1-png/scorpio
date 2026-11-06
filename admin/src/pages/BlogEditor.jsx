@@ -154,7 +154,7 @@ export default function BlogEditor() {
           )}
           {meta.status === 'pending_review' && (
             <div className="btn-row" style={{ marginTop: 12 }}>
-              <button className="btn btn--gold" disabled={submitting} onClick={() => review('approve')}>Approve &amp; publish</button>
+              <button className="btn btn--cta" disabled={submitting} onClick={() => review('approve')}>Approve &amp; publish</button>
               <button className="btn btn--ghost" disabled={submitting} onClick={() => review('reject')}>Reject</button>
             </div>
           )}
@@ -179,10 +179,10 @@ export default function BlogEditor() {
 
       {notice && (
         <div className="card card--pad" style={{
-          marginBottom: 20, borderColor: 'var(--green-glow)', display: 'flex',
+          marginBottom: 20, borderColor: 'var(--brand-strong)', display: 'flex',
           justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap'
         }}>
-          <span style={{ color: 'var(--green-glow)', fontWeight: 600 }}>
+          <span style={{ color: 'var(--brand-strong)', fontWeight: 600 }}>
             {notice.justSaved === 'published' ? 'Published — it\'s live now.'
               : notice.justSaved === 'pending_review' ? 'Sent back for review.'
               : notice.justSaved === 'rejected' ? 'Rejected — the creator can see why and resubmit.'
@@ -247,7 +247,7 @@ export default function BlogEditor() {
         <button className="btn btn--ghost" disabled={submitting} onClick={() => submit('draft')}>
           {submitting ? 'Saving...' : meta?.status === 'published' ? 'Unpublish (save as draft)' : 'Save as draft'}
         </button>
-        <button className="btn btn--gold" style={{ flex: 1 }} disabled={submitting} onClick={() => submit('published')}>
+        <button className="btn btn--cta" style={{ flex: 1 }} disabled={submitting} onClick={() => submit('published')}>
           {submitting ? 'Saving...' : meta?.status === 'published' ? 'Save changes' : 'Publish'}
         </button>
       </div>

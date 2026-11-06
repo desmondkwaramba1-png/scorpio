@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Nav from './components/Nav.jsx';
 import Footer from './components/Footer.jsx';
 import SplashScreen from './components/SplashScreen.jsx';
@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import OfflineScreen from './components/OfflineScreen.jsx';
 import Marketplace from './pages/Marketplace.jsx';
+import { titleForPath } from './lib/pageTitles';
 
 // Route-based code splitting, on a slow connection, shipping the entire
 // app (every dashboard page, every auth screen, the checkout flow) in one
@@ -14,6 +15,7 @@ import Marketplace from './pages/Marketplace.jsx';
 // Marketplace stays a normal eager import: it's overwhelmingly the first
 // page a new visitor actually lands on, so there's nothing to gain by
 // deferring it, everything reachable from a click loads on demand instead.
+const NotFound = lazy(() => import('./pages/NotFound.jsx'));
 const Discover = lazy(() => import('./pages/Discover.jsx'));
 const Creators = lazy(() => import('./pages/Creators.jsx'));
 const Reels = lazy(() => import('./pages/Reels.jsx'));
@@ -64,6 +66,12 @@ function RouteFallback() {
 }
 
 export default function App() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const title = titleForPath(pathname);
+    if (title) document.title = title;
+  }, [pathname]);
+
   const [connectionStatus, setConnectionStatus] = useState(() => navigator.onLine ? null : 'offline');
   const [checkingConnection, setCheckingConnection] = useState(false);
 
@@ -101,8 +109,9 @@ export default function App() {
   return (
     <>
       <SplashScreen />
+      <a href="#main-content" className="skip-link">Skip to content</a>
       <Nav />
-      <main>
+      <main id="main-content" tabIndex={-1}>
       <ErrorBoundary>
         <Suspense fallback={<RouteFallback />}>
           <Routes>
@@ -161,6 +170,7 @@ export default function App() {
                 handle list guards the top-level /reels route. */}
             <Route path="/:handle/reels" element={<CreatorReels />} />
             <Route path="/:handle" element={<CreatorProfile />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </ErrorBoundary>

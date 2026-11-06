@@ -6,7 +6,8 @@ const { isPromoActive, applyDiscount } = require('../lib/promotions');
 const { createOrder, isValidSenderPhone } = require('../services/payment');
 const { checkoutLimiter } = require('../middleware/rateLimit');
 const { markPurchaseFailed } = require('../lib/purchaseCompletion');
-const { isSoldOut } = require('../lib/stock');
+const { isSoldOut, promoSlotOpen } = require('../lib/stock');
+const { buyerOwnsProduct } = require('../lib/ownership');
 const { buyerForUser } = require('../lib/buyers');
 
 const router = express.Router();
@@ -22,6 +23,7 @@ const CART_SELECT = `
 `;
 
 function withPromo(product) {
+  delete product.flag_reason;
   const active = !product.pay_what_you_want && isPromoActive(product);
   product.promo_active = active;
   product.discounted_price_minor = active ? applyDiscount(product.price_minor, product.discount_percent) : null;
@@ -45,8 +47,13 @@ router.get('/count', requireAuth, (req, res) => {
 // POST /api/cart, { product_slug }
 router.post('/', requireAuth, (req, res) => {
   const { product_slug } = req.body;
-  const product = db.prepare("SELECT * FROM products WHERE slug = ? AND status = 'published'").get(product_slug);
+  const product = db.prepare("SELECT * FROM products WHERE slug = ? AND status = 'published' AND review_status = 'clear'").get(product_slug);
   if (!product) return res.status(404).json({ error: 'Product not found.' });
+
+  const existingBuyer = db.prepare('SELECT id FROM buyers WHERE user_id = ? ORDER BY id LIMIT 1').get(req.user.id);
+  if (existingBuyer && buyerOwnsProduct(existingBuyer.id, product)) {
+    return res.status(409).json({ error: 'You already own this. Find it in your library.' });
+  }
 
   // Same rule as the direct-buy flow (purchases.js): you can't buy your
   // own product. Blocked here too so it can't be reached by adding to the
@@ -105,7 +112,7 @@ router.post('/checkout', checkoutLimiter, requireVerified, async (req, res) => {
   const { name, phone } = req.body;
   if (!phone) return res.status(400).json({ error: 'phone is required.' });
   if (!isValidSenderPhone(phone)) {
-    return res.status(400).json({ error: 'Enter a valid EcoCash number, e.g. 0780070488 or +263780070488.' });
+    return res.status(400).json({ error: 'Enter a valid EcoCash number, e.g. 07XXXXXXXX or +2637XXXXXXXX.' });
   }
 
   const items = db.prepare(CART_SELECT).all(req.user.id).map(withPromo);
@@ -125,7 +132,14 @@ router.post('/checkout', checkoutLimiter, requireVerified, async (req, res) => {
   const buyer = buyerForUser(req.user, name);
   if (!buyer) return res.status(409).json({ error: 'This email is already attached to another account. Contact support.' });
 
-  const unavailable = items.filter(p => p.status !== 'published' || isSoldOut(p, { excludeBuyerId: buyer.id }));
+  const owned = items.filter(p => buyerOwnsProduct(buyer.id, p));
+  if (owned.length > 0) {
+    return res.status(409).json({
+      error: `You already own ${owned.map(p => p.title).join(', ')}. Remove ${owned.length === 1 ? 'it' : 'them'} from your cart to check out.`
+    });
+  }
+
+  const unavailable = items.filter(p => p.status !== 'published' || p.review_status !== 'clear' || isSoldOut(p, { excludeBuyerId: buyer.id }));
   if (unavailable.length > 0) {
     return res.status(409).json({
       error: `${unavailable.map(p => p.title).join(', ')} ${unavailable.length === 1 ? 'is' : 'are'} no longer available. Remove ${unavailable.length === 1 ? 'it' : 'them'} from your cart and try again.`
@@ -138,7 +152,8 @@ router.post('/checkout', checkoutLimiter, requireVerified, async (req, res) => {
   }
   const currency = items[0].currency;
 
-  const lineAmounts = items.map(p => p.promo_active ? p.discounted_price_minor : p.price_minor);
+  const discounted = items.map(p => p.promo_active && promoSlotOpen(p, buyer.id));
+  const lineAmounts = items.map((p, i) => discounted[i] ? p.discounted_price_minor : p.price_minor);
   const totalMinor = lineAmounts.reduce((sum, n) => sum + n, 0);
   if (totalMinor <= 0 || totalMinor >= 10000000) {
     return res.status(400).json({ error: 'Cart total must be greater than 0 and less than 100,000.' });
@@ -150,14 +165,20 @@ router.post('/checkout', checkoutLimiter, requireVerified, async (req, res) => {
   const orderId = `zsc${Date.now().toString(36)}${randomBytes(4).toString('hex')}`;
 
   const insert = db.prepare(`
-    INSERT INTO purchases (buyer_id, product_id, amount_minor, currency, payment_status, payment_reference, discount_applied)
-    VALUES (?, ?, ?, ?, 'pending', ?, ?)
+    INSERT INTO purchases (buyer_id, product_id, amount_minor, currency, payment_status, payment_reference, discount_applied, payer_phone)
+    VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)
   `);
   // All-or-nothing: a half-written cart order would charge for the combined
   // total while only some of the items ever exist to be fulfilled.
-  const purchaseIds = db.transaction(() => items.map((p, i) =>
-    insert.run(buyer.id, p.id, lineAmounts[i], currency, orderId, p.promo_active ? 1 : 0).lastInsertRowid
-  ))();
+  // The cart is emptied in the same step, before any await, so a double tap or
+  // second tab finds it empty instead of sending a second EcoCash charge.
+  const purchaseIds = db.transaction(() => {
+    const ids = items.map((p, i) =>
+      insert.run(buyer.id, p.id, lineAmounts[i], currency, orderId, discounted[i] ? 1 : 0, phone).lastInsertRowid
+    );
+    db.prepare('DELETE FROM cart_items WHERE user_id = ?').run(req.user.id);
+    return ids;
+  })();
 
   // Non-redirecting flow: triggers a real EcoCash prompt on the buyer's
   // phone directly. No pay_url, the frontend moves to /payment/return
@@ -165,7 +186,6 @@ router.post('/checkout', checkoutLimiter, requireVerified, async (req, res) => {
   const order = await createOrder({ orderId, sender: phone, amountMinor: totalMinor, currency });
 
   if (!order.success && order.uncertain) {
-    db.prepare('DELETE FROM cart_items WHERE user_id = ?').run(req.user.id);
     return res.status(201).json({
       order_id: orderId,
       ecocash_status: 'CHECKING',
@@ -175,10 +195,10 @@ router.post('/checkout', checkoutLimiter, requireVerified, async (req, res) => {
 
   if (!order.success) {
     for (const id of purchaseIds) markPurchaseFailed(id);
+    const restore = db.prepare('INSERT OR IGNORE INTO cart_items (user_id, product_id) VALUES (?, ?)');
+    for (const item of items) restore.run(req.user.id, item.id);
     return res.status(502).json({ error: order.error });
   }
-
-  db.prepare('DELETE FROM cart_items WHERE user_id = ?').run(req.user.id);
 
   res.status(201).json({ order_id: orderId, ecocash_status: order.ecocashStatus });
 });

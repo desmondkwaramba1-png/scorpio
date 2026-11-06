@@ -22,7 +22,8 @@ export default function CompactProductCard({ product: p }) {
         <p className="mono compact-card__price">
           {p.promo_active
             ? formatMoney(p.discounted_price_minor, p.currency)
-            : p.pay_what_you_want ? `From ${formatMoney(p.price_minor, p.currency)}` : formatMoney(p.price_minor, p.currency)}
+            : p.price_minor === 0 ? 'Free'
+              : p.pay_what_you_want ? `From ${formatMoney(p.price_minor, p.currency)}` : formatMoney(p.price_minor, p.currency)}
         </p>
       </div>
     </Link>

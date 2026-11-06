@@ -10,7 +10,7 @@ function formatDate(sqliteDatetime) {
 }
 
 const STATUS_LABEL = {
-  active: { text: 'Active', className: 'badge--green' },
+  active: { text: 'Active', className: 'badge--success' },
   lapsed: { text: 'Lapsed', className: 'badge--neutral' },
   canceled: { text: 'Canceled', className: 'badge--neutral' }
 };

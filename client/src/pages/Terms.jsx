@@ -8,7 +8,7 @@ function Section({ icon: Icon, title, children }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
         <span style={{
           width: 32, height: 32, borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'var(--gold-tint)', color: 'var(--gold-ink)'
+          background: 'var(--accent-tint)', color: 'var(--accent-ink)'
         }}>
           <Icon size={16} />
         </span>
@@ -79,7 +79,7 @@ export default function Terms() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '36px 0 16px' }}>
-        <FiShoppingBag size={16} color="var(--green-glow)" />
+        <FiShoppingBag size={16} color="var(--brand-strong)" />
         <h2 style={{ fontSize: '1.05rem' }}>Selling on SCORPIO</h2>
       </div>
       <p className="muted" style={{ fontSize: '.88rem', marginBottom: 16 }}>

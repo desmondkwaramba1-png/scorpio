@@ -5,6 +5,9 @@ const { resolveDispute, sweepAutoReleases } = require('../lib/escrow');
 const { balancesFor, remainingNetByPurchaseFor } = require('../lib/walletBalances');
 const { netOf } = require('../lib/fees');
 const { adminLimiter } = require('../middleware/rateLimit');
+const storage = require('../lib/storage');
+const { sendEmail } = require('../lib/notify');
+const { format } = require('../lib/money');
 const { sendRenewalReminders } = require('../lib/subscriptions');
 
 const router = express.Router();
@@ -24,14 +27,17 @@ router.use(adminLimiter);
 // equal-length buffers, so the length check has to happen first (and
 // separately) — that comparison alone leaks nothing an attacker doesn't
 // already know, since ADMIN_KEY's length isn't the secret.
-function requireAdmin(req, res, next) {
+function isValidAdminKey(provided) {
   const key = process.env.ADMIN_KEY;
-  if (!key) return res.status(501).json({ error: 'ADMIN_KEY is not set. Dispute resolution is not available.' });
-  const provided = req.headers['x-admin-key'] || '';
+  if (!key || typeof provided !== 'string') return false;
   const keyBuf = Buffer.from(key);
   const providedBuf = Buffer.from(provided);
-  const valid = keyBuf.length === providedBuf.length && timingSafeEqual(keyBuf, providedBuf);
-  if (!valid) return res.status(403).json({ error: 'Invalid admin key.' });
+  return keyBuf.length === providedBuf.length && timingSafeEqual(keyBuf, providedBuf);
+}
+
+function requireAdmin(req, res, next) {
+  if (!process.env.ADMIN_KEY) return res.status(501).json({ error: 'ADMIN_KEY is not set. Dispute resolution is not available.' });
+  if (!isValidAdminKey(req.headers['x-admin-key'])) return res.status(403).json({ error: 'Invalid admin key.' });
   next();
 }
 
@@ -39,14 +45,14 @@ function requireAdmin(req, res, next) {
 // judge a dispute without touching the database directly: what was bought,
 // who from, what the buyer says went wrong, and what the seller claims
 // they delivered (if anything).
-router.get('/disputes', requireAdmin, (req, res) => {
+router.get('/disputes', requireAdmin, async (req, res) => {
   const disputes = db.prepare(`
     SELECT d.id AS dispute_id, d.reason, d.serious_claim, d.status AS dispute_status, d.created_at AS disputed_at,
-           pu.id AS purchase_id, pu.amount_minor, pu.currency, pu.created_at AS purchased_at,
+           pu.id AS purchase_id, pu.amount_minor, pu.currency, pu.created_at AS purchased_at, pu.payer_phone,
            p.id AS product_id, p.title AS product_title, p.slug AS product_slug,
            (SELECT COUNT(*) FROM service_disputes rd JOIN purchases rp ON rp.id = rd.purchase_id WHERE rp.product_id = p.id AND rd.status = 'open') AS open_product_disputes,
            buyer.name AS buyer_name, buyer.email AS buyer_email,
-           CASE WHEN d.opened_by_user_id = buyer.user_id THEN 'buyer' ELSE 'seller' END AS opened_by_role,
+           CASE WHEN d.opened_by_user_id IS NULL THEN 'system' WHEN d.opened_by_user_id = buyer.user_id THEN 'buyer' ELSE 'seller' END AS opened_by_role,
            c.id AS creator_id, c.name AS seller_name, c.handle AS seller_handle, cu.email AS seller_email
     FROM service_disputes d
     JOIN purchases pu ON pu.id = d.purchase_id
@@ -66,11 +72,11 @@ router.get('/disputes', requireAdmin, (req, res) => {
       .find(hold => hold.product_id === d.product_id);
     d.product_funds_held_minor = productHold?.amount_minor || 0;
     d.delivery = db.prepare('SELECT message, external_url, storage_path FROM service_deliveries WHERE purchase_id = ? ORDER BY id DESC LIMIT 1').get(d.purchase_id) || null;
+    const evidence = db.prepare('SELECT id, author_role, original_filename, storage_path, created_at FROM dispute_evidence WHERE dispute_id = ?').all(d.dispute_id);
     d.timeline = [
       ...db.prepare('SELECT id, author_role, body, created_at FROM dispute_messages WHERE dispute_id = ?').all(d.dispute_id)
         .map(item => ({ type: 'message', ...item })),
-      ...db.prepare('SELECT id, author_role, original_filename, storage_path, created_at FROM dispute_evidence WHERE dispute_id = ?').all(d.dispute_id)
-        .map(item => ({ type: 'evidence', ...item }))
+      ...await Promise.all(evidence.map(async item => ({ type: 'evidence', ...item, storage_path: await storage.evidenceUrl(item.storage_path) })))
     ].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   }
 
@@ -85,6 +91,30 @@ router.post('/disputes/:id/resolve', requireAdmin, (req, res) => {
   }
   const dispute = resolveDispute(req.params.id, resolution, note);
   if (!dispute) return res.status(404).json({ error: 'Dispute not found, or already resolved.' });
+
+  // Both sides have been waiting on this decision, so both hear about it.
+  const parties = db.prepare(`
+    SELECT b.email AS buyer_email, u.email AS seller_email, p.title, pu.amount_minor, pu.currency
+    FROM purchases pu
+    JOIN buyers b ON b.id = pu.buyer_id
+    JOIN products p ON p.id = pu.product_id
+    JOIN creators c ON c.id = p.creator_id
+    LEFT JOIN users u ON u.id = c.user_id
+    WHERE pu.id = ?
+  `).get(dispute.purchase_id);
+  if (parties) {
+    const amount = format(parties.amount_minor, parties.currency);
+    const refunded = resolution === 'refund';
+    const noteLine = note ? `\n\nNote from SCORPIO: ${note}` : '';
+    sendEmail(parties.buyer_email, `Your case is resolved: ${parties.title}`, (refunded
+      ? `We've decided this in your favour. ${amount} will be refunded to the EcoCash number you paid from.`
+      : 'We reviewed this case and released the payment to the seller.') + noteLine);
+    if (parties.seller_email) {
+      sendEmail(parties.seller_email, `Case resolved: ${parties.title}`, (refunded
+        ? `This order was refunded to the buyer, so ${amount} won't reach your balance.`
+        : 'This case was resolved in your favour and the payment is released to your balance.') + noteLine);
+    }
+  }
 
   // "Refund" only changes the seller's wallet accounting (see wallet.js) —
   // actually returning the buyer's EcoCash payment is a manual step outside
@@ -197,36 +227,40 @@ router.get('/overview', requireAdmin, (req, res) => {
       (SELECT COUNT(*) FROM buyers) AS total_buyers,
       (SELECT COUNT(*) FROM products WHERE status = 'published') AS published_products,
       (SELECT COUNT(*) FROM products) AS total_products,
-      (SELECT COUNT(*) FROM purchases WHERE payment_status = 'paid') AS total_orders
+      (SELECT COUNT(*) FROM purchases WHERE payment_status = 'paid' AND COALESCE(fulfillment_status,'') != 'refunded') AS total_orders
   `).get();
 
-  const grossMinor = db.prepare(`SELECT COALESCE(SUM(amount_minor),0) AS n FROM purchases WHERE payment_status = 'paid'`).get().n;
-  const feeMinor = netOf(grossMinor).fee_minor;
+  // USD and ZiG are different money, so they are never added together, and a
+  // refunded order is not revenue.
+  const KEPT = `payment_status = 'paid' AND COALESCE(fulfillment_status,'') != 'refunded'`;
+  const byCurrency = rows => Object.fromEntries(rows.map(row => [row.currency, row.n]));
+  const grossByCurrency = byCurrency(db.prepare(`SELECT currency, SUM(amount_minor) AS n FROM purchases WHERE ${KEPT} GROUP BY currency`).all());
+  const revenue7ByCurrency = byCurrency(db.prepare(`SELECT currency, SUM(amount_minor) AS n FROM purchases WHERE ${KEPT} AND created_at >= datetime('now','-7 days') GROUP BY currency`).all());
+  const feesByCurrency = Object.fromEntries(Object.entries(grossByCurrency).map(([currency, gross]) => [currency, netOf(gross).fee_minor]));
 
   const signups7 = db.prepare(`SELECT COUNT(*) AS n FROM users WHERE created_at >= datetime('now','-7 days')`).get().n;
   const signups30 = db.prepare(`SELECT COUNT(*) AS n FROM users WHERE created_at >= datetime('now','-30 days')`).get().n;
-  const orders7 = db.prepare(`SELECT COUNT(*) AS n FROM purchases WHERE payment_status='paid' AND created_at >= datetime('now','-7 days')`).get().n;
-  const revenue7 = db.prepare(`SELECT COALESCE(SUM(amount_minor),0) AS n FROM purchases WHERE payment_status='paid' AND created_at >= datetime('now','-7 days')`).get().n;
+  const orders7 = db.prepare(`SELECT COUNT(*) AS n FROM purchases WHERE ${KEPT} AND created_at >= datetime('now','-7 days')`).get().n;
 
   const topProducts = db.prepare(`
-    SELECT p.id, p.title, p.slug, p.category, c.name AS creator_name, c.handle AS creator_handle,
+    SELECT p.id, p.title, p.slug, p.category, c.name AS creator_name, c.handle AS creator_handle, pu.currency,
            COUNT(pu.id) AS order_count, COALESCE(SUM(pu.amount_minor),0) AS revenue_minor
     FROM products p
     JOIN creators c ON c.id = p.creator_id
-    JOIN purchases pu ON pu.product_id = p.id AND pu.payment_status = 'paid'
-    GROUP BY p.id
+    JOIN purchases pu ON pu.product_id = p.id AND pu.payment_status = 'paid' AND COALESCE(pu.fulfillment_status,'') != 'refunded'
+    GROUP BY p.id, pu.currency
     ORDER BY revenue_minor DESC
     LIMIT 5
   `).all();
 
   const topCreators = db.prepare(`
-    SELECT c.id, c.name, c.handle, u.email, c.verified,
+    SELECT c.id, c.name, c.handle, u.email, c.verified, pu.currency,
            COUNT(pu.id) AS order_count, COALESCE(SUM(pu.amount_minor),0) AS revenue_minor
     FROM creators c
     LEFT JOIN users u ON u.id = c.user_id
     JOIN products p ON p.creator_id = c.id
-    JOIN purchases pu ON pu.product_id = p.id AND pu.payment_status = 'paid'
-    GROUP BY c.id
+    JOIN purchases pu ON pu.product_id = p.id AND pu.payment_status = 'paid' AND COALESCE(pu.fulfillment_status,'') != 'refunded'
+    GROUP BY c.id, pu.currency
     ORDER BY revenue_minor DESC
     LIMIT 5
   `).all();
@@ -239,12 +273,12 @@ router.get('/overview', requireAdmin, (req, res) => {
 
   res.json({
     ...totals,
-    gross_revenue_minor: grossMinor,
-    platform_fees_minor: feeMinor,
+    gross_by_currency: grossByCurrency,
+    platform_fees_by_currency: feesByCurrency,
+    revenue_last_7_days_by_currency: revenue7ByCurrency,
     signups_last_7_days: signups7,
     signups_last_30_days: signups30,
     orders_last_7_days: orders7,
-    revenue_last_7_days_minor: revenue7,
     top_products: topProducts,
     top_creators: topCreators,
     recent_signups: recentSignups
@@ -386,6 +420,11 @@ router.post('/payouts/:creatorId/mark-paid', requireAdmin, (req, res) => {
     return res.status(400).json({ error: err.message });
   }
 
+  const payee = db.prepare('SELECT u.email, c.payout_ecocash_number FROM creators c JOIN users u ON u.id = c.user_id WHERE c.id = ?').get(creator.id);
+  if (payee?.email) {
+    sendEmail(payee.email, `Payout sent: ${format(amountMinor, currency)}`, `We've sent ${format(amountMinor, currency)} to your EcoCash number ${payee.payout_ecocash_number || 'on file'}.`);
+  }
+
   res.status(201).json({ ok: true, ...balancesFor(creator.id) });
 });
 
@@ -417,25 +456,6 @@ router.post('/subscriptions/sweep', requireAdmin, (req, res) => {
 // same timing-safe ADMIN_KEY check, rather than a second copy of
 // security-sensitive comparison logic.
 
-// POST /api/admin/disputes/:id/resolve — manual dispute resolution.
-// Admin reviews the case chat and evidence, then picks 'refund' (buyer wins,
-// money goes back) or 'release' (seller wins, money releases to wallet).
-router.post('/disputes/:id/resolve', requireAdmin, (req, res) => {
-  const { resolution, note } = req.body;
-  if (!['refund', 'release'].includes(resolution)) {
-    return res.status(400).json({ error: 'Resolution must be refund or release.' });
-  }
-  
-  const dispute = db.prepare('SELECT * FROM service_disputes WHERE id = ?').get(req.params.id);
-  if (!dispute) return res.status(404).json({ error: 'Dispute not found.' });
-  
-  if (dispute.status !== 'open') {
-    return res.status(400).json({ error: 'Dispute is already resolved.' });
-  }
-  
-  resolveDispute(dispute.id, resolution, note);
-  res.json({ ok: true });
-});
-
 module.exports = router;
 module.exports.requireAdmin = requireAdmin;
+module.exports.isValidAdminKey = isValidAdminKey;

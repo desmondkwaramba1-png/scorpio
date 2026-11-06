@@ -208,6 +208,11 @@ async function main() {
     assert.equal(first.status, 201);
     const second = await call('POST', '/api/purchases', { cookie: buyerB.cookie, json: { product_slug: slug, phone: '0780070488' } });
     assert.equal(second.status, 409);
+    // An instant repeat is a double tap, so it rejoins the same order instead of
+    // sending a second prompt. A later retry gets a fresh prompt.
+    const doubleTap = await call('POST', '/api/purchases', { cookie: buyerA.cookie, json: { product_slug: slug, phone: '0780070488' } });
+    assert.equal(doubleTap.data.order_id, first.data.order_id);
+    db.prepare("UPDATE purchases SET created_at = datetime('now', '-1 minute') WHERE product_id = ?").run(id);
     const retry = await call('POST', '/api/purchases', { cookie: buyerA.cookie, json: { product_slug: slug, phone: '0780070488' } });
     assert.equal(retry.status, 201);
     assert.equal(db.prepare('SELECT quantity_sold FROM products WHERE id = ?').get(id).quantity_sold, 0);

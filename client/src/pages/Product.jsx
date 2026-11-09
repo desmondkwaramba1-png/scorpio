@@ -701,7 +701,7 @@ export default function Product() {
                 <p className="error-text">Sold out.</p>
               ) : (
                 <>
-                  <Link to={checkoutUrl} className="btn btn--cta btn--block">
+                  <Link to={user ? checkoutUrl : `/login?role=buyer&next=${encodeURIComponent(checkoutUrl)}`} className="btn btn--cta btn--block">
                     {buyLabel}
                   </Link>
                   {!product.pay_what_you_want && product.price_minor !== 0 && product.type !== 'service' && (

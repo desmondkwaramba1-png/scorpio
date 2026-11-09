@@ -42,6 +42,26 @@ function ProductTile({ product: p }) {
   );
 }
 
+// The top product, shown large in the hero so the page opens on something real.
+function FeaturedCard({ product: p, second }) {
+  return (
+    <div className="feature">
+      {second && <span className="feature__back" style={{ backgroundImage: `url(${second.cover_path})` }} aria-hidden="true" />}
+      <Link to={`/@${p.creator_handle}/${p.slug}`} className="feature__card">
+        <span className="feature__cover"><img src={p.cover_path} alt="" /></span>
+        <span className="feature__body">
+          <span className="feature__label">Trending this week</span>
+          <span className="feature__title">{p.title}</span>
+          <span className="feature__meta">
+            <span>{p.creator_name}</span>
+            <strong>{priceLabel(p)}</strong>
+          </span>
+        </span>
+      </Link>
+    </div>
+  );
+}
+
 function SectionHead({ title, link, label = 'View all' }) {
   return (
     <div className="home-head">
@@ -229,29 +249,37 @@ export default function Marketplace() {
     navigate(q.trim() ? `/discover?q=${encodeURIComponent(q.trim())}` : '/discover');
   }
 
+  const withCovers = (trending || []).filter(p => p.cover_path);
+  const featured = withCovers[0];
+  const secondFeatured = withCovers[1];
+
   return (
     <div className="home">
       <header className="hero">
         <div className="wrap hero__inner">
-          <p className="hero__kicker">Made in Zimbabwe · Paid with EcoCash</p>
-          <h1 className="hero__title">
-            {EBOOKS_ONLY ? 'Learn it from someone who has done it.' : "Zimbabwe's marketplace for digital products."}
-          </h1>
-          <p className="hero__sub">Guides, templates and courses from Zimbabwean creators. Pay with EcoCash and download straight away.</p>
-          <form className="hero__search" role="search" onSubmit={search}>
-            <FiSearch size={18} aria-hidden="true" />
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="What do you want to learn?" aria-label="Search products" />
-            <button type="submit" className="btn btn--primary">Search</button>
-          </form>
-          {ACTIVE_CATEGORIES.length > 1 && (
-            <p className="hero__popular">
-              <span>Popular:</span>
-              {ACTIVE_CATEGORIES.map(c => <Link key={c.value} to={`/discover?category=${c.value}`}>{c.label}</Link>)}
-            </p>
-          )}
+          <div className="hero__text">
+            <p className="hero__kicker">Made in Zimbabwe · Paid with EcoCash</p>
+            <h1 className="hero__title">
+              {EBOOKS_ONLY ? <>Learn it from someone who has <span className="hero__accent">done it.</span></> : "Zimbabwe's marketplace for digital products."}
+            </h1>
+            <p className="hero__sub">Guides, templates and courses from Zimbabwean creators. Pay with EcoCash and download straight away.</p>
+            <form className="hero__search" role="search" onSubmit={search}>
+              <FiSearch size={18} aria-hidden="true" />
+              <input value={q} onChange={e => setQ(e.target.value)} placeholder="What do you want to learn?" aria-label="Search products" />
+              <button type="submit" className="btn btn--primary">Search</button>
+            </form>
+            {ACTIVE_CATEGORIES.length > 1 && (
+              <div className="hero__chips">
+                {ACTIVE_CATEGORIES.map(c => {
+                  const Icon = c.icon;
+                  return <Link key={c.value} to={`/discover?category=${c.value}`} className="hero__chip"><Icon size={15} aria-hidden="true" /> {c.label}</Link>;
+                })}
+              </div>
+            )}
+          </div>
+          {featured && <FeaturedCard product={featured} second={secondFeatured} />}
         </div>
       </header>
-
       <ProductSection title="Trending now" link="/discover?sort=popular" products={trending} />
       <Categories byCategory={byCategory} />
       <ProductSection title="New arrivals" link="/discover" products={fresh} />
@@ -266,7 +294,7 @@ export default function Marketplace() {
               <h2 className="sell-panel__title">Turn what you know into income</h2>
               <p className="sell-panel__text">Open a storefront in minutes. No monthly fee. Paid out to your EcoCash.</p>
             </div>
-            <Link to={user ? '/onboarding' : '/login?role=creator'} className="btn btn--cta">Start selling</Link>
+            <Link to={user ? '/onboarding' : '/login?role=creator'} className="btn btn--primary">Start selling</Link>
           </div>
         </section>
       )}

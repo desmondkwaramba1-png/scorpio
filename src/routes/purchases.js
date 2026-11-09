@@ -12,7 +12,7 @@ const { createDownloadToken, getActiveTokenForPurchase, productHasFile, getProdu
 const { keyForPurchase } = require('../lib/licenseKeys');
 const { isSoldOut, promoSlotOpen } = require('../lib/stock');
 const { buyerOwnsProduct } = require('../lib/ownership');
-const { buyerForUser } = require('../lib/buyers');
+const { buyerForUser, VERIFY_FIRST } = require('../lib/buyers');
 const { reconcileForUser } = require('../lib/reconcilePayments');
 const { normalizeExternalUrl } = require('../lib/safeUrl');
 const { sweepAutoReleases, deliveryFor, disputeFor, markDelivered, confirmDelivery, openDispute } = require('../lib/escrow');
@@ -329,7 +329,7 @@ router.post('/:id/resend-download', requireAuth, (req, res) => {
 // post-payment page, nothing. Requiring an account here is what makes the
 // "your purchases are always there" promise actually true, not just a page
 // that happens to work once right after paying.
-router.post('/', checkoutLimiter, requireVerified, async (req, res) => {
+router.post('/', checkoutLimiter, requireAuth, async (req, res) => {
   const { name, phone, product_slug, amount } = req.body;
 
   if (!product_slug) {
@@ -351,6 +351,7 @@ router.post('/', checkoutLimiter, requireVerified, async (req, res) => {
   // Resolved before the stock check so this buyer's own earlier unpaid
   // attempt on the last unit doesn't count against their retry.
   const buyer = buyerForUser(req.user, name);
+  if (buyer === VERIFY_FIRST) return res.status(403).json({ error: 'Verify your email to buy with this address. Check your inbox for the link.', code: 'verify_email' });
   if (!buyer) return res.status(409).json({ error: 'This email is already attached to another account. Contact support.' });
 
   if (buyerOwnsProduct(buyer.id, product)) {

@@ -8,7 +8,7 @@ const { checkoutLimiter } = require('../middleware/rateLimit');
 const { markPurchaseFailed } = require('../lib/purchaseCompletion');
 const { isSoldOut, promoSlotOpen } = require('../lib/stock');
 const { buyerOwnsProduct } = require('../lib/ownership');
-const { buyerForUser } = require('../lib/buyers');
+const { buyerForUser, VERIFY_FIRST } = require('../lib/buyers');
 
 const router = express.Router();
 
@@ -108,7 +108,7 @@ router.delete('/:productId', requireAuth, (req, res) => {
 // already settles to the platform's single Dischub recipient account
 // (see services/payment.js RECIPIENT); a cart spanning multiple sellers
 // costs nothing extra here, it's the same one-recipient charge either way.
-router.post('/checkout', checkoutLimiter, requireVerified, async (req, res) => {
+router.post('/checkout', checkoutLimiter, requireAuth, async (req, res) => {
   const { name, phone } = req.body;
   if (!phone) return res.status(400).json({ error: 'phone is required.' });
   if (!isValidSenderPhone(phone)) {
@@ -130,6 +130,7 @@ router.post('/checkout', checkoutLimiter, requireVerified, async (req, res) => {
   // buyer's browser cached when they added it, a product can go sold out
   // or get unpublished between adding to cart and checking out.
   const buyer = buyerForUser(req.user, name);
+  if (buyer === VERIFY_FIRST) return res.status(403).json({ error: 'Verify your email to buy with this address. Check your inbox for the link.', code: 'verify_email' });
   if (!buyer) return res.status(409).json({ error: 'This email is already attached to another account. Contact support.' });
 
   const owned = items.filter(p => buyerOwnsProduct(buyer.id, p));

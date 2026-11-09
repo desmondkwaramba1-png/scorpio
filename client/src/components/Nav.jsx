@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { FiGrid, FiLogOut, FiShoppingBag, FiSearch, FiPackage, FiChevronDown, FiMail, FiMenu, FiX } from 'react-icons/fi';
+import { FiGrid, FiLogOut, FiShoppingBag, FiSearch, FiPackage, FiChevronDown, FiMail } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 
@@ -71,15 +71,6 @@ export default function Nav() {
   const navigate = useNavigate();
   const location = useLocation();
   const [q, setQ] = useState('');
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => { setMenuOpen(false); }, [location.pathname, location.search]);
-  // While the phone menu is open the page underneath shouldn't scroll.
-  useEffect(() => {
-    document.body.style.overflow = menuOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [menuOpen]);
-
   function submitSearch(e) {
     e.preventDefault();
     navigate(q ? `/discover?q=${encodeURIComponent(q)}` : '/discover');
@@ -90,7 +81,6 @@ export default function Nav() {
   // Unverified users can browse, so the way to verify is always one tap away.
   const showVerifyBanner = !loading && user && !user.email_verified_at && location.pathname !== '/check-email';
   const sellHref = user ? (creator ? '/dashboard' : '/onboarding') : '/login?role=creator';
-  const sellLabel = creator ? 'Dashboard' : 'Start selling';
   const linkClass = ({ isActive }) => 'nav__link' + (isActive ? ' nav__link--active' : '');
 
   return (
@@ -125,44 +115,20 @@ export default function Nav() {
               {count > 0 && <span className="nav__cart-badge">{count}</span>}
             </NavLink>
           )}
-          {!loading && user && <span className="nav__desktop-only"><AccountMenu user={user} creator={creator} logout={doLogout} /></span>}
-          {!loading && !user && <Link to="/login" className="nav__login nav__desktop-only">Log in</Link>}
-          {!loading && !(user && creator) && (
-            <Link to={sellHref} className="btn btn--primary nav__cta nav__desktop-only">{sellLabel}</Link>
+          {!loading && user && <AccountMenu user={user} creator={creator} logout={doLogout} />}
+          {!loading && !user && <Link to="/login" className="nav__login">Log in</Link>}
+          {!loading && (
+            <Link to={sellHref} className="btn btn--primary nav__cta">
+              {creator ? 'Dashboard' : <><span className="nav__cta-long">Start selling</span><span className="nav__cta-short">Sell</span></>}
+            </Link>
           )}
-          <button type="button" className="nav__icon-btn nav__menu-btn" onClick={() => setMenuOpen(o => !o)} aria-expanded={menuOpen} aria-controls="nav-sheet" aria-label={menuOpen ? 'Close menu' : 'Open menu'}>
-            {menuOpen ? <FiX size={22} /> : <FiMenu size={22} />}
-          </button>
         </div>
       </div>
 
-      {menuOpen && (
-        <div className="nav__sheet" id="nav-sheet">
-          <div className="nav__sheet-links">
-            <NavLink to="/" end className={linkClass}>Home</NavLink>
-            {LINKS.map(l => <NavLink key={l.to} to={l.to} className={linkClass}>{l.label}</NavLink>)}
-          </div>
-          <div className="nav__sheet-foot">
-            {!loading && user ? (
-              <>
-                <div className="nav__sheet-who">
-                  <Avatar user={user} creator={creator} initial={(creator?.name || user.name || user.username || '?').charAt(0).toUpperCase()} />
-                  <span>{creator?.name || user.name || user.username}</span>
-                </div>
-                {creator && <Link to="/dashboard" className="nav__sheet-item"><FiGrid size={16} /> Dashboard</Link>}
-                <Link to="/account" className="nav__sheet-item"><FiPackage size={16} /> {creator ? 'My orders' : 'My account and orders'}</Link>
-                {!creator && <Link to={sellHref} className="nav__sheet-item"><FiShoppingBag size={16} /> Start selling</Link>}
-                <button type="button" className="nav__sheet-item" onClick={doLogout}><FiLogOut size={16} /> Log out</button>
-              </>
-            ) : (
-              <>
-                <Link to={sellHref} className="btn btn--primary btn--block">Start selling</Link>
-                <Link to="/login" className="btn btn--ghost btn--block">Log in</Link>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-    </nav>
+      {/* Phones: the main sections as a row of tabs, always visible. */}
+      <div className="nav__tabs">
+        <NavLink to="/" end className={linkClass}>Home</NavLink>
+        {LINKS.map(l => <NavLink key={l.to} to={l.to} className={linkClass}>{l.label}</NavLink>)}
+      </div>    </nav>
   );
 }

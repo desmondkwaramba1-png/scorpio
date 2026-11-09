@@ -139,12 +139,9 @@ export default function Login() {
   // returning seller land on their dashboard without re-declaring "I'm a
   // creator" every single login, and it's also what makes a buyer who
   // later opens a storefront (see Account.jsx) land correctly from then on.
+  // Email verification no longer interrupts here: people go straight on to
+  // what they came for, and the nav reminds them to verify.
   function afterAuth(data) {
-    if (!data.user?.email_verified_at) {
-      const destination = next || (tab === 'signup' && signupRole === 'creator' ? '/onboarding' : '/');
-      navigate(`/check-email?next=${encodeURIComponent(destination)}`);
-      return;
-    }
     if (next) { navigate(next); return; }
     if (data.creator) { navigate('/dashboard'); return; }
     if (tab === 'signup' && signupRole === 'creator') { navigate('/onboarding'); return; }

@@ -59,17 +59,6 @@ export default function CartCheckout() {
     );
   }
 
-  if (!user.email_verified_at) {
-    return (
-      <div className="wrap center-page" style={{ maxWidth: 440, padding: '20px' }}>
-        <FiShield size={32} color="var(--accent-icon)" style={{ marginBottom: 14 }} />
-        <h1 style={{ fontSize: '1.4rem', marginBottom: 10 }}>Verify your email before paying</h1>
-        <p className="muted" style={{ marginBottom: 24 }}>Verification protects your account and keeps your purchases linked to you for future downloads.</p>
-        <Link to={`/check-email?next=${encodeURIComponent(location.pathname)}`} className="btn btn--cta">Verify email</Link>
-      </div>
-    );
-  }
-
   if (error) {
     return <div className="wrap center-page" style={{ padding: 20 }}><p className="error-text">{error}</p></div>;
   }

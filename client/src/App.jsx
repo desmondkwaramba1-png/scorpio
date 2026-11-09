@@ -137,14 +137,14 @@ export default function App() {
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/report" element={<ReportIssue />} />
             <Route path="/accept-terms" element={<AcceptTerms />} />
-            <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+            <Route path="/onboarding" element={<ProtectedRoute allowUnverified><Onboarding /></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute allowUnverified><Account /></ProtectedRoute>} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<CartCheckout />} />
             <Route path="/payment/return" element={<PaymentReturn />} />
             <Route
               path="/dashboard"
-              element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}
+              element={<ProtectedRoute allowUnverified><DashboardLayout /></ProtectedRoute>}
             >
               <Route index element={<DashboardHome />} />
               <Route path="products" element={<DashboardProducts />} />

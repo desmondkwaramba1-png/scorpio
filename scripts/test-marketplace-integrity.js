@@ -178,10 +178,18 @@ async function main() {
   });
 
   // ---- checkout auth + ownership ----------------------------------------
-  await check('checkout requires login and a verified email', async () => {
+  await check('checkout requires login; an unverified buyer can pay but not claim a row by email', async () => {
     const { slug } = addProduct(seller.creatorId);
     assert.equal((await call('POST', '/api/purchases', { json: { product_slug: slug, phone: '0780070488' } })).status, 401);
-    assert.equal((await call('POST', '/api/purchases', { cookie: unverified.cookie, json: { product_slug: slug, phone: '0780070488' } })).status, 403);
+    // Signed in but not yet verified: checkout goes ahead (no 401/403).
+    const fresh = makeUser({ email: 'fresh-buyer@example.invalid', verified: false });
+    const res = await call('POST', '/api/purchases', { cookie: fresh.cookie, json: { product_slug: slug, phone: '0780070488' } });
+    assert.ok(![401, 403].includes(res.status), `unverified checkout blocked: ${res.status}`);
+    // An unverified account never takes over an existing guest buyer row that shares its email.
+    db.prepare('INSERT INTO buyers (name, email) VALUES (?, ?)').run('Guest', 'guest-owner@example.invalid');
+    const squatter = makeUser({ email: 'guest-owner@example.invalid', verified: false });
+    assert.equal((await call('POST', '/api/purchases', { cookie: squatter.cookie, json: { product_slug: slug, phone: '0780070488' } })).status, 403);
+    assert.equal(db.prepare("SELECT user_id FROM buyers WHERE email = 'guest-owner@example.invalid'").get().user_id, null);
   });
 
   await check('checkout ignores a body email: cannot claim another person\'s guest buyer record', async () => {

@@ -1,26 +1,39 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { FiCompass, FiUsers, FiGrid, FiUser, FiLogIn, FiLogOut, FiShoppingBag, FiShoppingCart, FiSearch, FiPackage, FiChevronDown, FiMail, FiPlayCircle, FiBookOpen, FiPlusCircle } from 'react-icons/fi';
+import { FiGrid, FiLogOut, FiShoppingBag, FiSearch, FiPackage, FiChevronDown, FiMail, FiMenu, FiX } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 
-// A creator has two real destinations (their storefront dashboard, and
-// their own purchase history as a buyer), the nav used to only ever show
-// one ("Dashboard" replaced "Account" outright the moment a creator profile
-// existed), so a seller who also buys things had no visible way back to
-// their own orders. This folds both into one dropdown instead of picking a
-// winner. Buyers use the same identity menu so sign-out stays discoverable
-// on compact/mobile navigation too.
+const LINKS = [
+  { to: '/discover', label: 'Discover' },
+  { to: '/reels', label: 'Reels' },
+  { to: '/creators', label: 'Creators' },
+  { to: '/blog', label: 'Blog' },
+];
+
+function Avatar({ user, creator, initial, large }) {
+  const image = creator?.avatar_path || user?.avatar_url;
+  return (
+    <span className={`nav__avatar${large ? ' nav__avatar--lg' : ''}`} style={image ? { backgroundImage: `url(${image})` } : undefined}>
+      {!image && initial}
+    </span>
+  );
+}
+
+// A creator has two destinations (their dashboard and their own purchases),
+// so both live in one account menu instead of one replacing the other.
 function AccountMenu({ user, creator, logout }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  const location = useLocation();
 
+  useEffect(() => { setOpen(false); }, [location.pathname]);
   useEffect(() => {
-    function onClickOutside(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    }
+    function onClickOutside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    function onKey(e) { if (e.key === 'Escape') setOpen(false); }
     document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onClickOutside); document.removeEventListener('keydown', onKey); };
   }, []);
 
   const accountName = creator?.name || user?.name || user?.username || 'Your account';
@@ -28,48 +41,22 @@ function AccountMenu({ user, creator, logout }) {
 
   return (
     <div className="nav__account" ref={ref}>
-      <button
-        type="button"
-        className={`nav__account-trigger${open ? ' nav__account-trigger--active' : ''}`}
-        onClick={() => setOpen(o => !o)}
-        aria-expanded={open}
-      >
-        <span
-          className="nav__account-avatar"
-          style={creator?.avatar_path ? { backgroundImage: `url(${creator.avatar_path})` } : user?.avatar_url ? { backgroundImage: `url(${user.avatar_url})` } : undefined}
-        >
-          {!creator?.avatar_path && !user?.avatar_url && initial}
-        </span>
-        <span className="nav__account-trigger__label">Account</span>
-        <FiChevronDown size={13} className="nav__account-trigger__chevron" style={{ transform: open ? 'rotate(180deg)' : 'none' }} />
+      <button type="button" className="nav__account-trigger" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-label="Account menu">
+        <Avatar user={user} creator={creator} initial={initial} />
+        <FiChevronDown size={14} className="nav__account-chevron" style={{ transform: open ? 'rotate(180deg)' : 'none' }} />
       </button>
       {open && (
         <div className="nav__account-menu">
           <div className="nav__account-menu__header">
-            <span
-              className="nav__account-avatar nav__account-avatar--lg"
-              style={creator?.avatar_path ? { backgroundImage: `url(${creator.avatar_path})` } : user?.avatar_url ? { backgroundImage: `url(${user.avatar_url})` } : undefined}
-            >
-              {!creator?.avatar_path && !user?.avatar_url && initial}
-            </span>
+            <Avatar user={user} creator={creator} initial={initial} large />
             <div className="nav__account-menu__who">
               <p className="nav__account-menu__name">{accountName}</p>
-              {creator?.handle
-                ? <p className="nav__account-menu__handle">@{creator.handle}</p>
-                : user?.email && <p className="nav__account-menu__handle">{user.email}</p>}
+              <p className="nav__account-menu__handle">{creator?.handle ? `@${creator.handle}` : user?.email}</p>
             </div>
           </div>
-          <div className="nav__account-menu__divider" />
-          {creator && (
-            <Link to="/dashboard" onClick={() => setOpen(false)} className="nav__account-menu__item">
-              <FiGrid size={15} /> Dashboard
-            </Link>
-          )}
-          <Link to="/account" onClick={() => setOpen(false)} className="nav__account-menu__item">
-            <FiPackage size={15} /> {creator ? 'My orders' : 'My account and orders'}
-          </Link>
-          <div className="nav__account-menu__divider" />
-          <button type="button" onClick={() => { setOpen(false); logout(); }} className="nav__account-menu__item nav__account-menu__item--danger">
+          {creator && <Link to="/dashboard" className="nav__account-menu__item"><FiGrid size={15} /> Dashboard</Link>}
+          <Link to="/account" className="nav__account-menu__item"><FiPackage size={15} /> {creator ? 'My orders' : 'My account and orders'}</Link>
+          <button type="button" onClick={() => { setOpen(false); logout(); }} className="nav__account-menu__item">
             <FiLogOut size={15} /> Log out
           </button>
         </div>
@@ -84,78 +71,98 @@ export default function Nav() {
   const navigate = useNavigate();
   const location = useLocation();
   const [q, setQ] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => { setMenuOpen(false); }, [location.pathname, location.search]);
+  // While the phone menu is open the page underneath shouldn't scroll.
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [menuOpen]);
 
   function submitSearch(e) {
     e.preventDefault();
     navigate(q ? `/discover?q=${encodeURIComponent(q)}` : '/discover');
   }
 
-  // The only route to /check-email now that ProtectedRoute doesn't force
-  // anyone there (see its comment, Resend is still unverified, so a hard
-  // block there meant no new signup could ever get in at all). Without
-  // this, a real logged-in-but-unverified user had no way to even find
-  // the page that lets them verify or resend the email, not a real fix,
-  // just a permanent nag instead of a wall.
+  async function doLogout() { await logout(); navigate('/'); }
+
+  // Unverified users can browse, so the way to verify is always one tap away.
   const showVerifyBanner = !loading && user && !user.email_verified_at && location.pathname !== '/check-email';
+  const sellHref = user ? (creator ? '/dashboard' : '/onboarding') : '/login?role=creator';
+  const sellLabel = creator ? 'Dashboard' : 'Start selling';
+  const linkClass = ({ isActive }) => 'nav__link' + (isActive ? ' nav__link--active' : '');
 
   return (
     <nav className="nav" aria-label="Main">
       {showVerifyBanner && (
-        <div className="wrap nav__verify-banner">
+        <div className="nav__verify-banner">
           <FiMail size={14} />
           <span>Verify your email to keep your account secure.</span>
           <Link to="/check-email">Verify now</Link>
         </div>
       )}
       <div className="wrap nav__inner">
-        <Link to="/" className="nav__brand">
+        <Link to="/" className="nav__brand" aria-label="Scorpio home">
           <span className="nav__name">Scorpio</span>
         </Link>
 
-        <form onSubmit={submitSearch} className="nav__search" role="search">
-          <FiSearch size={14} />
-          <input
-            value={q} onChange={e => setQ(e.target.value)}
-            placeholder="Search products..." aria-label="Search products"
-          />
-        </form>
+        <div className="nav__links">
+          {LINKS.map(l => <NavLink key={l.to} to={l.to} className={linkClass}>{l.label}</NavLink>)}
+        </div>
 
-        <div className="nav__icons">
-          {/* Phones only: the search field doesn't fit the one-row top bar, so search is an icon. */}
-          <Link to="/discover?search=1" className="nav__icon-link nav__icon-link--search">
-            <FiSearch /> <span>Search</span>
+        <div className="nav__actions">
+          <form onSubmit={submitSearch} className="nav__search" role="search">
+            <FiSearch size={15} aria-hidden="true" />
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search" aria-label="Search products" />
+          </form>
+          <Link to="/discover?search=1" className="nav__icon-btn nav__icon-link--search" aria-label="Search">
+            <FiSearch size={20} />
           </Link>
-          <NavLink to="/discover" className={({ isActive }) => 'nav__icon-link nav__icon-link--discover' + (isActive ? ' nav__icon-link--active' : '')}>
-            <FiCompass /> <span>Discover</span>
-          </NavLink>
-          <NavLink to="/reels" className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')}>
-            <FiPlayCircle /> <span>Reels</span>
-          </NavLink>
-          <NavLink to="/creators" className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')}>
-            <FiUsers /> <span>Creators</span>
-          </NavLink>
-          <NavLink to="/blog" className={({ isActive }) => 'nav__icon-link nav__icon-link--secondary' + (isActive ? ' nav__icon-link--active' : '')}>
-            <FiBookOpen /> <span>Blog</span>
-          </NavLink>
           {!loading && user && (
-            <NavLink to="/cart" className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')} style={{ position: 'relative' }}>
-              <FiShoppingCart /> <span>Cart</span>
+            <NavLink to="/cart" className="nav__icon-btn" aria-label={count > 0 ? `Cart, ${count} items` : 'Cart'}>
+              <FiShoppingBag size={20} />
               {count > 0 && <span className="nav__cart-badge">{count}</span>}
             </NavLink>
           )}
-          {!loading && user && <AccountMenu user={user} creator={creator} logout={async () => { await logout(); navigate('/'); }} />}
-          {!loading && !user && (
-            <NavLink to="/login" className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')}>
-              <FiLogIn /> <span>Log in</span>
-            </NavLink>
+          {!loading && user && <span className="nav__desktop-only"><AccountMenu user={user} creator={creator} logout={doLogout} /></span>}
+          {!loading && !user && <Link to="/login" className="nav__login nav__desktop-only">Log in</Link>}
+          {!loading && !(user && creator) && (
+            <Link to={sellHref} className="btn btn--primary nav__cta nav__desktop-only">{sellLabel}</Link>
           )}
-          {!loading && !user && (
-            <NavLink to="/login?role=creator" className="nav__icon-link nav__icon-link--cta">
-              <FiPlusCircle /> <span>Sell</span>
-            </NavLink>
-          )}
+          <button type="button" className="nav__icon-btn nav__menu-btn" onClick={() => setMenuOpen(o => !o)} aria-expanded={menuOpen} aria-controls="nav-sheet" aria-label={menuOpen ? 'Close menu' : 'Open menu'}>
+            {menuOpen ? <FiX size={22} /> : <FiMenu size={22} />}
+          </button>
         </div>
       </div>
+
+      {menuOpen && (
+        <div className="nav__sheet" id="nav-sheet">
+          <div className="nav__sheet-links">
+            <NavLink to="/" end className={linkClass}>Home</NavLink>
+            {LINKS.map(l => <NavLink key={l.to} to={l.to} className={linkClass}>{l.label}</NavLink>)}
+          </div>
+          <div className="nav__sheet-foot">
+            {!loading && user ? (
+              <>
+                <div className="nav__sheet-who">
+                  <Avatar user={user} creator={creator} initial={(creator?.name || user.name || user.username || '?').charAt(0).toUpperCase()} />
+                  <span>{creator?.name || user.name || user.username}</span>
+                </div>
+                {creator && <Link to="/dashboard" className="nav__sheet-item"><FiGrid size={16} /> Dashboard</Link>}
+                <Link to="/account" className="nav__sheet-item"><FiPackage size={16} /> {creator ? 'My orders' : 'My account and orders'}</Link>
+                {!creator && <Link to={sellHref} className="nav__sheet-item"><FiShoppingBag size={16} /> Start selling</Link>}
+                <button type="button" className="nav__sheet-item" onClick={doLogout}><FiLogOut size={16} /> Log out</button>
+              </>
+            ) : (
+              <>
+                <Link to={sellHref} className="btn btn--primary btn--block">Start selling</Link>
+                <Link to="/login" className="btn btn--ghost btn--block">Log in</Link>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

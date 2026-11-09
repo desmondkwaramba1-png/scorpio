@@ -26,8 +26,10 @@ function priceLabel(p) {
 function ProductTile({ product: p }) {
   return (
     <Link to={`/@${p.creator_handle}/${p.slug}`} className="tile">
-      <span className="tile__cover" style={p.cover_path ? { backgroundImage: `url(${p.cover_path})` } : undefined}>
-        {!p.cover_path && <span className="tile__initial">{p.title.charAt(0).toUpperCase()}</span>}
+      <span className="tile__cover">
+        {p.cover_path
+          ? <img src={p.cover_path} alt="" loading="lazy" />
+          : <span className="tile__initial">{p.title.charAt(0).toUpperCase()}</span>}
         {p.promo_active && <span className="tile__badge">{p.discount_percent}% off</span>}
       </span>
       <span className="tile__title">{p.title}</span>
@@ -227,8 +229,6 @@ export default function Marketplace() {
     navigate(q.trim() ? `/discover?q=${encodeURIComponent(q.trim())}` : '/discover');
   }
 
-  const shelf = (trending || []).filter(p => p.cover_path).slice(0, 5);
-
   return (
     <div className="home">
       <header className="hero">
@@ -250,13 +250,6 @@ export default function Marketplace() {
             </p>
           )}
         </div>
-        {shelf.length >= 3 && (
-          <div className="hero__shelf" aria-label="Trending products">
-            {shelf.map(p => (
-              <Link key={p.id} to={`/@${p.creator_handle}/${p.slug}`} className="hero__shelf-item" style={{ backgroundImage: `url(${p.cover_path})` }} aria-label={p.title} />
-            ))}
-          </div>
-        )}
       </header>
 
       <ProductSection title="Trending now" link="/discover?sort=popular" products={trending} />

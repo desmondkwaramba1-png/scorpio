@@ -229,7 +229,8 @@ export default function Marketplace() {
   return (
     <div className="home">
       <header className="home-hero">
-        <div className="wrap">
+        <div className="wrap home-hero__inner">
+          <div className="home-hero__text">
           <h1 className="home-hero__title">
             {EBOOKS_ONLY ? 'Guides, templates and courses from Zimbabwean creators.' : "Zimbabwe's marketplace for digital products."}
           </h1>
@@ -240,6 +241,15 @@ export default function Marketplace() {
               <Link to={user ? '/onboarding' : '/login?role=creator'} className="btn home-hero__secondary">Sell on Scorpio</Link>
             )}
           </div>
+          </div>
+          {/* Desktop only: real covers from the store, not decoration. */}
+          {trending && trending.filter(p => p.cover_path).length >= 4 && (
+            <div className="home-hero__covers" aria-hidden="true">
+              {trending.filter(p => p.cover_path).slice(0, 4).map(p => (
+                <span key={p.id} className="home-hero__cover" style={{ backgroundImage: `url(${p.cover_path})` }} />
+              ))}
+            </div>
+          )}
         </div>
       </header>
 
@@ -267,7 +277,7 @@ export default function Marketplace() {
           <div className="wrap home-sell__inner">
             <h2 className="home-sell__title">Sell what you know</h2>
             <p className="home-sell__text">Open a storefront in minutes. No monthly fee. Paid out to your EcoCash.</p>
-            <Link to={user ? '/onboarding' : '/login?role=creator'} className="btn btn--cta">Start selling</Link>
+            <Link to={user ? '/onboarding' : '/login?role=creator'} className="btn btn--primary">Start selling</Link>
           </div>
         </section>
       )}

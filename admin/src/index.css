@@ -1,6 +1,6 @@
 :root{
-  /* SCORPIO palette: neutrals plus one signature colour, the orange of the
-     wordmark. Any second bright colour competes with the logo, so there isn't
+  /* SCORPIO palette, taken from the splash artwork: warm cream, warm charcoal
+     and one signature colour, the orange of the wordmark. Any second bright colour competes with the logo, so there isn't
      one. Black carries primary actions in seller tools. Green and red are
      status only, so "paid" reads as good news and errors stay unmistakable. */
   --brand:#FF8C42;
@@ -8,8 +8,8 @@
   --brand-strong:#B8470B;
   --brand-strong-rgb:184,71,11;
   --brand-tint:#FFF1E6;
-  --on-brand:#131921;
-  --chrome:#131921;
+  --on-brand:#1C1917;
+  --chrome:#1C1917;
   --link-ink:#B8470B;
   --accent:#FF8C42;
   --accent-dark:#F57A2B;
@@ -22,28 +22,28 @@
   --warning:#9A5B00;
   --warning-tint:#FFF3DC;
   --star:#F59E0B;
-  --ink:#15171A;
-  --ink-dim:#3A3F45;
-  --ink-800:#1C2438;
-  --muted:#5C6168;
-  --paper:#F1F2F4;
+  --ink:#1C1917;
+  --ink-dim:#44403C;
+  --ink-800:#292524;
+  --muted:#6B625A;
+  --paper:#FAF5EF;
   --surface:#FFFFFF;
-  --line:#E1E3E5;
+  --line:#EAE2D9;
   --field-bg:#FFFFFF;
-  --line-strong:#8A92A3;
+  --line-strong:#978C80;
   --red:#D4183D;
   --radius:12px;
   --radius-sm:10px;
   --max-w:1200px;
   --ink-contrast:#FFFFFF;
-  --skeleton-base:#E4E5E7;
-  --skeleton-shine:#F1F2F4;
+  --skeleton-base:#EFE8E0;
+  --skeleton-shine:#F7F2EC;
 
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px; --sp-8:64px;
 
-  --shadow-1:0 1px 2px rgba(15,18,24,.07);
-  --shadow-2:0 2px 4px rgba(11,16,32,.04),0 8px 24px rgba(11,16,32,.07);
-  --shadow-3:0 4px 8px rgba(11,16,32,.05),0 20px 48px rgba(11,16,32,.12);
+  --shadow-1:0 1px 2px rgba(28,25,23,.07);
+  --shadow-2:0 2px 4px rgba(28,25,23,.04),0 8px 24px rgba(28,25,23,.07);
+  --shadow-3:0 4px 8px rgba(28,25,23,.05),0 20px 48px rgba(28,25,23,.12);
 }
 
 /* Dark theme, opt-in from the nav toggle. Nav, hero and footer keep their
@@ -53,7 +53,7 @@
   --brand-strong:#FFB27F;
   --brand-strong-rgb:255,154,87;
   --brand-tint:rgba(255,154,87,.14);
-  --on-brand:#131921;
+  --on-brand:#1C1917;
   --link-ink:#FFB27F;
   --accent-tint:rgba(255,154,87,.14);
   --accent-ink:#FFB27F;
@@ -62,19 +62,19 @@
   --success-tint:rgba(74,222,155,.14);
   --warning:#FBBF5A;
   --warning-tint:rgba(251,191,90,.14);
-  --ink:#F2F4F8;
-  --ink-dim:#CDD3DF;
-  --ink-800:#232B40;
-  --muted:#A4ADBD;
-  --paper:#0A0E1A;
-  --surface:#131929;
+  --ink:#F5EFE8;
+  --ink-dim:#D9CFC4;
+  --ink-800:#2C2621;
+  --muted:#ABA195;
+  --paper:#14110F;
+  --surface:#1E1A17;
   --line:rgba(255,255,255,.10);
-  --field-bg:#1A2133;
+  --field-bg:#27221E;
   --line-strong:rgba(255,255,255,.26);
   --red:#FF6B81;
-  --ink-contrast:#131921;
-  --skeleton-base:#1E2638;
-  --skeleton-shine:#2A3347;
+  --ink-contrast:#1C1917;
+  --skeleton-base:#2A2420;
+  --skeleton-shine:#352E29;
 
   --shadow-1:0 1px 2px rgba(0,0,0,.4);
   --shadow-2:0 4px 16px rgba(0,0,0,.45);
@@ -404,7 +404,7 @@ img{max-width:100%;display:block;}
 .product-card__category{
   position:absolute;top:10px;left:10px;z-index:1;
   padding:3px 10px;border-radius:999px;font-size:.68rem;font-weight:700;
-  letter-spacing:.02em;color:#fff;background:rgba(11,16,32,.64);
+  letter-spacing:.02em;color:#fff;background:rgba(28,25,23,.64);
   backdrop-filter:blur(3px);
 }
 
@@ -525,7 +525,7 @@ img{max-width:100%;display:block;}
        (navy, plum, rose, orange) happens to land under a given word — the
        gradient stays fully vivid past ~60% where nothing needs to be read. */
     linear-gradient(100deg, rgba(8,10,15,.6) 0%, rgba(8,10,15,.28) 38%, transparent 62%),
-    linear-gradient(120deg, #131921 0%, #3d1f3d 28%, #8a3050 52%, #d1522f 76%, var(--accent) 100%);
+    linear-gradient(120deg, #1C1917 0%, #3d1f3d 28%, #8a3050 52%, #d1522f 76%, var(--accent) 100%);
 }
 .shop-hero__badge{
   display:inline-flex;align-items:center;gap:7px;
@@ -598,7 +598,7 @@ img{max-width:100%;display:block;}
 
 /* ---- nav ---- */
 .nav{
-  position:sticky;top:0;z-index:50;background:rgba(11,16,32,.88);
+  position:sticky;top:0;z-index:50;background:rgba(28,25,23,.88);
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
   border-bottom:1px solid var(--ink-800);
 }
@@ -655,7 +655,7 @@ img{max-width:100%;display:block;}
 .nav__account > .nav__icon-link.nav__icon-link--active{background:rgba(var(--accent-rgb),.16);}
 .nav__account-menu{
   position:absolute;top:calc(100% + 8px);right:0;min-width:180px;z-index:60;
-  background:#1A222D;border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-sm);
+  background:#292524;border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-sm);
   box-shadow:var(--shadow-3);padding:6px;
   animation:fade-in-up .18s cubic-bezier(.22,.7,.3,1) both;
 }
@@ -820,9 +820,9 @@ img{max-width:100%;display:block;}
 }
 .splash__scorpion{
   position:relative;z-index:1;
-  filter:drop-shadow(0 2px 6px rgba(11,16,32,.1));transition:filter .6s ease;
+  filter:drop-shadow(0 2px 6px rgba(28,25,23,.1));transition:filter .6s ease;
 }
-.splash__scorpion.is-glowing{filter:drop-shadow(0 4px 14px rgba(11,16,32,.16));animation:splash-pulse 2.6s ease-in-out .9s infinite;}
+.splash__scorpion.is-glowing{filter:drop-shadow(0 4px 14px rgba(28,25,23,.16));animation:splash-pulse 2.6s ease-in-out .9s infinite;}
 .splash__name{
   position:relative;z-index:1;
   font-family:'Alex Brush',cursive;font-weight:400;font-size:3.2rem;line-height:1;color:#E86F1F;
@@ -831,11 +831,11 @@ img{max-width:100%;display:block;}
 }
 .splash__name.is-in{opacity:1;transform:translateY(0);}
 @keyframes splash-pulse{
-  0%,100%{filter:drop-shadow(0 2px 6px rgba(11,16,32,.1));}
-  50%{filter:drop-shadow(0 5px 16px rgba(11,16,32,.2));}
+  0%,100%{filter:drop-shadow(0 2px 6px rgba(28,25,23,.1));}
+  50%{filter:drop-shadow(0 5px 16px rgba(28,25,23,.2));}
 }
 @media (prefers-reduced-motion: reduce){
-  .splash__scorpion, .splash__scorpion.is-glowing{animation:none;filter:drop-shadow(0 2px 6px rgba(11,16,32,.12));}
+  .splash__scorpion, .splash__scorpion.is-glowing{animation:none;filter:drop-shadow(0 2px 6px rgba(28,25,23,.12));}
   .splash__name{transition:none;opacity:1;transform:none;}
 }
 

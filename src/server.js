@@ -9,6 +9,7 @@ const fs = require('fs');
 const { randomUUID } = require('crypto');
 
 const { UPLOADS_DIR } = require('./lib/paths');
+const db = require('./db/schema');
 const { attachUser } = require('./middleware/auth');
 const authRouter = require('./routes/auth');
 const oauthRouter = require('./routes/oauth');
@@ -84,6 +85,16 @@ const app = express();
 // front of Fly. If production logs show every req.ip as a Vercel address, set
 // TRUST_PROXY_HOPS=2 so limits apply per visitor instead of per Vercel edge.
 app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS) || 1);
+
+// Every failed or rate-limited request is logged, so problems show up in
+// `fly logs`. The address shows whether rate limits see real visitors or a proxy.
+app.use((req, res, next) => {
+  res.on('finish', () => {
+    if (res.statusCode !== 429 && res.statusCode < 500) return;
+    console.warn('[http]', JSON.stringify({ status: res.statusCode, method: req.method, path: req.path, ip: req.ip, forwarded: req.get('X-Forwarded-For') || null }));
+  });
+  next();
+});
 app.use((req, res, next) => {
   const isProductUploadPath = req.path === '/api/products' ||
     req.path === '/api/products/' ||
@@ -214,7 +225,17 @@ app.use('/api/reels', reelsRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/disputes', disputesRouter);
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+// Healthy means the database answers too, so Fly restarts a machine whose
+// volume or database has stopped working, not just one that stopped listening.
+app.get('/api/health', (req, res) => {
+  try {
+    db.prepare('SELECT 1').get();
+    res.json({ status: 'ok' });
+  } catch (err) {
+    console.error('[health]', err.message);
+    res.status(503).json({ status: 'error' });
+  }
+});
 // Mounted at root, not under /api — see client/vercel.json's dedicated
 // /sitemap.xml rewrite, since that's the URL search engines expect.
 app.use('/', sitemapRouter);
@@ -284,3 +305,17 @@ const server = require('http').createServer({
 server.listen(PORT, () => console.log(`SCORPIO API running on port ${PORT}`));
 require('./lib/reconcilePayments').startPaymentReconciler();
 require('./lib/housekeeping').startHousekeeping();
+require('./lib/subscriptions').startRenewalSweep();
+
+// Finish requests in flight and close the database before a deploy or restart
+// stops the machine, so no write is cut off halfway.
+function shutdown(signal) {
+  console.info(`[shutdown] ${signal}`);
+  server.close(() => {
+    try { db.close(); } catch { /* already closed */ }
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(0), 8000).unref();
+}
+process.once('SIGTERM', () => shutdown('SIGTERM'));
+process.once('SIGINT', () => shutdown('SIGINT'));

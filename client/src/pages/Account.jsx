@@ -699,7 +699,7 @@ export default function Account() {
         <div className="empty-state">
           <FiCompass size={26} color="var(--muted)" style={{ marginBottom: 10 }} />
           <strong>No purchases yet.</strong>
-          <Link to="/discover" style={{ color: 'var(--brand)', fontWeight: 600 }}>Browse the marketplace</Link>
+          <Link to="/discover" style={{ color: 'var(--brand-strong)', fontWeight: 600 }}>Browse the marketplace</Link>
         </div>
       )}
 
@@ -774,7 +774,7 @@ export default function Account() {
 
       {!creator && (
         <p className="muted" style={{ fontSize: '.82rem', marginTop: 20, textAlign: 'center' }}>
-          Also selling something? <Link to="/onboarding" style={{ color: 'var(--brand)', fontWeight: 600 }}>Start a storefront</Link>
+          Also selling something? <Link to="/onboarding" style={{ color: 'var(--brand-strong)', fontWeight: 600 }}>Start a storefront</Link>
         </p>
       )}
     </div>

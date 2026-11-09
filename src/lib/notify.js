@@ -28,7 +28,7 @@ function renderHtml(subject, body) {
   const buttonHtml = ctaUrl ? `
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 20px;">
       <tr><td style="border-radius:999px;background:#FF8C42;">
-        <a href="${escapeHtml(ctaUrl)}" style="display:inline-block;padding:13px 28px;color:#131921;font-weight:700;font-size:15px;text-decoration:none;border-radius:999px;">
+        <a href="${escapeHtml(ctaUrl)}" style="display:inline-block;padding:13px 28px;color:#1C1917;font-weight:700;font-size:15px;text-decoration:none;border-radius:999px;">
           Continue
         </a>
       </td></tr>

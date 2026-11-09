@@ -34,8 +34,8 @@ export default defineConfig({
         // Matches --chrome (the app's fixed navy chrome, see index.css)
         // — the color a browser/OS paints behind the splash/status bar
         // before the page's own CSS has loaded.
-        theme_color: '#131921',
-        background_color: '#131921',
+        theme_color: '#1C1917',
+        background_color: '#1C1917',
         display: 'standalone',
         start_url: '/',
         icons: [

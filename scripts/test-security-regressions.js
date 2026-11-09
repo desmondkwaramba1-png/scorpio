@@ -406,6 +406,25 @@ async function main() {
     assert.equal((await call('GET', `/api/products/${item.slug}`, { cookie: user().cookie })).status, 404);
     assert.equal((await call('GET', `/api/products/${item.slug}`)).status, 404);
   });
+  await check('reset links are stored hashed and still work', async () => {
+    const account = user();
+    await call('POST', '/api/auth/forgot-password', { json: { identifier: account.email } });
+    const row = db.prepare('SELECT token FROM password_reset_tokens WHERE user_id = ? ORDER BY id DESC').get(account.userId);
+    assert.match(row.token, /^[0-9a-f]{64}$/);
+    assert.equal((await call('POST', '/api/auth/reset-password', { json: { token: row.token, password: 'Another-Pass-9' } })).status, 400, 'the stored hash is not a usable link');
+  });
+  await check('renewal sweep skips lapse notices older than a week', async () => {
+    const { sendRenewalReminders } = require('../src/lib/subscriptions');
+    const seller = user({ creator: true }); const item = product(seller.creatorId, { type: 'subscription', external: false }); const buyer = user();
+    paidOrder(buyer, item, 500, 'USD', 'delivered');
+    db.prepare("UPDATE subscriptions SET current_period_end = datetime('now', '-30 days') WHERE product_id = ?").run(item.id);
+    sendRenewalReminders();
+    assert.equal(db.prepare('SELECT lapse_notice_sent_at FROM subscriptions WHERE product_id = ?').get(item.id).lapse_notice_sent_at, null);
+  });
+  await check('admin overview reports checkout success', async () => {
+    const { data } = await call('GET', '/api/admin/overview', { headers: admin });
+    assert.ok(data.checkout_funnel_7d.started >= data.checkout_funnel_7d.paid);
+  });
   await check('search looks at descriptions and creator names too', async () => {
     const seller = user({ creator: true }); const item = product(seller.creatorId);
     db.prepare("UPDATE products SET description = 'all about zebrawood carving' WHERE id = ?").run(item.id);

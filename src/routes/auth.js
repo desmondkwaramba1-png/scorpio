@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
-const { randomUUID } = require('crypto');
+const { randomUUID, createHash } = require('crypto');
 const db = require('../db/schema');
 const { sendEmail } = require('../lib/notify');
 const { generateToken } = require('../lib/tokens');
@@ -61,6 +61,12 @@ function publicUser(user) {
   return rest;
 }
 
+// A database leak must not hand out working reset or verification links.
+const hashToken = token => createHash('sha256').update(String(token)).digest('hex');
+// Links sent before hashing hold the raw 48-character token. Only that exact
+// shape is accepted raw, so a leaked 64-character hash can never be used as a link.
+const legacyToken = token => (typeof token === 'string' && /^[0-9a-f]{48}$/.test(token) ? token : null);
+
 function futureTimestamp(minutesFromNow) {
   return new Date(Date.now() + minutesFromNow * 60 * 1000).toISOString();
 }
@@ -102,7 +108,7 @@ router.post('/signup', authLimiter, (req, res) => {
   const token = generateToken();
   db.prepare(
     'INSERT INTO email_verification_tokens (user_id, token, expires_at) VALUES (?, ?, ?)'
-  ).run(user.id, token, futureTimestamp(EMAIL_TOKEN_TTL_HOURS * 60));
+  ).run(user.id, hashToken(token), futureTimestamp(EMAIL_TOKEN_TTL_HOURS * 60));
   sendEmail(
     email,
     'Verify your SCORPIO account',
@@ -158,8 +164,8 @@ router.post('/verify-email', (req, res) => {
   if (!token) return res.status(400).json({ error: 'token is required.' });
 
   const row = db.prepare(
-    'SELECT * FROM email_verification_tokens WHERE token = ? AND consumed_at IS NULL'
-  ).get(token);
+    'SELECT * FROM email_verification_tokens WHERE token IN (?, ?) AND consumed_at IS NULL'
+  ).get(hashToken(token), legacyToken(token));
   if (!row || new Date(row.expires_at) < new Date()) {
     return res.status(400).json({ error: 'That verification link is invalid or has expired.' });
   }
@@ -187,7 +193,7 @@ router.post('/resend-verification', authLimiter, requireAuth, (req, res) => {
   const token = generateToken();
   db.prepare(
     'INSERT INTO email_verification_tokens (user_id, token, expires_at) VALUES (?, ?, ?)'
-  ).run(req.user.id, token, futureTimestamp(EMAIL_TOKEN_TTL_HOURS * 60));
+  ).run(req.user.id, hashToken(token), futureTimestamp(EMAIL_TOKEN_TTL_HOURS * 60));
   sendEmail(
     req.user.email,
     'Verify your SCORPIO account',
@@ -211,7 +217,7 @@ router.post('/forgot-password', authLimiter, (req, res) => {
     const token = generateToken();
     db.prepare(
       'INSERT INTO password_reset_tokens (user_id, method, token, expires_at) VALUES (?, ?, ?, ?)'
-    ).run(user.id, 'email', token, futureTimestamp(RESET_TOKEN_TTL_MINUTES));
+    ).run(user.id, 'email', hashToken(token), futureTimestamp(RESET_TOKEN_TTL_MINUTES));
     sendEmail(
       user.email,
       'Reset your SCORPIO password',
@@ -229,8 +235,8 @@ router.post('/reset-password', authLimiter, (req, res) => {
   if (!token || !password) return res.status(400).json({ error: 'token and password are required.' });
 
   const row = db.prepare(
-    'SELECT * FROM password_reset_tokens WHERE token = ? AND consumed_at IS NULL'
-  ).get(token);
+    'SELECT * FROM password_reset_tokens WHERE token IN (?, ?) AND consumed_at IS NULL'
+  ).get(hashToken(token), legacyToken(token));
   if (!row || new Date(row.expires_at) < new Date()) {
     return res.status(400).json({ error: 'That reset code or link is invalid or has expired.' });
   }

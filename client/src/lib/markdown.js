@@ -11,7 +11,8 @@ import DOMPurify from 'dompurify';
 export function renderMarkdown(md) {
   if (!md) return '';
   const html = marked.parse(md, { breaks: true, gfm: true });
-  return DOMPurify.sanitize(html);
+  // The post title is the page's h1, so headings written in the body start at h2.
+  return DOMPurify.sanitize(html.replace(/<(\/?)h1\b/g, '<$1h2'));
 }
 
 // Cheap and real — no reading-speed field to maintain, just word count.

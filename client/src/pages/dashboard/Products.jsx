@@ -44,7 +44,7 @@ export default function Products() {
       {products && products.length === 0 && (
         <div className="empty-state">
           <strong>No products yet.</strong>
-          <Link to="/dashboard/products/new" style={{ color: 'var(--brand)', fontWeight: 600 }}>Create your first product</Link>
+          <Link to="/dashboard/products/new" style={{ color: 'var(--brand-strong)', fontWeight: 600 }}>Create your first product</Link>
         </div>
       )}
       {products && products.length > 0 && filtered.length === 0 && (

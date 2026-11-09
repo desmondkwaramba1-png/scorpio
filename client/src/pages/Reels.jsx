@@ -40,7 +40,7 @@ export default function Reels() {
     return (
       <div className="wrap" style={{ padding: '60px 20px 80px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <FiFilm size={22} color="var(--brand)" />
+          <FiFilm size={22} color="var(--brand-strong)" />
           <h1 style={{ fontSize: '1.8rem' }}>Reels</h1>
         </div>
         <div className="empty-state" style={{ marginTop: 20 }}>
@@ -52,5 +52,10 @@ export default function Reels() {
   }
 
   const requestedIndex = reels.findIndex(item => String(item.id) === searchParams.get('reel'));
-  return <ReelViewer reels={reels} startIndex={requestedIndex < 0 ? 0 : requestedIndex} onClose={() => navigate('/discover')} />;
+  return (
+    <>
+      <h1 className="sr-only">Reels</h1>
+      <ReelViewer reels={reels} startIndex={requestedIndex < 0 ? 0 : requestedIndex} onClose={() => navigate('/discover')} />
+    </>
+  );
 }

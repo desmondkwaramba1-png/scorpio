@@ -61,7 +61,7 @@ export default function Cart() {
   return (
     <div className="wrap" style={{ maxWidth: 680, padding: '40px 20px 80px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <FiShoppingCart size={22} color="var(--brand)" />
+        <FiShoppingCart size={22} color="var(--brand-strong)" />
         <h1 style={{ fontSize: '1.6rem' }}>Your cart</h1>
       </div>
       <p className="muted" style={{ marginBottom: 28 }}>

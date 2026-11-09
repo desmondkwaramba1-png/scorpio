@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FiUsers, FiShoppingBag, FiBox, FiDollarSign, FiTrendingUp, FiUserPlus, FiPercent } from 'react-icons/fi';
+import { FiUsers, FiShoppingBag, FiBox, FiDollarSign, FiTrendingUp, FiUserPlus, FiPercent, FiActivity } from 'react-icons/fi';
 import { useAdmin } from '../context/AdminContext.jsx';
 import { formatMoney } from '../lib/money';
 import { SITE_ORIGIN } from '../lib/site';
@@ -39,6 +39,9 @@ export default function Overview() {
         <StatTile icon={FiDollarSign} label="Gross revenue" value={moneyByCurrency(data.gross_by_currency)}
           sub={`${moneyByCurrency(data.revenue_last_7_days_by_currency)} in the last 7 days, excluding refunds`} />
         <StatTile icon={FiPercent} label="Platform fees earned" value={moneyByCurrency(data.platform_fees_by_currency)} />
+        <StatTile icon={FiActivity} label="Checkout success, 7 days"
+          value={data.checkout_funnel_7d?.started ? `${Math.round((data.checkout_funnel_7d.paid / data.checkout_funnel_7d.started) * 100)}%` : '–'}
+          sub={data.checkout_funnel_7d ? `${data.checkout_funnel_7d.paid} of ${data.checkout_funnel_7d.started} paid, ${data.checkout_funnel_7d.failed} declined, ${data.checkout_funnel_7d.unfinished} unfinished` : null} />
         <StatTile icon={FiShoppingBag} label="Paid orders" value={data.total_orders} sub={`${data.orders_last_7_days} in the last 7 days`} />
         <StatTile icon={FiBox} label="Products" value={data.published_products} sub={`${data.total_products} total, incl. drafts`} />
         <StatTile icon={FiUsers} label="Creators" value={data.total_creators} />

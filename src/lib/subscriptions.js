@@ -113,6 +113,9 @@ function sendRenewalReminders() {
     JOIN products p ON p.id = s.product_id
     JOIN creators c ON c.id = s.creator_id
     WHERE s.status = 'lapsed' AND s.lapse_notice_sent_at IS NULL
+      -- Only recent lapses. A weeks-old "your subscription has lapsed" email is
+      -- confusing, and the old job never ran, so older ones were never sent.
+      AND s.current_period_end >= datetime('now', '-7 days')
   `).all();
   for (const row of lapsed) {
     sendEmail(
@@ -127,6 +130,24 @@ function sendRenewalReminders() {
   return { reminders_sent: remindersSent, lapse_notices_sent: lapseNoticesSent };
 }
 
+// Runs hourly in this process. Both kinds of email are recorded as sent, so a
+// repeat run or a restart never sends the same email twice.
+function startRenewalSweep(intervalMs = 60 * 60 * 1000) {
+  const run = () => {
+    try {
+      const result = sendRenewalReminders();
+      if (result.reminders_sent || result.lapse_notices_sent) console.info('[renewal sweep]', JSON.stringify(result));
+    } catch (err) {
+      console.error('[renewal sweep]', err.message);
+    }
+  };
+  setTimeout(run, 60 * 1000).unref();
+  const timer = setInterval(run, intervalMs);
+  timer.unref();
+  return timer;
+}
+
 module.exports = {
+  startRenewalSweep,
   PERIOD_DAYS, syncSubscriptionStatuses, findOrCreateSubscription, cancelSubscription, sendRenewalReminders
 };

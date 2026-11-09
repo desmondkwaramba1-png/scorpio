@@ -211,7 +211,7 @@ export default function PaymentReturn() {
         </div>
 
         <p style={{ marginTop: 20 }}>
-          <Link to="/account" style={{ color: 'var(--brand)', fontWeight: 600, fontSize: '.9rem' }}>View all your orders</Link>
+          <Link to="/account" style={{ color: 'var(--brand-strong)', fontWeight: 600, fontSize: '.9rem' }}>View all your orders</Link>
         </p>
       </div>
     );

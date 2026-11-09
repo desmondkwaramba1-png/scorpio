@@ -271,8 +271,22 @@ router.get('/overview', requireAdmin, (req, res) => {
     FROM users u ORDER BY u.created_at DESC LIMIT 10
   `).all();
 
+  // One row per checkout (a cart order shares one reference), last 7 days.
+  const funnel = db.prepare(`
+    WITH orders AS (
+      SELECT COALESCE(payment_reference, 'purchase-' || id) AS ref, MAX(payment_status = 'paid') AS paid,
+             MAX(payment_status = 'failed') AS failed
+      FROM purchases
+      WHERE amount_minor > 0 AND created_at >= datetime('now', '-7 days')
+      GROUP BY ref
+    )
+    SELECT COUNT(*) AS started, COALESCE(SUM(paid), 0) AS paid, COALESCE(SUM(failed AND NOT paid), 0) AS failed
+    FROM orders
+  `).get();
+
   res.json({
     ...totals,
+    checkout_funnel_7d: { ...funnel, unfinished: funnel.started - funnel.paid - funnel.failed },
     gross_by_currency: grossByCurrency,
     platform_fees_by_currency: feesByCurrency,
     revenue_last_7_days_by_currency: revenue7ByCurrency,
@@ -440,13 +454,9 @@ router.get('/payouts/history', requireAdmin, (req, res) => {
   res.json(history);
 });
 
-// POST /api/admin/subscriptions/sweep — the one scheduled job this app
-// has. No in-process scheduler exists (see escrow.js's sweepAutoReleases
-// comment) — this is meant to be triggered externally, once a day, by a
-// GitHub Actions workflow (.github/workflows/subscription-sweep.yml)
-// hitting this route with the same ADMIN_KEY every other admin route
-// already uses. Emails only ever go out from here, never from a page
-// load, see subscriptions.js's own reasoning for that split.
+// POST /api/admin/subscriptions/sweep: runs the renewal email sweep now. The
+// server already runs it hourly (see startRenewalSweep); this is the manual
+// trigger. Emails only go out from the sweep, never from a page load.
 router.post('/subscriptions/sweep', requireAdmin, (req, res) => {
   const result = sendRenewalReminders();
   res.json({ ok: true, ...result });

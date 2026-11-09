@@ -287,7 +287,7 @@ export default function Login() {
                 </a>
               </div>
               <p className="muted" style={{ fontSize: '.78rem', textAlign: 'center', marginTop: -10 }}>
-                Continuing means you'll be asked to agree to the <Link to="/terms" target="_blank" style={{ color: 'var(--brand)' }}>terms</Link> on your first visit.
+                Continuing means you'll be asked to agree to the <Link to="/terms" target="_blank" style={{ color: 'var(--brand-strong)' }}>terms</Link> on your first visit.
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0', color: 'var(--muted)', fontSize: '.8rem' }}>
                 <span style={{ flex: 1, height: 1, background: 'var(--line)' }} />
@@ -367,7 +367,7 @@ export default function Login() {
                         onChange={e => setForm(f => ({ ...f, terms: e.target.checked }))}
                         style={{ width: 'auto', marginTop: 3 }} />
                       <span>
-                        I agree to the <Link to="/terms" target="_blank" style={{ color: 'var(--brand)', fontWeight: 600 }}>SCORPIO terms</Link>.
+                        I agree to the <Link to="/terms" target="_blank" style={{ color: 'var(--brand-strong)', fontWeight: 600 }}>SCORPIO terms</Link>.
                       </span>
                     </label>
                   </div>

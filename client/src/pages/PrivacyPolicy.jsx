@@ -53,8 +53,10 @@ export default function PrivacyPolicy() {
         </Section>
 
         <Section icon={FiLock} title="Cookies">
-          One cookie: a session cookie that keeps you logged in. It's essential to the app working, no
-          tracking cookies, no ad pixels, no analytics scripts watching what you do.
+          Only cookies the app needs to work: one keeps you logged in, one protects forms against forged
+          requests, and a short-lived one secures signing in with Google. Your theme choice, cart
+          reminders and reading position are kept in your own browser's storage. No tracking cookies, no
+          ad pixels, no analytics scripts watching what you do.
         </Section>
 
         <Section icon={FiClock} title="How long we keep it">

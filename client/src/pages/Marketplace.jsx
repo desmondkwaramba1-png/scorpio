@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { FiPlay, FiSearch, FiArrowRight } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
+import { FiPlay, FiChevronRight, FiSearch, FiSmartphone, FiDownload } from 'react-icons/fi';
 import ReelViewer from '../components/ReelViewer.jsx';
 import StoryCard from '../components/StoryCard.jsx';
 import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../lib/launchScope.js';
@@ -10,26 +10,24 @@ import { useAuth } from '../context/AuthContext.jsx';
 // Marks the first visit; other screens read this flag.
 const HERO_SEEN_KEY = 'scorpio_seen_marketplace_pitch';
 
-const CATEGORY_BLURBS = {
-  ebooks: 'Read it tonight, use it tomorrow.',
-  templates: 'Ready-made sheets, plans and checklists.',
-  courses: 'Learn step by step, at your own pace.',
-};
-
 function priceLabel(p) {
   if (p.promo_active) return formatMoney(p.discounted_price_minor, p.currency);
   if (p.price_minor === 0) return 'Free';
   return (p.pay_what_you_want ? 'From ' : '') + formatMoney(p.price_minor, p.currency);
 }
 
-// A borderless product tile: the cover does the talking.
+function Cover({ product: p }) {
+  return p.cover_path
+    ? <img src={p.cover_path} alt="" loading="lazy" />
+    : <span className="tile__initial">{p.title.charAt(0).toUpperCase()}</span>;
+}
+
+// One product in a row: cover shown whole, then title, creator and price.
 function ProductTile({ product: p }) {
   return (
     <Link to={`/@${p.creator_handle}/${p.slug}`} className="tile">
       <span className="tile__cover">
-        {p.cover_path
-          ? <img src={p.cover_path} alt="" loading="lazy" />
-          : <span className="tile__initial">{p.title.charAt(0).toUpperCase()}</span>}
+        <Cover product={p} />
         {p.promo_active && <span className="tile__badge">{p.discount_percent}% off</span>}
       </span>
       <span className="tile__title">{p.title}</span>
@@ -42,127 +40,57 @@ function ProductTile({ product: p }) {
   );
 }
 
-// The top product, shown large in the hero so the page opens on something real.
-function FeaturedCard({ product: p, second }) {
+// A card with four products in a 2x2 grid, the way big stores open their home page.
+function QuadCard({ title, link, products, linkLabel = 'See more' }) {
+  const four = (products || []).slice(0, 4);
+  if (four.length < 2) return null;
   return (
-    <div className="feature">
-      {second && <span className="feature__back" style={{ backgroundImage: `url(${second.cover_path})` }} aria-hidden="true" />}
-      <Link to={`/@${p.creator_handle}/${p.slug}`} className="feature__card">
-        <span className="feature__cover"><img src={p.cover_path} alt="" /></span>
-        <span className="feature__body">
-          <span className="feature__label">Trending this week</span>
-          <span className="feature__title">{p.title}</span>
-          <span className="feature__meta">
-            <span>{p.creator_name}</span>
-            <strong>{priceLabel(p)}</strong>
-          </span>
-        </span>
-      </Link>
-    </div>
+    <section className="quad">
+      <h2 className="quad__title">{title}</h2>
+      <div className="quad__grid">
+        {four.map(p => (
+          <Link key={p.id} to={`/@${p.creator_handle}/${p.slug}`} className="quad__item">
+            <span className="quad__cover"><Cover product={p} /></span>
+            <span className="quad__name">{p.title}</span>
+          </Link>
+        ))}
+      </div>
+      <Link to={link} className="quad__link">{linkLabel}</Link>
+    </section>
   );
 }
 
-function SectionHead({ title, link, label = 'View all' }) {
+function Panel({ title, link, linkLabel = 'See all', children, className = '' }) {
   return (
-    <div className="home-head">
-      <h2 className="home-head__title">{title}</h2>
-      {link && <Link to={link} className="home-head__link">{label} <FiArrowRight size={14} aria-hidden="true" /></Link>}
-    </div>
+    <section className={`panel ${className}`}>
+      <div className="panel__head">
+        <h2 className="panel__title">{title}</h2>
+        {link && <Link to={link} className="panel__link">{linkLabel} <FiChevronRight size={15} aria-hidden="true" /></Link>}
+      </div>
+      {children}
+    </section>
   );
 }
 
-function ProductSection({ title, link, products }) {
-  if (products === null) {
-    return (
-      <section className="home-section wrap" aria-hidden="true">
-        <SectionHead title={title} />
-        <div className="tile-grid">
-          {Array.from({ length: 4 }).map((_, i) => <div key={i}><div className="skeleton" style={{ aspectRatio: '1/1', borderRadius: 14 }} /><div className="skeleton" style={{ height: 14, width: '70%', marginTop: 12 }} /></div>)}
-        </div>
-      </section>
-    );
-  }
+function ProductRow({ title, link, products }) {
   if (!products || products.length < 2) return null;
   return (
-    <section className="home-section wrap">
-      <SectionHead title={title} link={link} />
-      <div className="tile-grid">{products.slice(0, 8).map(p => <ProductTile key={p.id} product={p} />)}</div>
-    </section>
-  );
-}
-
-function Categories({ byCategory }) {
-  if (ACTIVE_CATEGORIES.length < 2) return null;
-  return (
-    <section className="home-section wrap">
-      <SectionHead title="Shop by category" />
-      <div className="cat-tiles">
-        {ACTIVE_CATEGORIES.map(c => {
-          const covers = (byCategory[c.value] || []).filter(p => p.cover_path).slice(0, 3);
-          const Icon = c.icon;
-          return (
-            <Link key={c.value} to={`/discover?category=${c.value}`} className="cat-tile">
-              <span className="cat-tile__text">
-                <span className="cat-tile__icon"><Icon size={18} aria-hidden="true" /></span>
-                <span className="cat-tile__name">{c.label}</span>
-                <span className="cat-tile__blurb">{CATEGORY_BLURBS[c.value] || 'Browse the collection.'}</span>
-              </span>
-              {covers.length > 0 && (
-                <span className="cat-tile__covers" aria-hidden="true">
-                  {covers.map(p => <span key={p.id} style={{ backgroundImage: `url(${p.cover_path})` }} />)}
-                </span>
-              )}
-            </Link>
-          );
-        })}
-      </div>
-    </section>
+    <Panel title={title} link={link}>
+      <div className="row">{products.slice(0, 12).map(p => <ProductTile key={p.id} product={p} />)}</div>
+    </Panel>
   );
 }
 
 const STEPS = [
-  { title: 'Find what you need', text: 'Guides, templates and courses from people who know the subject.' },
-  { title: 'Pay with EcoCash', text: 'Confirm on your phone. No card needed.' },
-  { title: 'Download straight away', text: 'Files stay in your account, with 5 days of buyer protection.' },
+  { icon: FiSearch, title: 'Find what you need', text: 'Guides, templates and courses from people who know the subject.' },
+  { icon: FiSmartphone, title: 'Pay with EcoCash', text: 'Confirm on your phone. No card needed.' },
+  { icon: FiDownload, title: 'Download straight away', text: 'Files stay in your account, with 5 days of buyer protection.' },
 ];
 
-function HowItWorks() {
-  return (
-    <section className="home-section wrap" aria-labelledby="how-heading">
-      <SectionHead title="How it works" />
-      <ol className="steps">
-        {STEPS.map((s, i) => (
-          <li key={s.title} className="step">
-            <span className="step__num">{String(i + 1).padStart(2, '0')}</span>
-            <h3 className="step__title" id={i === 0 ? 'how-heading' : undefined}>{s.title}</h3>
-            <p className="step__text">{s.text}</p>
-          </li>
-        ))}
-      </ol>
-    </section>
-  );
-}
-
 function Creators({ creators, reelsByCreator, onPlay }) {
-  if (creators === null) {
-    return (
-      <section className="home-section wrap" aria-hidden="true">
-        <SectionHead title="Meet the creators" />
-        <div className="creator-spotlight">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="creator-spotlight__item">
-              <span className="creator-spotlight__ring skeleton" style={{ border: 'none' }} />
-              <span className="skeleton" style={{ width: 40, height: 19, borderRadius: 4 }} />
-            </div>
-          ))}
-        </div>
-      </section>
-    );
-  }
-  if (!creators.length) return null;
+  if (!creators || !creators.length) return null;
   return (
-    <section className="home-section wrap">
-      <SectionHead title="Meet the creators" link="/creators" />
+    <Panel title="Meet the creators" link="/creators">
       <div className="creator-spotlight">
         {creators.map(c => {
           const reels = reelsByCreator[c.handle];
@@ -187,24 +115,12 @@ function Creators({ creators, reelsByCreator, onPlay }) {
           );
         })}
       </div>
-    </section>
-  );
-}
-
-function BlogSection({ posts }) {
-  if (!posts || posts.length === 0) return null;
-  return (
-    <section className="home-section wrap">
-      <SectionHead title="From the blog" link="/blog" label="All articles" />
-      <div className="home-stories">{posts.slice(0, 3).map(post => <StoryCard key={post.id} post={post} />)}</div>
-    </section>
+    </Panel>
   );
 }
 
 export default function Marketplace() {
-  const navigate = useNavigate();
   const { user, creator, loading: authLoading } = useAuth();
-  const [q, setQ] = useState('');
   const [trending, setTrending] = useState(null);
   const [fresh, setFresh] = useState(null);
   const [blogPosts, setBlogPosts] = useState(null);
@@ -215,24 +131,25 @@ export default function Marketplace() {
 
   useEffect(() => { try { localStorage.setItem(HERO_SEEN_KEY, '1'); } catch { /* private mode */ } }, []);
 
-  // Everything the page needs, applied in one state update so it settles in one layout pass.
+  // Everything the page needs, applied together so it settles in one layout pass.
   useEffect(() => {
     const cats = ACTIVE_CATEGORIES.length > 1 ? ACTIVE_CATEGORIES : [];
     const get = url => fetch(url).then(r => r.json()).catch(() => []);
+    const list = v => (Array.isArray(v) ? v : []);
     Promise.all([
-      get('/api/products?sort=popular&limit=8'),
-      get('/api/products?limit=12'),
+      get('/api/products?sort=popular&limit=12'),
+      get('/api/products?limit=16'),
       get('/api/creators?limit=14'),
       get('/api/reels?limit=60'),
       get('/api/blog?limit=3'),
-      Promise.all(cats.map(c => get(`/api/products?category=${c.value}&limit=3`))),
+      Promise.all(cats.map(c => get(`/api/products?category=${c.value}&limit=4`))),
     ]).then(([popular, newest, creators, reels, blog, catResults]) => {
-      const list = v => (Array.isArray(v) ? v : []);
       popular = list(popular); newest = list(newest);
       setTrending(popular);
       // With little like activity, "popular" and "newest" overlap; don't show the same products twice.
       const seen = new Set(popular.map(p => p.id));
-      setFresh(newest.filter(p => !seen.has(p.id)));
+      const unseen = newest.filter(p => !seen.has(p.id));
+      setFresh(unseen.length >= 4 ? unseen : newest);
       setSpotlightCreators(list(creators));
       setBlogPosts(list(blog));
       const grouped = {};
@@ -244,60 +161,67 @@ export default function Marketplace() {
     });
   }, []);
 
-  function search(e) {
-    e.preventDefault();
-    navigate(q.trim() ? `/discover?q=${encodeURIComponent(q.trim())}` : '/discover');
-  }
-
-  const withCovers = (trending || []).filter(p => p.cover_path);
-  const featured = withCovers[0];
-  const secondFeatured = withCovers[1];
+  const sellHref = user ? '/onboarding' : '/login?role=creator';
 
   return (
     <div className="home">
-      <header className="hero">
-        <div className="wrap hero__inner">
-          <div className="hero__text">
-            <p className="hero__kicker">Made in Zimbabwe · Paid with EcoCash</p>
-            <h1 className="hero__title">
-              {EBOOKS_ONLY ? <>Learn it from someone who has <span className="hero__accent">done it.</span></> : "Zimbabwe's marketplace for digital products."}
-            </h1>
-            <p className="hero__sub">Guides, templates and courses from Zimbabwean creators. Pay with EcoCash and download straight away.</p>
-            <form className="hero__search" role="search" onSubmit={search}>
-              <FiSearch size={18} aria-hidden="true" />
-              <input value={q} onChange={e => setQ(e.target.value)} placeholder="What do you want to learn?" aria-label="Search products" />
-              <button type="submit" className="btn btn--primary">Search</button>
-            </form>
-            {ACTIVE_CATEGORIES.length > 1 && (
-              <div className="hero__chips">
-                {ACTIVE_CATEGORIES.map(c => {
-                  const Icon = c.icon;
-                  return <Link key={c.value} to={`/discover?category=${c.value}`} className="hero__chip"><Icon size={15} aria-hidden="true" /> {c.label}</Link>;
-                })}
-              </div>
-            )}
+      <header className="banner">
+        <div className="wrap banner__inner">
+          <p className="banner__kicker">Made in Zimbabwe · Paid with EcoCash</p>
+          <h1 className="banner__title">
+            {EBOOKS_ONLY ? 'Learn it from someone who has done it.' : "Zimbabwe's marketplace for digital products."}
+          </h1>
+          <p className="banner__sub">Guides, templates and courses from Zimbabwean creators. Download straight after paying.</p>
+          <div className="banner__actions">
+            <Link to="/discover" className="btn banner__primary">Shop all products</Link>
+            {!authLoading && !creator && <Link to={sellHref} className="btn banner__secondary">Start selling</Link>}
           </div>
-          {featured && <FeaturedCard product={featured} second={secondFeatured} />}
         </div>
       </header>
-      <ProductSection title="Trending now" link="/discover?sort=popular" products={trending} />
-      <Categories byCategory={byCategory} />
-      <ProductSection title="New arrivals" link="/discover" products={fresh} />
-      <HowItWorks />
-      <Creators creators={spotlightCreators} reelsByCreator={reelsByCreator} onPlay={setViewingReels} />
-      <BlogSection posts={blogPosts} />
 
-      {!authLoading && !creator && (
-        <section className="wrap home-section">
-          <div className="sell-panel">
+      <div className="wrap home__body">
+        <div className="quads">
+          <QuadCard title="Trending now" link="/discover?sort=popular" products={trending} />
+          {ACTIVE_CATEGORIES.length > 1 && ACTIVE_CATEGORIES.map(c => (
+            <QuadCard key={c.value} title={c.label} link={`/discover?category=${c.value}`} products={byCategory[c.value]} />
+          ))}
+        </div>
+
+        <ProductRow title="Best sellers" link="/discover?sort=popular" products={trending} />
+        <ProductRow title="New arrivals" link="/discover" products={fresh} />
+
+        <Panel title="How Scorpio works">
+          <ol className="steps">
+            {STEPS.map(({ icon: Icon, title, text }) => (
+              <li key={title} className="step">
+                <span className="step__icon"><Icon size={20} aria-hidden="true" /></span>
+                <span>
+                  <h3 className="step__title">{title}</h3>
+                  <p className="step__text">{text}</p>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </Panel>
+
+        <Creators creators={spotlightCreators} reelsByCreator={reelsByCreator} onPlay={setViewingReels} />
+
+        {blogPosts && blogPosts.length > 0 && (
+          <Panel title="From the blog" link="/blog" linkLabel="All articles">
+            <div className="home-stories">{blogPosts.slice(0, 3).map(post => <StoryCard key={post.id} post={post} />)}</div>
+          </Panel>
+        )}
+
+        {!authLoading && !creator && (
+          <section className="sell-panel">
             <div>
               <h2 className="sell-panel__title">Turn what you know into income</h2>
               <p className="sell-panel__text">Open a storefront in minutes. No monthly fee. Paid out to your EcoCash.</p>
             </div>
-            <Link to={user ? '/onboarding' : '/login?role=creator'} className="btn btn--primary">Start selling</Link>
-          </div>
-        </section>
-      )}
+            <Link to={sellHref} className="btn btn--primary">Start selling</Link>
+          </section>
+        )}
+      </div>
 
       {viewingReels && <ReelViewer reels={viewingReels} onClose={() => setViewingReels(null)} />}
     </div>

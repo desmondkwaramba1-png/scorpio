@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { FiGrid, FiLogOut, FiShoppingBag, FiSearch, FiPackage, FiChevronDown, FiMail } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
+import { ACTIVE_CATEGORIES } from '../lib/launchScope.js';
 
 const LINKS = [
   { to: '/discover', label: 'Discover' },
@@ -71,9 +72,10 @@ export default function Nav() {
   const navigate = useNavigate();
   const location = useLocation();
   const [q, setQ] = useState('');
+
   function submitSearch(e) {
     e.preventDefault();
-    navigate(q ? `/discover?q=${encodeURIComponent(q)}` : '/discover');
+    navigate(q.trim() ? `/discover?q=${encodeURIComponent(q.trim())}` : '/discover');
   }
 
   async function doLogout() { await logout(); navigate('/'); }
@@ -97,38 +99,38 @@ export default function Nav() {
           <span className="nav__name">Scorpio</span>
         </Link>
 
-        <div className="nav__links">
-          {LINKS.map(l => <NavLink key={l.to} to={l.to} className={linkClass}>{l.label}</NavLink>)}
-        </div>
+        <form onSubmit={submitSearch} className="nav__search" role="search">
+          <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search guides, templates and courses" aria-label="Search products" />
+          <button type="submit" className="nav__search-btn" aria-label="Search"><FiSearch size={19} /></button>
+        </form>
 
         <div className="nav__actions">
-          <form onSubmit={submitSearch} className="nav__search" role="search">
-            <FiSearch size={15} aria-hidden="true" />
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search" aria-label="Search products" />
-          </form>
-          <Link to="/discover?search=1" className="nav__icon-btn nav__icon-link--search" aria-label="Search">
-            <FiSearch size={20} />
-          </Link>
+          {!loading && user && <AccountMenu user={user} creator={creator} logout={doLogout} />}
+          {!loading && !user && <Link to="/login" className="nav__login">Log in</Link>}
           {!loading && user && (
             <NavLink to="/cart" className="nav__icon-btn" aria-label={count > 0 ? `Cart, ${count} items` : 'Cart'}>
-              <FiShoppingBag size={20} />
+              <FiShoppingBag size={21} />
               {count > 0 && <span className="nav__cart-badge">{count}</span>}
             </NavLink>
           )}
-          {!loading && user && <AccountMenu user={user} creator={creator} logout={doLogout} />}
-          {!loading && !user && <Link to="/login" className="nav__login">Log in</Link>}
           {!loading && (
-            <Link to={sellHref} className="btn btn--primary nav__cta">
+            <Link to={sellHref} className="btn nav__cta">
               {creator ? 'Dashboard' : <><span className="nav__cta-long">Start selling</span><span className="nav__cta-short">Sell</span></>}
             </Link>
           )}
         </div>
       </div>
 
-      {/* Phones: the main sections as a row of tabs, always visible. */}
-      <div className="nav__tabs">
-        <NavLink to="/" end className={linkClass}>Home</NavLink>
-        {LINKS.map(l => <NavLink key={l.to} to={l.to} className={linkClass}>{l.label}</NavLink>)}
-      </div>    </nav>
+      {/* The belt: every section in one row that fits the screen. */}
+      <div className="nav__belt">
+        <div className="wrap nav__belt-inner">
+          <NavLink to="/" end className={linkClass}>Home</NavLink>
+          {LINKS.map(l => <NavLink key={l.to} to={l.to} className={linkClass}>{l.label}</NavLink>)}
+          <span className="nav__belt-cats">
+            {ACTIVE_CATEGORIES.map(c => <Link key={c.value} to={`/discover?category=${c.value}`} className="nav__link">{c.label}</Link>)}
+          </span>
+        </div>
+      </div>
+    </nav>
   );
 }

@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { FiGrid, FiLogOut, FiShoppingBag, FiSearch, FiPackage, FiChevronDown, FiMail } from 'react-icons/fi';
+import { FiGrid, FiLogOut, FiShoppingBag, FiSearch, FiPackage, FiChevronDown, FiMail, FiHome, FiCompass, FiPlayCircle, FiUsers, FiBookOpen } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { ACTIVE_CATEGORIES } from '../lib/launchScope.js';
 
 const LINKS = [
-  { to: '/discover', label: 'Discover' },
-  { to: '/reels', label: 'Reels' },
-  { to: '/creators', label: 'Creators' },
-  { to: '/blog', label: 'Blog' },
+  { to: '/discover', label: 'Discover', icon: FiCompass },
+  { to: '/reels', label: 'Reels', icon: FiPlayCircle },
+  { to: '/creators', label: 'Creators', icon: FiUsers },
+  { to: '/blog', label: 'Blog', icon: FiBookOpen },
 ];
+const BELT = [{ to: '/', label: 'Home', icon: FiHome, end: true }, ...LINKS];
 
 function Avatar({ user, creator, initial, large }) {
   const image = creator?.avatar_path || user?.avatar_url;
@@ -83,7 +84,6 @@ export default function Nav() {
   // Unverified users can browse, so the way to verify is always one tap away.
   const showVerifyBanner = !loading && user && !user.email_verified_at && location.pathname !== '/check-email';
   const sellHref = user ? (creator ? '/dashboard' : '/onboarding') : '/login?role=creator';
-  const linkClass = ({ isActive }) => 'nav__link' + (isActive ? ' nav__link--active' : '');
 
   return (
     <nav className="nav" aria-label="Main">
@@ -124,10 +124,21 @@ export default function Nav() {
       {/* The belt: every section in one row that fits the screen. */}
       <div className="nav__belt">
         <div className="wrap nav__belt-inner">
-          <NavLink to="/" end className={linkClass}>Home</NavLink>
-          {LINKS.map(l => <NavLink key={l.to} to={l.to} className={linkClass}>{l.label}</NavLink>)}
+          {BELT.map(({ to, label, icon: Icon, end }) => (
+            <NavLink key={to} to={to} end={end} className={({ isActive }) => 'belt-item' + (isActive ? ' belt-item--active' : '')}>
+              <span className="belt-item__icon"><Icon size={19} aria-hidden="true" /></span>
+              <span className="belt-item__label">{label}</span>
+            </NavLink>
+          ))}
           <span className="nav__belt-cats">
-            {ACTIVE_CATEGORIES.map(c => <Link key={c.value} to={`/discover?category=${c.value}`} className="nav__link">{c.label}</Link>)}
+            {ACTIVE_CATEGORIES.map(c => {
+              const Icon = c.icon;
+              return (
+                <Link key={c.value} to={`/discover?category=${c.value}`} className="belt-cat">
+                  <Icon size={15} aria-hidden="true" /> {c.label}
+                </Link>
+              );
+            })}
           </span>
         </div>
       </div>

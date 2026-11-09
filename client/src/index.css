@@ -2703,3 +2703,54 @@ span.nav__desktop-only{display:contents;}
   .banner__sub{font-size:.98rem;}
   .banner__actions .btn{flex:1;padding:0 12px;}
 }
+
+/* ---- Belt with icons. Phones get an app-style tab row: icon in a pill,
+   label under it, the current section lit in orange. ---- */
+.nav__belt{border-top:1px solid rgba(255,255,255,.06);}
+.nav__belt-inner{gap:4px;min-height:52px;}
+.belt-item{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;color:rgba(255,255,255,.78);font-size:.875rem;font-weight:500;white-space:nowrap;transition:background .15s ease,color .15s ease;}
+.belt-item__icon{display:grid;place-items:center;transition:background .15s ease,color .15s ease;}
+.belt-item:hover{background:rgba(255,255,255,.08);color:#fff;}
+.belt-item--active{background:rgba(255,140,66,.16);color:#FFB27F;font-weight:600;}
+.nav__belt-cats{gap:6px;padding-left:0;border-left:0;}
+.belt-cat{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid rgba(255,255,255,.14);border-radius:999px;color:rgba(255,255,255,.86);font-size:.82rem;white-space:nowrap;transition:border-color .15s ease,color .15s ease;}
+.belt-cat:hover{border-color:rgba(255,255,255,.36);color:#fff;}
+.belt-cat svg{color:var(--brand);}
+@media (max-width:860px){
+  .nav__belt-inner{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;min-height:0;padding:6px 6px 8px;}
+  .belt-item{flex-direction:column;gap:4px;padding:2px 0;border-radius:12px;font-size:.7rem;color:rgba(255,255,255,.7);}
+  .belt-item:hover{background:none;}
+  .belt-item__icon{width:52px;height:28px;border-radius:999px;}
+  .belt-item--active{background:none;color:#fff;}
+  .belt-item--active .belt-item__icon{background:var(--brand);color:#1C1917;}
+}
+
+/* ---- Top section: light and calm, orange only as an accent ---- */
+.banner{padding:48px 0 132px;background:
+  radial-gradient(55% 110% at 100% 0%, rgba(255,140,66,.16), transparent 62%),
+  radial-gradient(40% 80% at 0% 100%, rgba(255,186,120,.12), transparent 60%),
+  linear-gradient(180deg,#FFF7F0 0%,var(--page) 100%);}
+:root[data-theme="dark"] .banner{background:radial-gradient(55% 110% at 100% 0%, rgba(255,140,66,.14), transparent 62%),var(--page);}
+.banner__kicker{background:var(--surface);border:1px solid rgba(184,71,11,.16);color:var(--brand-strong);}
+.banner__title,:root[data-theme="dark"] .banner__title{color:var(--ink);}
+.banner__accent{color:var(--brand-strong);}
+.banner__sub,:root[data-theme="dark"] .banner__sub{color:var(--muted);}
+.banner__primary{background:var(--ink);color:var(--paper);}
+.banner__primary:hover{background:var(--ink-dim);color:var(--paper);}
+.banner__secondary{background:var(--surface);color:var(--ink);border:1px solid var(--line);}
+.banner__secondary:hover{background:var(--surface);border-color:var(--line-strong);}
+.banner__trust{display:flex;flex-wrap:wrap;gap:8px 20px;margin:20px 0 0;padding:0;list-style:none;color:var(--ink-dim);font-size:.86rem;font-weight:500;}
+.banner__trust li{display:inline-flex;align-items:center;gap:6px;}
+.banner__trust svg{color:var(--success);}
+
+/* ---- Sell panel: a calm white card with one orange button ---- */
+.sell-panel{background:var(--surface);box-shadow:var(--panel-shadow);color:var(--ink);}
+.sell-panel__title{color:var(--ink);}
+.sell-panel__text{color:var(--muted);}
+.sell-panel .btn{background:var(--brand);color:#1C1917;}
+.sell-panel .btn:hover{background:var(--accent-dark);}
+
+@media (max-width:900px){
+  .banner{padding:28px 0 92px;}
+  .banner__trust{gap:6px 14px;font-size:.8rem;margin-top:16px;}
+}

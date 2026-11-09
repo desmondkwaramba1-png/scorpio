@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiPlay, FiChevronRight, FiSearch, FiSmartphone, FiDownload } from 'react-icons/fi';
+import { FiPlay, FiChevronRight, FiSearch, FiSmartphone, FiDownload, FiCheckCircle } from 'react-icons/fi';
 import ReelViewer from '../components/ReelViewer.jsx';
 import StoryCard from '../components/StoryCard.jsx';
 import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../lib/launchScope.js';
@@ -169,13 +169,18 @@ export default function Marketplace() {
         <div className="wrap banner__inner">
           <p className="banner__kicker">Made in Zimbabwe · Paid with EcoCash</p>
           <h1 className="banner__title">
-            {EBOOKS_ONLY ? 'Learn it from someone who has done it.' : "Zimbabwe's marketplace for digital products."}
+            {EBOOKS_ONLY ? <>Learn it from someone who has <span className="banner__accent">done it.</span></> : "Zimbabwe's marketplace for digital products."}
           </h1>
-          <p className="banner__sub">Guides, templates and courses from Zimbabwean creators. Download straight after paying.</p>
+          <p className="banner__sub">Guides, templates and courses from Zimbabwean creators.</p>
           <div className="banner__actions">
             <Link to="/discover" className="btn banner__primary">Shop all products</Link>
             {!authLoading && !creator && <Link to={sellHref} className="btn banner__secondary">Start selling</Link>}
           </div>
+          <ul className="banner__trust">
+            <li><FiCheckCircle size={15} aria-hidden="true" /> Pay with EcoCash</li>
+            <li><FiCheckCircle size={15} aria-hidden="true" /> Instant download</li>
+            <li><FiCheckCircle size={15} aria-hidden="true" /> 5-day buyer protection</li>
+          </ul>
         </div>
       </header>
 

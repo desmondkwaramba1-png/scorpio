@@ -2835,3 +2835,39 @@ body:has(.article){background:var(--surface);}
   .showcase__price{flex:none;font-size:.8rem;font-weight:700;color:var(--brand-strong);}
 }
 @media (prefers-reduced-motion:reduce){ .showcase__card,.tile__cover img,.quad__cover img{transition:none;} }
+
+/* ==========================================================================
+   Phones: a tidier order.
+   ========================================================================== */
+@media (max-width:860px){
+  /* The account menu hangs from the screen edge, not from the avatar, so it
+     can't run off the left side when the seller's Dashboard button is wide. */
+  .nav__inner{position:relative;}
+  .nav__account{position:static;}
+  .nav__account-menu{top:56px;right:12px;left:auto;width:min(280px,calc(100vw - 24px));min-width:0;}
+  /* Inside the seller dashboard its own tabs lead; the shop tab row steps aside. */
+  body:has(.dash-main) .nav__belt{display:none;}
+}
+
+@media (max-width:600px){
+  /* Two products per row, like a shopping app, instead of one huge card. */
+  .product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+  .product-card__body{padding:10px 10px 12px;}
+  .product-card__title{font-size:.86rem;line-height:1.3;}
+  .product-card__creator{display:inline-flex;align-items:center;min-width:0;min-height:24px;font-size:.72rem;}
+}
+/* Clamp the title link itself: clamping only its paragraph left the hidden
+   third line of the link sitting invisibly over the creator name below. */
+.product-card__title a{display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+@media (max-width:600px){
+  .product-card__price{margin-top:6px;font-size:.95rem;}
+  .product-card__sold{font-size:.7rem;}
+  .product-card__buyrow{margin-top:8px;gap:6px;}
+  .product-card__buyrow .btn{min-height:34px;padding-inline:8px;}
+  .product-card__buy{flex:1;justify-content:center;}
+
+  /* Home 2x2 cards: pictures only on a phone; the names stay for screen readers. */
+  .quad__name{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;}
+  .quad__grid{gap:8px;}
+  .quad__title{font-size:1rem;}
+}

@@ -81,12 +81,6 @@ export default function ProductCard({ product, isOwner = false }) {
         style={p.cover_path ? { backgroundImage: `url(${p.cover_path})` } : undefined}
       >
         {!p.cover_path && p.title.charAt(0).toUpperCase()}
-        {p.creator_avatar && (
-          <div className="product-card__watermark" style={{ backgroundImage: `url(${p.creator_avatar})` }} />
-        )}
-        {p.category && CATEGORY_LABELS[p.category] && (
-          <span className="product-card__category">{CATEGORY_LABELS[p.category]}</span>
-        )}
         {p.promo_active && (
           <span className="product-card__category" style={{ left: 'auto', right: 10, background: 'var(--accent)', color: 'var(--chrome)' }}>
             {p.discount_percent}% off
@@ -157,12 +151,6 @@ export default function ProductCard({ product, isOwner = false }) {
               {addedToCart ? <FiCheck size={13} /> : <FiShoppingCart size={13} />}
             </button>
           )}
-          <Link to={productUrl} onClick={e => e.stopPropagation()} style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            color: 'var(--muted)', fontSize: '.78rem', fontWeight: 600
-          }}>
-            <FiEye size={12} /> View
-          </Link>
         </div>
         {cartError && <p className="error-text" style={{ fontSize: '.76rem', marginTop: 6 }}>{cartError}</p>}
 

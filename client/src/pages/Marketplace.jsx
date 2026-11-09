@@ -8,182 +8,11 @@ import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../lib/launchScope.js';
 import { formatMoney } from '../lib/money';
 import { useAuth } from '../context/AuthContext.jsx';
 
-// Only promises the platform actually keeps. Listings go live straight away and
-// files are checked by automated rules, so this must not claim human review.
 // Short labels only, no sentence each — see the CSS comment on
 // .trust-band for why (a phone-height problem, not a taste one).
-const TRUST_ITEMS = [
-  { icon: FiCheckCircle, title: 'Automatic file checks' },
-  { icon: FiZap, title: 'Instant delivery' },
-  { icon: FiShield, title: '5-day buyer protection' }
-];
 
-const FEATURE_BENEFITS = [
-  {
-    icon: FiBookOpen,
-    title: 'Built for learning and earning',
-    text: 'Discover books, guides, templates, and courses created by people who actually know the subject.'
-  },
-  {
-    icon: FiShield,
-    title: 'Trust-first buying',
-    text: 'Files are checked automatically, and every purchase comes with 5 days of buyer protection.'
-  },
-  {
-    icon: FiTrendingUp,
-    title: 'A storefront that sells for you',
-    text: 'Creators can publish quickly, manage their catalog, and keep the entire customer experience in one place.'
-  }
-];
 
-function TrustBand() {
-  return (
-    <section className="trust-band">
-      <div className="section wrap">
-        <div className="trust-grid">
-          {TRUST_ITEMS.map(item => (
-            <div key={item.title} className="trust-item">
-              <span className="trust-item__icon"><item.icon size={12} /></span>
-              <p className="trust-item__title">{item.title}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
 
-function FeatureHighlights() {
-  return (
-    <section className="feature-strip">
-      <div className="wrap">
-        <div className="feature-strip__header">
-          <p className="section__eyebrow mono">WHY PEOPLE BUY HERE</p>
-          <h2 className="section__title">A marketplace designed for momentum.</h2>
-        </div>
-        <div className="feature-strip__grid">
-          {FEATURE_BENEFITS.map(({ icon: Icon, title, text }) => (
-            <article key={title} className="feature-card">
-              <span className="feature-card__icon"><Icon size={18} /></span>
-              <div className="feature-card__content">
-                <h3>{title}</h3>
-                <p>{text}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function GettingStarted() {
-  return (
-    <section className="getting-started" aria-labelledby="getting-started-title">
-      <div className="wrap">
-        <div className="getting-started__head">
-          <div>
-            <p className="section__eyebrow mono">START HERE</p>
-            <h2 id="getting-started-title" className="section__title">What brings you to Scorpio?</h2>
-          </div>
-          <p className="getting-started__intro">Choose a path and we will take you to the right first step.</p>
-        </div>
-        <div className="getting-started__grid">
-          <div className="getting-started__card getting-started__card--buyer">
-            <div className="getting-started__icon"><FiCompass size={20} /></div>
-            <div className="getting-started__content">
-              <p className="getting-started__kicker">I want to buy</p>
-              <h3>Find something useful.</h3>
-              <p>Browse trusted ebooks, guides, templates, and courses. Pay with EcoCash and access your purchase straight away.</p>
-              <div className="getting-started__steps">
-                <span><FiSearch size={13} /> Browse</span>
-                <span><FiShield size={13} /> Buy safely</span>
-                <span><FiDownload size={13} /> Get access</span>
-              </div>
-              <Link to="/discover" className="btn btn--primary btn--sm">Browse products <FiChevronRight size={14} /></Link>
-            </div>
-          </div>
-          <div className="getting-started__card getting-started__card--seller">
-            <div className="getting-started__icon"><FiUploadCloud size={20} /></div>
-            <div className="getting-started__content">
-              <p className="getting-started__kicker">I want to sell</p>
-              <h3>Turn what you know into income.</h3>
-              <p>Create a storefront, upload your first product, and share one link with people who need what you know.</p>
-              <div className="getting-started__steps">
-                <span><FiShoppingBag size={13} /> Set up</span>
-                <span><FiUploadCloud size={13} /> Publish</span>
-                <span><FiZap size={13} /> Get paid</span>
-              </div>
-              <Link to="/login?role=creator" className="btn btn--cta btn--sm">Start selling <FiChevronRight size={14} /></Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// A text-only hero, however short, still makes a first-time visitor
-// scroll past it before seeing one real product — direct feedback was
-// that people expect to see products right away, especially on a phone
-// where the hero already eats most of the first screen. This puts a
-// real one (image, title, price) inside the hero itself, and rotates
-// through a handful of trending products on a timer so more than just
-// whichever one happens to be first gets a chance to be seen.
-function HeroSpotlight({ products }) {
-  const navigate = useNavigate();
-  const [index, setIndex] = useState(0);
-  const items = (products || []).slice(0, 5);
-
-  useEffect(() => {
-    if (items.length < 2) return;
-    const timer = setInterval(() => setIndex(i => (i + 1) % items.length), 4000);
-    return () => clearInterval(timer);
-  }, [items.length]);
-
-  if (items.length === 0) return null;
-  const p = items[index % items.length];
-  const url = `/@${p.creator_handle}/${p.slug}`;
-  const price = p.price_minor === 0
-    ? 'Free'
-    : formatMoney(p.promo_active ? p.discounted_price_minor : p.price_minor, p.currency);
-
-  return (
-    <div className="hero-spotlight">
-      <div
-        key={p.id}
-        className="hero-spotlight__card"
-        role="link" tabIndex={0}
-        onClick={() => navigate(url)}
-        onKeyDown={e => { if (e.key === 'Enter') navigate(url); }}
-      >
-        <span
-          className="hero-spotlight__cover"
-          style={p.cover_path ? { backgroundImage: `url(${p.cover_path})` } : undefined}
-        >
-          {!p.cover_path && p.title.charAt(0).toUpperCase()}
-        </span>
-        <div className="hero-spotlight__info">
-          <p className="hero-spotlight__eyebrow mono">TRENDING NOW</p>
-          <p className="hero-spotlight__title">{p.title}</p>
-          <p className="hero-spotlight__price">{price}</p>
-        </div>
-      </div>
-      {items.length > 1 && (
-        <div className="hero-spotlight__dots">
-          {items.map((it, i) => (
-            <button
-              key={it.id} type="button"
-              className={`hero-spotlight__dot${i === index ? ' is-active' : ''}`}
-              onClick={() => setIndex(i)}
-              aria-label={`Show product ${i + 1} of ${items.length}`}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // The first-encounter moment (badge + pitch + Get Started) is a one-time
 // thing, real the very first time someone lands here, dead weight on
@@ -365,7 +194,7 @@ function BlogRail({ posts }) {
   );
 }
 
-function Rail({ title, subtitle, icon: Icon, link, products }) {
+function Rail({ title, link, products }) {
   // A single card in a row built for a horizontal scroll of many reads
   // as broken, not curated — a lonely card floating in a full-width
   // carousel track with nothing to scroll to. Below 2, that category/row
@@ -375,13 +204,7 @@ function Rail({ title, subtitle, icon: Icon, link, products }) {
   return (
     <section className="section section--row wrap">
       <div className="rail-head">
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {Icon && <Icon size={16} color="var(--brand-strong)" />}
-            <h2 className="rail-head__title">{title}</h2>
-          </div>
-          {subtitle && <p className="rail-head__subtitle">{subtitle}</p>}
-        </div>
+        <h2 className="rail-head__title">{title}</h2>
         <Link to={link} className="rail-head__link">See all</Link>
       </div>
       <div className="rail-wrap">
@@ -473,169 +296,46 @@ export default function Marketplace() {
 
   return (
     <div>
-      <header className={`shop-hero${showPitch ? '' : ' shop-hero--compact'}`}>
+      <header className="shop-hero">
         <div className="wrap">
-          {showPitch ? (
-            <>
-              {/* Real Lighthouse data traced LCP straight to these two: the
-                  fade-in-up entrance animation (.6s + a staggered delay)
-                  meant the browser doesn't count this text as "painted"
-                  for Core Web Vitals purposes until it's actually visible,
-                  not just in the DOM, over a second of pure animation cost
-                  on exactly the content LCP measures. Left the animation
-                  on the badge and CTA below, small elements, never the
-                  LCP candidate, so the entrance still reads as polished. */}
-              {/* This used to open with "Turn what you know into income" -
-                  a seller pitch, first thing a brand-new visitor read, on
-                  what's supposed to be a marketplace's front door. Direct
-                  feedback: the page read as a blog/creator platform, not
-                  somewhere to buy something, and this line (plus having no
-                  actual "browse" CTA at all below it) was a real part of
-                  why. Leads with what a buyer actually gets now; the
-                  seller pitch still gets its own real moment, just further
-                  down (see the CTA band near the bottom), not the very
-                  first thing anyone sees. */}
-              <span className="mono shop-hero__badge shop-hero__reveal" style={{ animationDelay: '.05s' }}><FiZap size={12} /> ZIMBABWE'S MARKETPLACE FOR DIGITAL PRODUCTS</span>
-              <h1 className="shop-hero__title">
-                {EBOOKS_ONLY ? 'Find digital products that actually help you grow.' : 'Find real digital products that move work forward.'}
-              </h1>
-              <p className="shop-hero__sub">
-                {EBOOKS_ONLY
-                  ? "Practical guides, templates, and courses from Zimbabwean creators, paid for with EcoCash."
-                  : "Discover ebooks, templates, courses, and tools from people who know their craft. Clear pricing, instant access, and buyer protection built in."}
-              </p>
-              <div className="shop-hero__meta shop-hero__reveal" style={{ animationDelay: '.2s' }}>
-                <span>Instant access</span>
-                <span>EcoCash ready</span>
-                <span>Verified sellers</span>
-              </div>
-              <div className="shop-hero__actions shop-hero__reveal" style={{ animationDelay: '.35s' }}>
-                <Link to="/discover" className="btn btn--cta shop-hero__cta">Browse products</Link>
-                <Link to="/login?role=creator" className="shop-hero__browse-btn">
-                  Sell your work <FiChevronRight size={14} />
-                </Link>
-              </div>
-
-              <HeroSpotlight products={trending} />
-            </>
-          ) : (
-            <h1 className="shop-hero__compact-label">
-              {EBOOKS_ONLY ? 'Guides, templates, and courses from real Zimbabwean creators.' : "Zimbabwe's marketplace for real digital products."}
-            </h1>
-          )}
-          {/* A returning visit means the search bar is here, but nothing
-              else - no sign of whether this device even remembers you're
-              logged in, and nothing pointing a logged-out visitor (or a
-              logged-in buyer who never got around to it) toward the other
-              real reason to be here. Auth-aware, not one-size-fits-all:
-              a logged-in creator already has the nav's own Account menu
-              for this, so gets nothing extra here. */}
-          {!showPitch && !authLoading && (
-            <div className="shop-hero__quicklinks">
-              <Link to="/discover" className="shop-hero__quicklink shop-hero__quicklink--primary">
-                <FiCompass size={14} /> Browse everything
-              </Link>
-              {!user && (
-                <>
-                  <Link to="/login" className="shop-hero__quicklink">
-                    <FiLogIn size={14} /> Log in
-                  </Link>
-                  <Link to="/login?role=creator" className="shop-hero__quicklink">
-                    <FiShoppingBag size={14} /> Sell your own
-                  </Link>
-                </>
-              )}
-              {user && !creator && (
-                <Link to="/onboarding" className="shop-hero__quicklink">
-                  <FiShoppingBag size={14} /> Start a storefront
-                </Link>
-              )}
-            </div>
-          )}
+          <h1 className="shop-hero__title">
+            {EBOOKS_ONLY ? 'Guides, templates and courses from Zimbabwean creators.' : "Zimbabwe's marketplace for digital products."}
+          </h1>
+          <p className="shop-hero__sub">Pay with EcoCash. Download straight away. Every order has 5 days of buyer protection.</p>
+          <div className="shop-hero__actions">
+            <Link to="/discover" className="btn btn--cta">Browse products</Link>
+            {!authLoading && !creator && (
+              <Link to={user ? '/onboarding' : '/login?role=creator'} className="btn shop-hero__secondary">Sell on Scorpio</Link>
+            )}
+          </div>
         </div>
       </header>
 
-      <TrustBand />
-
-      {/* Real proof comes before anything else below the hero and trust
-          band — a first-time visitor deciding whether this is worth their
-          time needs to see actual products fast, not scroll past
-          categories, creator avatars, and a blog before hitting one. */}
-      <Rail
-        title="Trending now" subtitle="What buyers are grabbing right now."
-        icon={FiTrendingUp} link="/discover?sort=popular" products={trending}
-      />
-      <Rail
-        title="New arrivals" subtitle="Just listed, be the first to grab these."
-        icon={FiClock} link="/discover" products={fresh}
-      />
-
       {ACTIVE_CATEGORIES.length > 1 && (
-        <section className="category-band">
-          <div className="section wrap">
-            <div className="section__head">
-              <p className="section__eyebrow mono">SHOP BY CATEGORY</p>
-              <h2 className="section__title">Find what you're looking for.</h2>
-            </div>
-            <div className="category-feature-grid">
-              {ACTIVE_CATEGORIES.map(c => (
-                <Link key={c.value} to={`/discover?category=${c.value}`} className="category-feature-card">
-                  <span className="category-feature-card__icon"><c.icon size={21} /></span>
-                  <span className="category-feature-card__body">
-                    <span className="category-feature-card__label">{c.label}</span>
-                    <span className="category-feature-card__tagline">{CATEGORY_TAGLINES[c.value] || 'Browse this category'}</span>
-                  </span>
-                  <span className="category-feature-card__arrow" aria-hidden="true"><FiArrowUpRight size={16} /></span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
+        <nav className="wrap cat-links" aria-label="Categories">
+          {ACTIVE_CATEGORIES.map(c => (
+            <Link key={c.value} to={`/discover?category=${c.value}`} className="cat-link">{c.label}</Link>
+          ))}
+        </nav>
       )}
 
+      <Rail title="Trending" link="/discover?sort=popular" products={trending} />
+      <Rail title="New arrivals" link="/discover" products={fresh} />
       {ACTIVE_CATEGORIES.length > 1 && ACTIVE_CATEGORIES.map(c => (
-        <Rail
-          key={c.value}
-          title={CATEGORY_TAGLINES[c.value] || c.label}
-          icon={c.icon}
-          link={`/discover?category=${c.value}`}
-          products={byCategory[c.value]}
-        />
+        <Rail key={c.value} title={c.label} link={`/discover?category=${c.value}`} products={byCategory[c.value]} />
       ))}
 
-      <FeatureHighlights />
-      <GettingStarted />
-
       <CreatorSpotlight creators={spotlightCreators} reelsByCreator={reelsByCreator} onPlay={setViewingReels} />
+      <BlogRail posts={blogPosts} />
 
-      {/* The blog earns a real, prominent spot on the page — just not the
-          very first thing a first-time visitor hits before they've even
-          seen this is a marketplace. Direct feedback: leading with it made
-          the whole page read as a blog/content site first, marketplace
-          second. Real proof (products), then category/creator context,
-          THEN "here's more if you want to read" - a supporting act, not
-          the headline. */}
-      <div className="blog-band">
-        <BlogRail posts={blogPosts} />
-      </div>
-
-      {/* Same rule as the hero pitch above: this is a first-encounter pitch
-          ("here's the other path you could've picked"), not a standing
-          fixture of the shop. A returning visitor already made that call ,
-          re-pitching them "become a seller" every time they check the
-          marketplace is exactly the repeat-visit clutter we cut the hero
-          pitch for. */}
-      {showPitch && (
-        <section className="cta-band">
-          <div className="wrap" style={{ textAlign: 'center' }}>
-            <p className="mono hero__eyebrow">SELLING ON SCORPIO</p>
-            <h2 className="section__title" style={{ margin: '0 auto 12px', maxWidth: '30ch', color: '#fff' }}>
-              {EBOOKS_ONLY ? 'Know something worth teaching? Open your storefront in five minutes.' : 'Got something to sell? Open your storefront in five minutes.'}
-            </h2>
-            <p style={{ color: 'rgba(255,255,255,.68)', maxWidth: '46ch', margin: '0 auto 24px' }}>
-              No website, no monthly fee. Get paid straight to your EcoCash.
-            </p>
-            <Link to="/login?role=creator" className="btn btn--cta">Start selling</Link>
+      {!authLoading && !creator && (
+        <section className="sell-band">
+          <div className="wrap sell-band__inner">
+            <div>
+              <h2 className="sell-band__title">Sell what you know</h2>
+              <p className="sell-band__text">Open a storefront in minutes. No monthly fee, paid out to your EcoCash.</p>
+            </div>
+            <Link to={user ? '/onboarding' : '/login?role=creator'} className="btn btn--primary">Start selling</Link>
           </div>
         </section>
       )}

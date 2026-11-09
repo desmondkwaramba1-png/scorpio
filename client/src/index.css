@@ -2516,3 +2516,66 @@ body:has(.setup){padding-bottom:0;}
   .dash-tab:hover{background:rgba(28,25,23,.05);}
 }
 :root[data-theme="dark"] .dash-tab:hover{background:rgba(255,255,255,.06);}
+
+/* ==========================================================================
+   Calm system. Loaded last on purpose: one type scale, one spacing rhythm,
+   flat surfaces, and orange only where it means "act here". Decoration that
+   doesn't help someone read or decide was removed here.
+   ========================================================================== */
+:root{
+  --fs-xs:.75rem; --fs-sm:.875rem; --fs-md:1rem; --fs-lg:1.25rem; --fs-xl:1.5rem; --fs-2xl:2rem;
+  --shadow-2:0 1px 3px rgba(28,25,23,.06);
+  --shadow-3:0 2px 8px rgba(28,25,23,.08);
+}
+:root[data-theme="dark"]{--shadow-2:0 1px 3px rgba(0,0,0,.4);--shadow-3:0 2px 10px rgba(0,0,0,.45);}
+
+h1,h2,h3{font-weight:600;letter-spacing:-.02em;}
+h1{font-size:var(--fs-2xl);line-height:1.15;}
+h2{font-size:var(--fs-lg);line-height:1.3;}
+h3{font-size:var(--fs-md);}
+@media (max-width:640px){ h1{font-size:var(--fs-xl);} }
+
+/* Numbers and labels in the body font; tabular figures keep prices aligned. */
+.mono{font-family:inherit;font-variant-numeric:tabular-nums;letter-spacing:0;}
+.badge,.seal{font-family:inherit;letter-spacing:0;font-weight:600;}
+.section__eyebrow,.hero__eyebrow{display:none;}
+
+/* Flat surfaces: a hairline border, no glow, no lift, no entrance animation. */
+:is(.card,.product-card,.compact-card,.category-feature-card,.feature-card,.role-card,.creator-card,.blog-card,.stat-tile,.order-card,.page-state,.buy-panel,.cart-summary){box-shadow:none;}
+:is(.card,.product-card,.compact-card,.category-feature-card,.feature-card,.role-card,.creator-card,.blog-card,.stat-tile,.order-card):hover{transform:none;box-shadow:none;border-color:var(--line-strong);}
+.product-card:hover .product-card__cover,.compact-card:hover .compact-card__cover{transform:none;}
+.product-grid > *,.rail > *,.category-grid > *{animation:none;}
+.btn:hover,.shop-hero__browse-btn:hover,.shop-hero__quicklink:hover{transform:none;}
+.buy-panel,.cart-summary{border:1px solid var(--line);border-top-width:1px;}
+
+/* Information, not decoration. */
+.trust-line{background:none;padding:0;border-radius:0;color:var(--ink-dim);}
+.dash-tour{border-style:solid;}
+
+/* Rhythm: sections sit on one spacing scale. */
+.section{padding-block:40px;}
+.section--row{padding-block:28px;}
+.rail-head{align-items:baseline;margin-bottom:14px;}
+.rail-head__title{font-size:var(--fs-lg);}
+.rail-head__link{font-size:var(--fs-sm);font-weight:600;color:var(--link-ink);}
+
+/* Home */
+.shop-hero{background:var(--chrome);padding:56px 0 48px;}
+.shop-hero__title{font-size:clamp(1.75rem,4vw,2.5rem);line-height:1.12;max-width:20ch;margin:0 0 12px;color:#fff;}
+.shop-hero__sub{color:rgba(255,255,255,.72);font-size:var(--fs-md);margin:0 0 24px;max-width:52ch;}
+.shop-hero__actions{display:flex;gap:10px;flex-wrap:wrap;}
+.shop-hero__secondary{background:transparent;color:#fff;border-color:rgba(255,255,255,.28);}
+.shop-hero__secondary:hover{background:rgba(255,255,255,.08);}
+.cat-links{display:flex;gap:8px;flex-wrap:wrap;padding-top:20px;padding-bottom:4px;}
+.cat-link{padding:.45rem .95rem;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:var(--fs-sm);font-weight:500;color:var(--ink);}
+.cat-link:hover{border-color:var(--line-strong);}
+.sell-band{margin-top:24px;border-top:1px solid var(--line);background:var(--surface);}
+.sell-band__inner{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-top:32px;padding-bottom:32px;}
+.sell-band__title{font-size:var(--fs-lg);margin-bottom:4px;}
+.sell-band__text{color:var(--muted);font-size:var(--fs-sm);}
+@media (max-width:640px){ .shop-hero{padding:36px 0 32px;} .shop-hero__actions .btn{flex:1;} }
+.product-card__engagement,.product-cover__watermark{display:none;}
+.product-card .seal{background:none;color:var(--brand-strong);padding:0;}
+.product-layout .buy-panel{border-top:1px solid var(--line);}
+.product-layout .buy-panel::before,.product-layout .buy-panel::after{display:none;}
+.cart-summary{border-top:1px solid var(--line);}

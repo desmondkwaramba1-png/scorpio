@@ -1460,7 +1460,7 @@ img{max-width:100%;display:block;}
      only needs to fill main's own already-correct height. */
   min-height:100%;display:flex;align-items:flex-start;justify-content:center;
   padding:56px 20px 80px;
-  background:var(--paper);
+  background:var(--page);
 }
 /* The shell stacks the wordmark above the card and owns the column width;
    the card itself just fills it. A visible brand mark on the auth screen
@@ -2754,3 +2754,84 @@ span.nav__desktop-only{display:contents;}
   .banner{padding:28px 0 92px;}
   .banner__trust{gap:6px 14px;font-size:.8rem;margin-top:16px;}
 }
+
+/* ==========================================================================
+   App-wide: every screen uses the same parts as the home page. Warm grey
+   page, white cards with a soft shadow instead of hairline boxes, square
+   product covers on a light frame, dark primary and orange call to action.
+   ========================================================================== */
+:root{--card-shadow-hover:0 2px 4px rgba(28,25,23,.06),0 12px 28px rgba(28,25,23,.10);}
+:root[data-theme="dark"]{--card-shadow-hover:0 2px 4px rgba(0,0,0,.5),0 12px 28px rgba(0,0,0,.5);}
+body{background:var(--page);}
+
+/* Cards */
+:is(.card,.product-card,.settings-card,.auth-card,.creator-card,.page-state,.storefront-reels-link,.getting-started__card,
+    .publish-readiness,.publish-steps,.table-wrap,.doc-card,.dash-quick__item,.security__sessions,.publish-success,.role-card){
+  border-color:transparent;border-radius:12px;box-shadow:var(--panel-shadow);
+}
+:is(a.card,.product-card,.creator-card,.dash-quick__item,.doc-card,.storefront-reels-link):hover{border-color:transparent;box-shadow:var(--card-shadow-hover);}
+.order-card:has(.order-card__detail){border-color:transparent;box-shadow:var(--card-shadow-hover);}
+.cart-summary{border-top:0;}
+
+/* Product cards everywhere match the home page tiles. */
+.product-card__cover{aspect-ratio:1/1;background-color:var(--soft);}
+.product-card__title{font-weight:600;}
+
+/* Buttons and fields share one corner radius and one focus colour. */
+.btn{border-radius:10px;}
+.btn--sm{border-radius:8px;}
+.btn--cta{color:#1C1917;}
+.btn--ghost:hover{background:var(--surface);}
+:is(.field input,.field textarea,.field select,.input-icon input,.discover-search input,.discover-sort){border-radius:10px;}
+:is(.field input,.field textarea,.field select,.input-icon input):focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(255,140,66,.25);}
+.category-chip,.cat-link,.type-pill{border-color:transparent;box-shadow:var(--panel-shadow);}
+
+/* Long reading stays on white. */
+body:has(.article){background:var(--surface);}
+
+/* Sign in and sign up: a white card centred on the warm page. */
+.auth-card{padding:32px 30px;}
+@media (max-width:520px){ .auth-card{padding:26px 20px;} }
+
+/* Seller dashboard: the side menu becomes a white panel like everything else. */
+@media (min-width:960px){
+  .dash-side .dash-nav{background:var(--surface);border-radius:12px;box-shadow:var(--panel-shadow);padding:10px;}
+}
+
+/* ==========================================================================
+   Polish: covers fill their frame (a soft blurred copy behind the sharp,
+   uncropped cover, no grey bars) and the desktop banner shows real products.
+   ========================================================================== */
+.cover-fill{position:absolute;inset:-14%;background:center/cover no-repeat;filter:blur(18px) saturate(1.25);opacity:.6;}
+.tile__cover,.quad__cover{position:relative;}
+.tile__cover img,.quad__cover img{position:relative;z-index:1;}
+.tile__badge{z-index:2;}
+.quad__item:hover .quad__cover img,.tile:hover .tile__cover img{transform:scale(1.03);}
+.tile__cover img,.quad__cover img{transition:transform .35s cubic-bezier(.22,.7,.3,1);}
+
+.product-card__cover:not(.product-card__cover--empty)::before,
+.product-card__cover:not(.product-card__cover--empty)::after{content:'';position:absolute;background-image:inherit;background-position:center;background-repeat:no-repeat;}
+.product-card__cover:not(.product-card__cover--empty)::before{inset:-14%;background-size:cover;filter:blur(18px) saturate(1.25);opacity:.6;}
+.product-card__cover:not(.product-card__cover--empty)::after{inset:0;background-size:contain;}
+.product-card__cover > *{z-index:2;}
+
+/* Desktop banner: three real covers fanned out on the right. */
+.banner__inner{position:relative;}
+.showcase{display:none;}
+@media (min-width:1024px){
+  .showcase{display:block;position:absolute;top:-6px;right:24px;width:440px;height:300px;}
+  .showcase__card{position:absolute;top:44px;display:flex;flex-direction:column;width:184px;padding:8px;border-radius:14px;background:var(--surface);color:var(--ink);
+    box-shadow:0 2px 6px rgba(28,25,23,.06),0 18px 40px rgba(28,25,23,.14);transition:transform .35s cubic-bezier(.22,.7,.3,1);}
+  .showcase__card--0{left:0;transform:rotate(-7deg);}
+  .showcase__card--1{left:128px;top:0;z-index:2;}
+  .showcase__card--2{left:256px;transform:rotate(7deg);}
+  .showcase__card--0:hover{transform:rotate(-7deg) translateY(-8px);}
+  .showcase__card--1:hover{transform:translateY(-8px);}
+  .showcase__card--2:hover{transform:rotate(7deg) translateY(-8px);}
+  .showcase__cover{position:relative;display:grid;place-items:center;aspect-ratio:1/1;overflow:hidden;border-radius:9px;background:var(--soft);}
+  .showcase__cover img{position:relative;z-index:1;width:100%;height:100%;object-fit:contain;}
+  .showcase__meta{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:9px 4px 3px;}
+  .showcase__title{overflow:hidden;font-size:.8rem;font-weight:600;white-space:nowrap;text-overflow:ellipsis;}
+  .showcase__price{flex:none;font-size:.8rem;font-weight:700;color:var(--brand-strong);}
+}
+@media (prefers-reduced-motion:reduce){ .showcase__card,.tile__cover img,.quad__cover img{transition:none;} }

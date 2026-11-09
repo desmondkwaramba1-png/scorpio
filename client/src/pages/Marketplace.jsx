@@ -17,9 +17,29 @@ function priceLabel(p) {
 }
 
 function Cover({ product: p }) {
+  // A blurred copy fills the frame behind the sharp, uncropped cover.
   return p.cover_path
-    ? <img src={p.cover_path} alt="" loading="lazy" />
+    ? <><span className="cover-fill" style={{ backgroundImage: `url(${p.cover_path})` }} aria-hidden="true" /><img src={p.cover_path} alt="" loading="lazy" /></>
     : <span className="tile__initial">{p.title.charAt(0).toUpperCase()}</span>;
+}
+
+// Desktop only: three real covers fanned out beside the headline.
+function Showcase({ products }) {
+  const three = (products || []).filter(p => p.cover_path).slice(0, 3);
+  if (three.length < 3) return null;
+  return (
+    <div className="showcase" aria-hidden="true">
+      {three.map((p, i) => (
+        <Link key={p.id} to={`/@${p.creator_handle}/${p.slug}`} className={`showcase__card showcase__card--${i}`} tabIndex={-1}>
+          <span className="showcase__cover"><Cover product={p} /></span>
+          <span className="showcase__meta">
+            <span className="showcase__title">{p.title}</span>
+            <span className="showcase__price">{priceLabel(p)}</span>
+          </span>
+        </Link>
+      ))}
+    </div>
+  );
 }
 
 // One product in a row: cover shown whole, then title, creator and price.
@@ -167,6 +187,7 @@ export default function Marketplace() {
     <div className="home">
       <header className="banner">
         <div className="wrap banner__inner">
+          <Showcase products={trending} />
           <p className="banner__kicker">Made in Zimbabwe · Paid with EcoCash</p>
           <h1 className="banner__title">
             {EBOOKS_ONLY ? <>Learn it from someone who has <span className="banner__accent">done it.</span></> : "Zimbabwe's marketplace for digital products."}

@@ -11,8 +11,6 @@ export default function DisputeThread({ purchaseId, currentUserId, disputeStatus
   const [error, setError] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [seriousClaim, setSeriousClaim] = useState(false);
-  
-  const bottomRef = useRef(null);
 
   const fetchTimeline = async () => {
     try {
@@ -31,9 +29,14 @@ export default function DisputeThread({ purchaseId, currentUserId, disputeStatus
     return () => clearInterval(interval);
   }, [purchaseId]);
 
+  // Keep the newest message in view by scrolling the chat box itself, and only
+  // when a message arrives. scrollIntoView would drag the whole page here on
+  // every 5-second refresh.
+  const timelineRef = useRef(null);
   useEffect(() => {
-    if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth' });
-  }, [timeline]);
+    const box = timelineRef.current;
+    if (box) box.scrollTop = box.scrollHeight;
+  }, [timeline.length]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -79,7 +82,7 @@ export default function DisputeThread({ purchaseId, currentUserId, disputeStatus
         <p className="dispute-thread__policy">Keep contact on SCORPIO. Phone numbers, email addresses, and links are blocked. Use attachments only as case evidence.</p>
       </div>
 
-      <div className="dispute-thread__timeline">
+      <div className="dispute-thread__timeline" ref={timelineRef}>
         {timeline.map((item, idx) => {
           const isMine = item.user_id === currentUserId;
           return (
@@ -99,7 +102,6 @@ export default function DisputeThread({ purchaseId, currentUserId, disputeStatus
             </div>
           );
         })}
-        <div ref={bottomRef} />
       </div>
 
       {disputeStatus === 'open' && (

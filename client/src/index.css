@@ -724,7 +724,6 @@ img{max-width:100%;display:block;}
    rail shares — a blog post isn't a product, and treating its row as
    visually identical to "Trending now" buried the one piece of the page
    meant to read as editorial content rather than inventory. */
-.blog-band{background:var(--accent-tint);}
 
 /* ---- shop: homepage product rows (Trending/New arrivals/per-category) ---- */
 /* A dozen-plus rows share this page, back to back — full .section padding
@@ -997,23 +996,30 @@ img{max-width:100%;display:block;}
   clip:rect(0,0,0,0);white-space:nowrap;border:0;
 }
 
-/* Phones get a labelled tab bar at the bottom, in thumb reach, and the top bar
-   keeps the logo and search. */
+.nav__icon-link--search{display:none;}
+/* Phones: one slim top bar. Wordmark on the left, icons on the right, and
+   search as an icon that opens Discover ready to type. */
 @media (max-width:780px){
-  .nav__inner{display:flex;align-items:center;gap:12px;padding:8px 16px;}
-  .nav__name{font-size:1.6rem;}
-  .nav__search{flex:1;max-width:none;}
-  .nav__icons{
-    position:fixed;left:0;right:0;bottom:0;z-index:55;gap:0;justify-content:space-around;justify-self:stretch;
-    padding:4px 4px calc(4px + env(safe-area-inset-bottom));
-    background:var(--chrome);border-top:1px solid rgba(255,255,255,.1);
-  }
-  .nav__icon-link{flex:1 1 0;min-width:0;padding:6px 2px;gap:2px;font-size:.68rem;border-radius:10px;}
+  .nav__inner{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px 6px 16px;min-height:56px;}
+  .nav__name{font-size:1.7rem;}
+  .nav__search{display:none;}
+  .nav__icons{gap:0;align-items:center;}
+  .nav__icon-link{width:40px;height:40px;min-width:0;padding:0;border-radius:10px;}
+  .nav__icon-link > span:not(.nav__cart-badge){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;}
   .nav__icon-link svg{font-size:1.3rem;}
-  .nav__icon-link--secondary{display:none;}
+  .nav__icon-link--search{display:flex;}
+  .nav__icon-link--discover{display:none;}
   .nav__icon-link--active{color:var(--accent);}
   .nav__icon-link--active::after{display:none;}
-  body{padding-bottom:calc(64px + env(safe-area-inset-bottom));}
+  .nav__icon-link--cta{width:auto;height:34px;margin-left:4px;padding:0 12px;flex-direction:row;gap:6px;border-radius:999px;background:var(--brand);color:var(--chrome);}
+  .nav__icon-link--cta > span:not(.nav__cart-badge){position:static;width:auto;height:auto;overflow:visible;clip:auto;font-size:.8rem;font-weight:700;}
+  .nav__icon-link--cta svg{display:none;}
+  .nav__cart-badge{top:2px;right:0;}
+}
+@media (max-width:380px){
+  .nav__icon-link{width:36px;}
+  .nav__name{font-size:1.55rem;}
+  .nav__icon-link--secondary{display:none;}
 }
 
 /* ---- nav: account dropdown (Dashboard + My orders, for a creator who
@@ -1040,9 +1046,8 @@ img{max-width:100%;display:block;}
 }
 .nav__account-avatar--lg{width:38px;height:38px;font-size:1rem;}
 @media (max-width:780px){
-  .nav__account{flex:1 1 0;display:flex;justify-content:center;align-items:center;}
+  .nav__account{display:flex;justify-content:center;align-items:center;margin-left:4px;}
   .nav__account-trigger{padding:4px;background:none;border-color:transparent;}
-  .nav__account-menu{top:auto;bottom:calc(100% + 8px);right:8px;}
   .nav__account-trigger__label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;}
   .nav__account-trigger__chevron{display:none;}
   .nav__account-avatar{width:30px;height:30px;}
@@ -1270,8 +1275,6 @@ img{max-width:100%;display:block;}
 .checklist-item span{color:var(--muted);}
 
 /* ---- onboarding wizard ---- */
-@media (max-width:560px){
-}
 .wizard-steps{display:flex;align-items:center;margin-bottom:36px;}
 .wizard-step{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.8rem;font-weight:600;white-space:nowrap;}
 .wizard-step__circle{
@@ -1849,47 +1852,6 @@ img{max-width:100%;display:block;}
 .reel-manage-card__footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;}
 
 /* ---- blog ---- */
-.blog-page{padding-top:40px;padding-bottom:80px;}
-.blog-heading{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,360px);align-items:end;gap:28px;padding:10px 0 24px;margin-bottom:18px;border-bottom:1px solid var(--line);}
-.blog-heading__copy .section__eyebrow{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
-.blog-heading h1{max-width:22ch;font-size:2rem;line-height:1.14;margin-bottom:8px;}
-.blog-heading__copy > p:last-child{max-width:56ch;color:var(--muted);font-size:.9rem;line-height:1.55;}
-.blog-search{width:100%;}
-.blog-search input{height:48px;background:var(--surface);}
-.blog-grid--loading{margin-top:16px;}
-.blog-featured{
-  display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);overflow:hidden;
-  margin:12px 0 42px;border:1px solid var(--line);border-radius:8px;background:var(--surface);
-  color:inherit;text-decoration:none;transition:border-color .2s ease,box-shadow .2s ease;
-}
-.blog-featured:hover{border-color:var(--line-strong);box-shadow:var(--shadow-2);}
-.blog-featured__media{position:relative;min-height:320px;overflow:hidden;background:var(--accent-tint);}
-.blog-featured__backdrop{position:absolute;inset:-14px;background-position:center;background-size:cover;filter:blur(26px) brightness(.82);transform:scale(1.1);}
-.blog-featured__image{position:absolute;inset:0;background-position:center;background-size:contain;background-repeat:no-repeat;transition:transform .5s ease;}
-.blog-featured:hover .blog-featured__image{transform:scale(1.035);}
-.blog-featured__empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:radial-gradient(ellipse at 70% 20%,rgba(var(--accent-rgb),.26),transparent 48%),linear-gradient(135deg,var(--chrome),#44403C);color:#fff;}
-.blog-featured__empty svg{color:var(--accent-icon);}
-.blog-featured__empty span{font-family:'Geist Mono Variable',ui-monospace,monospace;font-size:.68rem;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.72);}
-.blog-featured__content{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:clamp(24px,4vw,48px);}
-.blog-featured__label{margin-bottom:14px;color:var(--brand-strong);font-size:.72rem;font-weight:800;text-transform:uppercase;}
-.blog-featured__content h2{font-size:clamp(1.55rem,3vw,2.2rem);line-height:1.2;margin-bottom:12px;}
-.blog-featured__content > p{color:var(--muted);font-size:.98rem;line-height:1.65;margin-bottom:22px;}
-.blog-featured__byline{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.78rem;font-weight:600;}
-.blog-featured__read{display:inline-flex;align-items:center;gap:6px;margin-top:26px;color:var(--link-ink);font-size:.82rem;font-weight:800;}
-.blog-section-heading{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:16px;}
-.blog-section-heading h2{font-size:1.2rem;}
-.blog-section-heading span{color:var(--muted);font-size:.78rem;font-weight:700;}
-.blog-archive{margin-top:12px;}
-@media (max-width:720px){
-  .blog-page{padding-top:26px;padding-bottom:56px;}
-  .blog-heading{grid-template-columns:1fr;gap:16px;padding-top:4px;padding-bottom:18px;}
-  .blog-heading h1{font-size:1.65rem;}
-  .blog-featured{grid-template-columns:1fr;margin-bottom:32px;}
-  .blog-featured__media{min-height:0;aspect-ratio:16/10;}
-  .blog-featured__content{padding:22px;}
-  .blog-featured__content h2{font-size:1.55rem;}
-  .blog-featured__read{margin-top:18px;}
-}
 /* auto-fill (like .product-grid uses) computes column tracks off the
    container width regardless of how many posts actually exist - fine for
    a feed that's usually full, but a blog with only one or two posts left
@@ -1900,30 +1862,11 @@ img{max-width:100%;display:block;}
    visible at once without scrolling matters more on a browsing/listing
    page than each individual card taking up more room. The shadow/hover/
    scrim polish stays, just not the size bump. */
-.blog-grid{display:grid;gap:var(--sp-5);grid-template-columns:repeat(auto-fit, minmax(260px, 320px));}
-.blog-card{
-  display:flex;flex-direction:column;border-radius:var(--radius);overflow:hidden;
-  background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow-1);
-  transition:transform .25s cubic-bezier(.22,.7,.3,1), box-shadow .25s ease, border-color .25s ease;
-}
 /* A real lift plus a genuinely elevated shadow (not just the flat
    border swap the old hover had) and a slow image zoom underneath the
    cover's own gradient scrim - the small editorial touches that make a
    card feel considered instead of a plain bordered box with a photo in
    it. */
-.blog-card:hover{transform:translateY(-6px);box-shadow:var(--shadow-3);border-color:transparent;}
-.blog-card:hover .blog-card__cover-image{transform:scale(1.05);}
-.blog-card__cover{
-  aspect-ratio:16/10;background-color:var(--accent-tint);position:relative;overflow:hidden;
-}
-.blog-card__cover-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:radial-gradient(ellipse at 70% 20%,rgba(var(--accent-rgb),.26),transparent 48%),linear-gradient(135deg,var(--chrome),#44403C);color:#fff;}
-.blog-card__cover-empty svg{color:var(--accent-icon);}
-.blog-card__cover-empty span{font-family:'Geist Mono Variable',ui-monospace,monospace;font-size:.65rem;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.7);}
-.blog-card__cover::after{
-  content:'';position:absolute;inset:0;
-  background:linear-gradient(180deg, transparent 55%, rgba(28,25,23,.45));
-  pointer-events:none;
-}
 /* Same blurred-backdrop-plus-contained-image treatment .product-cover
    uses — a cover that isn't a wide photo (a square logo/badge image,
    the common case for a quick admin-authored post) got cropped down to
@@ -1931,85 +1874,16 @@ img{max-width:100%;display:block;}
    real on the first post actually published: a circular Scorpio zodiac
    badge on white came out as barely-visible sliver of blue in a sea of
    white instead of something recognizable. */
-.blog-card__cover-backdrop{
-  position:absolute;inset:-14px;background-size:cover;background-position:center;background-repeat:no-repeat;
-  filter:blur(26px) brightness(.82) saturate(1.15);transform:scale(1.1);
-}
-.blog-card__cover-image{
-  position:absolute;inset:0;background-size:contain;background-position:center;background-repeat:no-repeat;
-  transition:transform .5s cubic-bezier(.22,.7,.3,1);
-}
 /* The whole card is a link, but a plain photo gives no hint of that —
    real feedback was people not realizing a cover was clickable at all.
    Sits on top of the cover's own gradient scrim now, not a flat dark
    pill dropped straight onto whatever's underneath it. */
-.blog-card__read-badge{
-  position:absolute;bottom:10px;right:10px;display:inline-flex;align-items:center;gap:4px;
-  padding:5px 11px;border-radius:999px;font-size:.72rem;font-weight:700;
-  background:rgba(255,255,255,.92);color:var(--ink);backdrop-filter:blur(2px);box-shadow:var(--shadow-1);
-}
-.blog-card__body{display:flex;flex-direction:column;flex:1;padding:16px 18px 20px;}
-.blog-card__byline{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
-.blog-card__avatar{
-  width:24px;height:24px;border-radius:50%;background:var(--brand-strong) center/cover;color:#fff;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-  font-size:.68rem;font-weight:700;
-}
-.blog-card__byline-text{color:var(--muted);font-size:.78rem;font-weight:600;}
-.blog-card__title{
-  font-size:1.05rem;line-height:1.32;margin-bottom:8px;transition:color .15s ease;
-}
-.blog-card:hover .blog-card__title{color:var(--brand-strong);}
-.blog-card__excerpt{
-  color:var(--muted);font-size:.9rem;line-height:1.6;
-  display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
-}
-.blog-card__open{display:inline-flex;align-items:center;gap:5px;margin-top:auto;padding-top:14px;color:var(--link-ink);font-size:.78rem;font-weight:800;}
-.blog-card__open svg{transition:transform .16s ease;}
-.blog-card:hover .blog-card__open svg{transform:translate(2px,-2px);}
 
-.blog-post__back{
-  display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:.88rem;font-weight:600;margin-bottom:20px;
-}
-.blog-post__cover{
-  width:100%;aspect-ratio:16/9;max-height:420px;border-radius:var(--radius);background-color:var(--accent-tint);
-  margin-bottom:28px;position:relative;overflow:hidden;
-}
-.blog-post__cover-backdrop{
-  position:absolute;inset:-14px;background-size:cover;background-position:center;background-repeat:no-repeat;
-  filter:blur(26px) brightness(.82) saturate(1.15);transform:scale(1.1);
-}
-.blog-post__cover-image{
-  position:absolute;inset:0;background-size:contain;background-position:center;background-repeat:no-repeat;
-}
-.blog-post__title{font-size:clamp(1.6rem,3.6vw,2.2rem);line-height:1.2;margin-bottom:10px;}
-.blog-post__meta{color:var(--muted);font-size:.88rem;margin-bottom:28px;}
 /* Real article typography — this is the one place in the app rendering
    admin-authored long-form prose (see lib/markdown.js), everywhere else
    is short, tightly-controlled copy. Headings/lists/links/images need
    their own real rules since dangerouslySetInnerHTML'd markdown output
    has no className to hook into. */
-.blog-post__body{font-size:1.05rem;line-height:1.75;color:var(--ink-dim);}
-.blog-post__body h1,.blog-post__body h2,.blog-post__body h3{color:var(--ink);margin:1.6em 0 .6em;line-height:1.3;}
-.blog-post__body h1{font-size:1.5rem;}
-.blog-post__body h2{font-size:1.3rem;}
-.blog-post__body h3{font-size:1.1rem;}
-.blog-post__body p{margin:0 0 1.2em;}
-.blog-post__body ul,.blog-post__body ol{margin:0 0 1.2em;padding-left:1.4em;}
-.blog-post__body li{margin-bottom:.4em;}
-.blog-post__body a{color:var(--link-ink);text-decoration:underline;font-weight:600;}
-.blog-post__body img{border-radius:var(--radius-sm);margin:1.2em 0;}
-.blog-post__body blockquote{
-  margin:0 0 1.2em;padding:2px 0 2px 16px;border-left:3px solid var(--accent);color:var(--muted);font-style:italic;
-}
-.blog-post__body code{background:var(--paper);padding:.15em .4em;border-radius:4px;font-size:.9em;}
-.blog-post__body pre{background:var(--ink-800);color:#fff;padding:16px;border-radius:var(--radius-sm);overflow-x:auto;margin:0 0 1.2em;touch-action:pan-x pan-y;}
-.blog-post__body pre code{background:none;padding:0;}
-.blog-post__more-link{display:flex;align-items:center;gap:12px;}
-.blog-post__more-cover{
-  width:64px;height:64px;border-radius:var(--radius-sm);flex-shrink:0;background-color:var(--accent-tint);
-  background-size:cover;background-position:center;
-}
 
 /* =========================================================
    Responsive
@@ -2442,11 +2316,11 @@ img{max-width:100%;display:block;}
   .dash-top .dash-profile__avatar{width:36px;height:36px;}
 }
 
-/* After the base menu rule on purpose: this has to win so the account menu
-   opens upward from the phone tab bar instead of off the bottom of the screen. */
+/* After the base menu rule on purpose: on phones the menu drops down from
+   the top bar, pinned to the right edge of the screen. */
 @media (max-width:780px){
   .nav__account{position:static;}
-  .nav__account-menu{top:auto;bottom:calc(100% + 8px);left:auto;right:8px;}
+  .nav__account-menu{top:calc(100% + 6px);bottom:auto;left:auto;right:10px;}
 }
 
 /* ---- store setup: a focused, full-screen flow ---- */
@@ -2541,8 +2415,6 @@ h3{font-size:var(--fs-md);}
 .section__eyebrow,.hero__eyebrow{display:none;}
 
 /* Flat surfaces: a hairline border, no glow, no lift, no entrance animation. */
-:is(.card,.product-card,.compact-card,.category-feature-card,.feature-card,.role-card,.creator-card,.blog-card,.stat-tile,.order-card,.page-state,.buy-panel,.cart-summary){box-shadow:none;}
-:is(.card,.product-card,.compact-card,.category-feature-card,.feature-card,.role-card,.creator-card,.blog-card,.stat-tile,.order-card):hover{transform:none;box-shadow:none;border-color:var(--line-strong);}
 .product-card:hover .product-card__cover,.compact-card:hover .compact-card__cover{transform:none;}
 .product-grid > *,.rail > *,.category-grid > *{animation:none;}
 .btn:hover,.shop-hero__browse-btn:hover,.shop-hero__quicklink:hover{transform:none;}
@@ -2579,3 +2451,164 @@ h3{font-size:var(--fs-md);}
 .product-layout .buy-panel{border-top:1px solid var(--line);}
 .product-layout .buy-panel::before,.product-layout .buy-panel::after{display:none;}
 .cart-summary{border-top:1px solid var(--line);}
+
+/* ==========================================================================
+   Blog: an editorial layout. Generous measure, quiet metadata, one featured
+   story, then an even grid.
+   ========================================================================== */
+.journal{padding-top:40px;padding-bottom:64px;}
+.journal-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;padding-bottom:28px;margin-bottom:32px;border-bottom:1px solid var(--line);}
+.journal-head__title{font-size:clamp(2rem,5vw,2.75rem);letter-spacing:-.03em;}
+.journal-head__intro{margin-top:6px;color:var(--muted);max-width:52ch;}
+.journal-search{display:flex;align-items:center;gap:8px;width:min(100%,320px);padding:0 14px;border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--field-bg);color:var(--muted);}
+.journal-search:focus-within{border-color:var(--brand-strong);box-shadow:0 0 0 3px rgba(var(--brand-strong-rgb),.18);}
+.journal-search input{flex:1;min-width:0;border:0;background:none;outline:none;padding:11px 0;font-size:var(--fs-md);color:var(--ink);}
+.journal-section-label{font-size:var(--fs-sm);font-weight:600;color:var(--muted);margin:0 0 18px;letter-spacing:0;}
+.journal-grid{display:grid;gap:40px 28px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));}
+.journal-empty{padding:48px 0;text-align:center;color:var(--muted);display:grid;justify-items:center;gap:14px;}
+.journal-foot{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:var(--fs-sm);}
+.journal-foot a{color:var(--link-ink);font-weight:600;}
+
+.story-cover{position:relative;aspect-ratio:16/9;overflow:hidden;border-radius:var(--radius);background:var(--line);}
+.story-cover img{width:100%;height:100%;object-fit:cover;display:block;transition:opacity .2s ease;}
+.story-cover__empty{position:absolute;inset:0;display:grid;place-items:center;font-size:2.25rem;background:var(--chrome);}
+.story-meta{display:flex;align-items:center;gap:8px;margin:14px 0 6px;font-size:var(--fs-sm);color:var(--muted);}
+.story-card{display:block;color:inherit;}
+.story-card__title{font-size:var(--fs-lg);line-height:1.3;letter-spacing:-.015em;margin:0;}
+.story-card__summary{margin-top:8px;color:var(--ink-dim);font-size:var(--fs-sm);line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.story-card:hover .story-card__title{color:var(--link-ink);}
+.story-card:hover img{opacity:.92;}
+
+.journal-feature{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:40px;align-items:center;margin-bottom:56px;color:inherit;}
+.journal-feature__cover{aspect-ratio:3/2;}
+.journal-feature__text .story-meta{margin-top:0;}
+.journal-feature__title{font-size:clamp(1.75rem,3.2vw,2.5rem);line-height:1.12;letter-spacing:-.03em;margin:4px 0 14px;}
+.journal-feature__summary{font-size:1.0625rem;line-height:1.6;color:var(--ink-dim);}
+.journal-feature__author{margin-top:18px;font-size:var(--fs-sm);font-weight:600;}
+.journal-feature:hover .journal-feature__title{color:var(--link-ink);}
+@media (max-width:820px){
+  .journal{padding-top:24px;}
+  .journal-feature{grid-template-columns:1fr;gap:4px;margin-bottom:44px;}
+  .journal-feature__cover{aspect-ratio:16/9;}
+  .journal-feature__text .story-meta{margin-top:14px;}
+  .journal-search{width:100%;}
+}
+
+/* Article */
+.article-progress{position:sticky;top:56px;z-index:40;height:2px;margin-bottom:-2px;}
+.article-progress span{display:block;height:100%;background:var(--brand);transform-origin:left;transform:scaleX(0);}
+.article{padding-bottom:24px;}
+.article .wrap{max-width:calc(720px + 40px);}
+.article-head{padding-top:32px;}
+.article-back{display:inline-flex;align-items:center;gap:6px;min-height:32px;font-size:var(--fs-sm);font-weight:600;color:var(--muted);}
+.article-back:hover{color:var(--ink);}
+.article-head .story-meta{margin:20px 0 10px;}
+.article-title{font-size:clamp(2rem,5.2vw,3rem);line-height:1.1;letter-spacing:-.035em;}
+.article-standfirst{margin-top:16px;font-size:clamp(1.125rem,2.2vw,1.3rem);line-height:1.5;color:var(--ink-dim);}
+.article-byline{display:flex;align-items:center;gap:10px;margin-top:22px;font-size:var(--fs-sm);font-weight:600;}
+.article-byline a{color:inherit;}
+.article-byline__avatar{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--accent) center/cover no-repeat;color:var(--chrome);font-size:.85rem;font-weight:700;}
+.article .article-cover{max-width:calc(1000px + 40px);margin:36px auto 0;}
+.article-cover img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:var(--radius);display:block;}
+.article-body{margin-top:40px;font-size:1.125rem;line-height:1.75;color:var(--ink);}
+.article-body > *{margin:0 0 1.25em;}
+.article-body h2{font-size:1.5rem;line-height:1.25;letter-spacing:-.02em;margin:2.2em 0 .6em;}
+.article-body h3{font-size:1.2rem;line-height:1.3;margin:1.8em 0 .5em;}
+.article-body h4,.article-body h5,.article-body h6{font-size:1.05rem;margin:1.6em 0 .4em;}
+.article-body ul,.article-body ol{padding-left:1.4em;}
+.article-body li{margin:.35em 0;}
+.article-body li::marker{color:var(--muted);}
+.article-body a{color:var(--link-ink);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px;}
+.article-body strong{font-weight:650;}
+.article-body blockquote{margin:1.8em 0;padding:2px 0 2px 20px;border-left:3px solid var(--brand);color:var(--ink-dim);font-size:1.2rem;line-height:1.6;}
+.article-body hr{border:0;border-top:1px solid var(--line);margin:2.5em 0;}
+.article-body img{max-width:100%;height:auto;border-radius:var(--radius-sm);}
+.article-body code{font-size:.9em;padding:.12em .35em;border-radius:5px;background:var(--line);}
+.article-body pre{overflow-x:auto;padding:16px;border-radius:var(--radius-sm);background:var(--chrome);color:#F5EFE8;font-size:.9rem;line-height:1.6;}
+.article-body pre code{background:none;padding:0;}
+.article-body table{width:100%;border-collapse:collapse;font-size:1rem;display:block;overflow-x:auto;}
+.article-body th,.article-body td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;}
+.article-foot{display:grid;gap:20px;justify-items:start;margin-top:48px;padding-top:28px;border-top:1px solid var(--line);}
+.article-product{display:flex;align-items:center;gap:14px;width:100%;padding:14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);color:inherit;}
+.article-product:hover{border-color:var(--line-strong);}
+.article-product__cover{flex:none;width:56px;height:56px;border-radius:var(--radius-sm);background:var(--brand-tint) center/cover no-repeat;}
+.article-product__text{flex:1;min-width:0;display:grid;gap:2px;}
+.article-product__label{font-size:var(--fs-xs);color:var(--muted);font-weight:600;}
+.article-product__title{font-weight:600;}
+.article-more{border-top:1px solid var(--line);margin-top:24px;padding-top:40px;}
+@media (max-width:640px){
+  .article-head{padding-top:20px;}
+  .article-body{font-size:1.0625rem;margin-top:28px;}
+  .article .article-cover{margin-top:24px;padding-inline:0;}
+  .article-cover img{border-radius:0;}
+}
+
+/* ==========================================================================
+   Home. One reading order, one section header, room around everything.
+   ========================================================================== */
+.home-hero{background:var(--chrome);padding:88px 0 80px;}
+.home-hero__title{font-size:clamp(2rem,5.5vw,3.25rem);line-height:1.08;letter-spacing:-.035em;max-width:18ch;margin:0;color:#fff;}
+.home-hero__sub{margin:18px 0 32px;color:rgba(255,255,255,.7);font-size:1.125rem;max-width:44ch;}
+.home-hero__actions{display:flex;gap:12px;flex-wrap:wrap;}
+.home-hero__actions .btn{min-height:48px;padding-inline:24px;}
+.home-hero__secondary{background:transparent;color:#fff;border-color:rgba(255,255,255,.28);}
+.home-hero__secondary:hover{background:rgba(255,255,255,.08);}
+
+.home-cats{border-bottom:1px solid var(--line);}
+.home-cats__row{display:flex;gap:8px;overflow-x:auto;padding-top:16px;padding-bottom:16px;scrollbar-width:none;touch-action:pan-x pan-y;}
+.home-cats__row::-webkit-scrollbar{display:none;}
+.home-cats .cat-link{flex:none;white-space:nowrap;}
+
+.home-section{padding-top:56px;padding-bottom:8px;}
+.home-section--tint{margin-top:56px;padding-bottom:64px;background:var(--surface);border-block:1px solid var(--line);}
+.home-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:20px;}
+.home-head__title{font-size:var(--fs-xl);line-height:1.2;letter-spacing:-.025em;margin:0 0 20px;}
+.home-head .home-head__title{margin:0;}
+.home-head__link{flex:none;font-size:var(--fs-sm);font-weight:600;color:var(--link-ink);}
+.home-head__link:hover{text-decoration:underline;text-underline-offset:3px;}
+
+.home-rail{gap:16px;padding-bottom:12px;}
+.home-rail .compact-card{flex-basis:168px;}
+.home-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px 20px;}
+.home-grid .compact-card{flex:none;width:auto;}
+.home .compact-card__body{padding:12px 12px 14px;}
+.home .compact-card__title{font-size:var(--fs-sm);}
+.home .compact-card__price{font-size:var(--fs-md);}
+
+.home-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;}
+.home-step{padding:24px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);}
+.home-step__icon{display:grid;place-items:center;width:40px;height:40px;border-radius:10px;background:var(--brand-tint);color:var(--brand-strong);}
+.home-step__title{margin:16px 0 6px;font-size:var(--fs-md);}
+.home-step__text{color:var(--muted);font-size:var(--fs-sm);line-height:1.55;}
+
+.home-stories{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;}
+
+.home-sell{background:var(--chrome);color:#fff;}
+.home-sell__inner{display:grid;justify-items:start;gap:12px;padding-top:72px;padding-bottom:80px;}
+.home-sell__title{font-size:clamp(1.75rem,4vw,2.25rem);letter-spacing:-.03em;color:#fff;}
+.home-sell__text{color:rgba(255,255,255,.7);max-width:44ch;margin-bottom:12px;}
+.home .rail-wrap::after{display:none;}
+.home .compact-card{content-visibility:visible;}
+
+@media (max-width:900px){
+  .home-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 14px;}
+  .home-steps{grid-template-columns:1fr;gap:12px;}
+  .home-step{display:grid;grid-template-columns:40px 1fr;column-gap:16px;align-items:start;padding:18px;}
+  .home-step__icon{grid-row:span 2;}
+  .home-step__title{margin:0 0 2px;}
+  .home-stories{display:flex;overflow-x:auto;gap:16px;scroll-snap-type:x mandatory;padding-bottom:8px;margin-inline:-20px;padding-inline:20px;scrollbar-width:none;touch-action:pan-x pan-y;scroll-padding-inline:20px;}
+  .home-stories::-webkit-scrollbar{display:none;}
+  .home-stories .story-card{flex:0 0 78%;scroll-snap-align:start;}
+}
+@media (max-width:640px){
+  .home-hero{padding:56px 0 52px;}
+  .home-hero__sub{font-size:1.0625rem;margin:14px 0 28px;}
+  .home-hero__actions{display:grid;grid-template-columns:1fr;}
+  .home-section{padding-top:44px;}
+  .home-section--tint{margin-top:44px;padding-bottom:48px;}
+  .home-head{margin-bottom:16px;}
+  .home-rail .compact-card{flex-basis:150px;}
+  .home-sell__inner{padding-top:56px;padding-bottom:64px;}
+  .home-sell__inner .btn{width:100%;min-height:48px;}
+  .home-stories{margin-inline:-16px;padding-inline:16px;scroll-padding-inline:16px;}
+}

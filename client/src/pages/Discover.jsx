@@ -123,6 +123,7 @@ export default function Discover() {
             value={q} onChange={e => updateParam('q', e.target.value)}
             placeholder="Search ebooks, courses, templates..."
             aria-label="Search products"
+            autoFocus={params.get('search') === '1'}
           />
         </label>
 

@@ -121,7 +121,11 @@ export default function Nav() {
         </form>
 
         <div className="nav__icons">
-          <NavLink to="/discover" className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')}>
+          {/* Phones only: the search field doesn't fit the one-row top bar, so search is an icon. */}
+          <Link to="/discover?search=1" className="nav__icon-link nav__icon-link--search">
+            <FiSearch /> <span>Search</span>
+          </Link>
+          <NavLink to="/discover" className={({ isActive }) => 'nav__icon-link nav__icon-link--discover' + (isActive ? ' nav__icon-link--active' : '')}>
             <FiCompass /> <span>Discover</span>
           </NavLink>
           <NavLink to="/reels" className={({ isActive }) => 'nav__icon-link' + (isActive ? ' nav__icon-link--active' : '')}>

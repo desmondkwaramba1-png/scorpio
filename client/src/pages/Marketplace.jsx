@@ -1,56 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { FiSearch, FiTrendingUp, FiClock, FiZap, FiUsers, FiChevronRight, FiPlay, FiBookOpen, FiCheckCircle, FiShield, FiCompass, FiLogIn, FiShoppingBag, FiDownload, FiUploadCloud, FiArrowUpRight } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
+import { FiPlay, FiSearch, FiSmartphone, FiDownload } from 'react-icons/fi';
 import CompactProductCard from '../components/CompactProductCard.jsx';
-import Seal from '../components/Seal.jsx';
 import ReelViewer from '../components/ReelViewer.jsx';
 import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../lib/launchScope.js';
-import { formatMoney } from '../lib/money';
+import StoryCard from '../components/StoryCard.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
-// Short labels only, no sentence each — see the CSS comment on
-// .trust-band for why (a phone-height problem, not a taste one).
-
-
-
-
-// The first-encounter moment (badge + pitch + Get Started) is a one-time
-// thing, real the very first time someone lands here, dead weight on
-// every visit after. localStorage (not sessionStorage, unlike the splash)
-// so it's gone for good after the first real visit, not just the first tab.
-// The buyer/seller choice itself lives on /login now (its "Create account"
-// tab), not here, this is just the door into it. "Just browsing" dismisses
-// inline within the same visit, no reload needed.
-//
-// hasSeenPitch is read-only on purpose, it must NOT also set the flag.
-// StrictMode (see main.jsx) deliberately double-invokes useState's lazy
-// initializer in dev to catch exactly an impure-initializer bug like that:
-// the first call would set the flag and return true, then the second
-// (discarded-and-rerun) call would see its own flag already set and return
-// false, so the pitch would never show even on a genuine first visit. The
-// actual "mark as seen" write happens once, safely, in the effect below.
+// Marks the first visit; other screens read this flag.
 const HERO_SEEN_KEY = 'scorpio_seen_marketplace_pitch';
-function hasSeenPitch() {
-  if (typeof window === 'undefined') return true;
-  return !!localStorage.getItem(HERO_SEEN_KEY);
-}
-
-// One line of real "you want X, here it is" pitch per category, the
-// Amazon-homepage trick of naming the row like a person would, not like a
-// filter ("Guides & templates" the label vs. "Downloads worth having" the row).
-const CATEGORY_TAGLINES = {
-  ebooks: 'Books worth reading',
-  templates: 'Downloads worth having',
-  courses: 'Courses to level you up',
-  music: 'Sounds worth your time',
-  video: 'Video worth watching',
-  design: 'Design that stands out',
-  software: 'Tools built for you',
-  photography: 'Shots worth a look',
-  writing: 'Words worth reading',
-  business: 'Grow your business',
-  other: 'More worth discovering'
-};
 
 // The "meet your creators" tray, a story-bubble row of who's actually
 // behind the listings. A creator with reels gets a ring + play glyph and
@@ -66,31 +24,26 @@ const CATEGORY_TAGLINES = {
 // instead, once creators is a genuinely empty array (fetched, really
 // nothing to show) it collapses to null same as before, that's not a
 // loading state, there's really nothing coming.
+function SectionHead({ title, link, label = 'See all' }) {
+  return (
+    <div className="home-head">
+      <h2 className="home-head__title">{title}</h2>
+      {link && <Link to={link} className="home-head__link">{label}</Link>}
+    </div>
+  );
+}
+
 function CreatorSpotlightSkeleton() {
   return (
-    <section className="section section--row wrap" aria-hidden="true">
-      <div className="rail-head">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <FiUsers size={16} color="var(--brand-strong)" />
-          <h2 className="rail-head__title">Meet the creators</h2>
-        </div>
-      </div>
-      <div className="rail-wrap">
-        <div className="creator-spotlight">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="creator-spotlight__item">
-              <span className="creator-spotlight__ring skeleton" style={{ border: 'none' }} />
-              {/* Real .creator-spotlight__name is .78rem text on the
-                  body's inherited line-height:1.5, a ~19px line box, not
-                  the 12px this placeholder used to reserve. Measured via
-                  a real Lighthouse desktop run: that 7px-per-item gap
-                  appearing across the whole row the instant real creator
-                  data replaced the skeleton was the single largest CLS
-                  culprit on the page (score 0.119 of 0.121 total). */}
-              <span className="skeleton" style={{ width: 40, height: 19, borderRadius: 4 }} />
-            </div>
-          ))}
-        </div>
+    <section className="home-section wrap" aria-hidden="true">
+      <SectionHead title="Meet the creators" />
+      <div className="creator-spotlight">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="creator-spotlight__item">
+            <span className="creator-spotlight__ring skeleton" style={{ border: 'none' }} />
+            <span className="skeleton" style={{ width: 40, height: 19, borderRadius: 4 }} />
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -100,17 +53,8 @@ function CreatorSpotlight({ creators, reelsByCreator, onPlay }) {
   if (creators === null) return <CreatorSpotlightSkeleton />;
   if (!creators || creators.length === 0) return null;
   return (
-    <section className="section section--row wrap">
-      <div className="rail-head">
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <FiUsers size={16} color="var(--brand-strong)" />
-            <h2 className="rail-head__title">Meet the creators</h2>
-          </div>
-          <p className="rail-head__subtitle">Real people behind the listings, not anonymous storefronts.</p>
-        </div>
-        <Link to="/creators" className="rail-head__link">See all <FiChevronRight size={13} /></Link>
-      </div>
+    <section className="home-section wrap">
+      <SectionHead title="Meet the creators" link="/creators" />
       <div className="rail-wrap">
         <div className="creator-spotlight">
           {creators.map(c => {
@@ -144,50 +88,14 @@ function CreatorSpotlight({ creators, reelsByCreator, onPlay }) {
   );
 }
 
-function formatBlogDate(sqliteDatetime) {
-  return new Date(sqliteDatetime.replace(' ', 'T') + 'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-// Same card shape as CompactProductCard, meta line swapped for a date
-// instead of a price — the entry point the whole content->product loop
-// depends on (see the "Want this?" callout on the post page itself)
-// starts with someone actually noticing the blog exists, which a nav
-// link alone doesn't do for a visitor who lands straight on the shop.
-function BlogPostCard({ post }) {
-  return (
-    <Link to={`/blog/${post.slug}`} className="compact-card">
-      <div
-        className={`compact-card__cover${post.cover_path ? '' : ' compact-card__cover--empty'}`}
-        style={post.cover_path ? { backgroundImage: `url(${post.cover_path})` } : undefined}
-      >
-        {!post.cover_path && post.title.charAt(0).toUpperCase()}
-        <span className="compact-card__badge">Read</span>
-      </div>
-      <div className="compact-card__body">
-        <p className="compact-card__title">{post.title}</p>
-        <p className="muted" style={{ fontSize: '.78rem' }}>{formatBlogDate(post.published_at)}</p>
-      </div>
-    </Link>
-  );
-}
-
-function BlogRail({ posts }) {
+function BlogSection({ posts }) {
   if (!posts || posts.length === 0) return null;
   return (
-    <section className="section section--row wrap">
-      <div className="rail-head">
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <FiBookOpen size={16} color="var(--brand-strong)" />
-            <h2 className="rail-head__title">From the blog</h2>
-          </div>
-          <p className="rail-head__subtitle">Real guides on selling and buying digitally, from the people building this.</p>
-        </div>
-        <Link to="/blog" className="rail-head__link">See all <FiChevronRight size={13} /></Link>
-      </div>
-      <div className="rail-wrap">
-        <div className="rail">
-          {posts.map(post => <BlogPostCard key={post.id} post={post} />)}
+    <section className="home-section home-section--tint">
+      <div className="wrap">
+        <SectionHead title="From the blog" link="/blog" label="All articles" />
+        <div className="home-stories">
+          {posts.slice(0, 3).map(post => <StoryCard key={post.id} post={post} />)}
         </div>
       </div>
     </section>
@@ -202,13 +110,10 @@ function Rail({ title, link, products }) {
   // itself is still fully reachable from Discover.
   if (!products || products.length < 2) return null;
   return (
-    <section className="section section--row wrap">
-      <div className="rail-head">
-        <h2 className="rail-head__title">{title}</h2>
-        <Link to={link} className="rail-head__link">See all</Link>
-      </div>
+    <section className="home-section wrap">
+      <SectionHead title={title} link={link} />
       <div className="rail-wrap">
-        <div className="rail">
+        <div className="rail home-rail">
           {products.map(p => <CompactProductCard key={p.id} product={p} />)}
         </div>
       </div>
@@ -216,16 +121,43 @@ function Rail({ title, link, products }) {
   );
 }
 
+function ProductGrid({ title, link, products }) {
+  if (!products || products.length < 2) return null;
+  return (
+    <section className="home-section wrap">
+      <SectionHead title={title} link={link} />
+      <div className="home-grid">
+        {products.slice(0, 8).map(p => <CompactProductCard key={p.id} product={p} />)}
+      </div>
+    </section>
+  );
+}
+
+const STEPS = [
+  { icon: FiSearch, title: 'Find it', text: 'Guides, templates and courses made by people who know the subject.' },
+  { icon: FiSmartphone, title: 'Pay with EcoCash', text: 'Confirm on your phone. No card needed.' },
+  { icon: FiDownload, title: 'Download straight away', text: 'Your files stay in your account, with 5 days of buyer protection.' },
+];
+
+function HowItWorks() {
+  return (
+    <section className="home-section wrap" aria-labelledby="how-heading">
+      <h2 id="how-heading" className="home-head__title">How it works</h2>
+      <ol className="home-steps">
+        {STEPS.map(({ icon: Icon, title, text }) => (
+          <li key={title} className="home-step">
+            <span className="home-step__icon"><Icon size={18} aria-hidden="true" /></span>
+            <h3 className="home-step__title">{title}</h3>
+            <p className="home-step__text">{text}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 export default function Marketplace() {
-  const navigate = useNavigate();
   const { user, creator, loading: authLoading } = useAuth();
-  const [q, setQ] = useState('');
-  // No setter used, in fact: the pitch used to have its own "Just
-  // browsing" dismiss button that collapsed it in place mid-session, but
-  // with a real "Browse products" CTA now linking straight to Discover
-  // and everything below the hero fully visible by just scrolling, that
-  // extra dismiss control was redundant rather than genuinely useful.
-  const [showPitch] = useState(() => !hasSeenPitch());
   const [trending, setTrending] = useState(null);
   const [fresh, setFresh] = useState(null);
   const [blogPosts, setBlogPosts] = useState(null);
@@ -257,7 +189,7 @@ export default function Marketplace() {
       fetch('/api/products?limit=8').then(r => r.json()).catch(() => []),
       fetch('/api/creators?limit=14').then(r => r.json()).catch(() => []),
       fetch('/api/reels?limit=60').then(r => r.json()).catch(() => []),
-      fetch('/api/blog?limit=6').then(r => r.json()).catch(() => []),
+      fetch('/api/blog?limit=3').then(r => r.json()).catch(() => []),
       Promise.all(categoryEntries.map(c =>
         fetch(`/api/products?category=${c.value}&limit=6`).then(r => r.json()).catch(() => [])
       ))
@@ -295,47 +227,47 @@ export default function Marketplace() {
   }, []);
 
   return (
-    <div>
-      <header className="shop-hero">
+    <div className="home">
+      <header className="home-hero">
         <div className="wrap">
-          <h1 className="shop-hero__title">
+          <h1 className="home-hero__title">
             {EBOOKS_ONLY ? 'Guides, templates and courses from Zimbabwean creators.' : "Zimbabwe's marketplace for digital products."}
           </h1>
-          <p className="shop-hero__sub">Pay with EcoCash. Download straight away. Every order has 5 days of buyer protection.</p>
-          <div className="shop-hero__actions">
+          <p className="home-hero__sub">Pay with EcoCash and download straight away.</p>
+          <div className="home-hero__actions">
             <Link to="/discover" className="btn btn--cta">Browse products</Link>
             {!authLoading && !creator && (
-              <Link to={user ? '/onboarding' : '/login?role=creator'} className="btn shop-hero__secondary">Sell on Scorpio</Link>
+              <Link to={user ? '/onboarding' : '/login?role=creator'} className="btn home-hero__secondary">Sell on Scorpio</Link>
             )}
           </div>
         </div>
       </header>
 
       {ACTIVE_CATEGORIES.length > 1 && (
-        <nav className="wrap cat-links" aria-label="Categories">
-          {ACTIVE_CATEGORIES.map(c => (
-            <Link key={c.value} to={`/discover?category=${c.value}`} className="cat-link">{c.label}</Link>
-          ))}
+        <nav className="home-cats" aria-label="Categories">
+          <div className="wrap home-cats__row">
+            {ACTIVE_CATEGORIES.map(c => (
+              <Link key={c.value} to={`/discover?category=${c.value}`} className="cat-link">{c.label}</Link>
+            ))}
+          </div>
         </nav>
       )}
 
       <Rail title="Trending" link="/discover?sort=popular" products={trending} />
-      <Rail title="New arrivals" link="/discover" products={fresh} />
+      <HowItWorks />
+      <ProductGrid title="New arrivals" link="/discover" products={fresh} />
+      <CreatorSpotlight creators={spotlightCreators} reelsByCreator={reelsByCreator} onPlay={setViewingReels} />
       {ACTIVE_CATEGORIES.length > 1 && ACTIVE_CATEGORIES.map(c => (
         <Rail key={c.value} title={c.label} link={`/discover?category=${c.value}`} products={byCategory[c.value]} />
       ))}
-
-      <CreatorSpotlight creators={spotlightCreators} reelsByCreator={reelsByCreator} onPlay={setViewingReels} />
-      <BlogRail posts={blogPosts} />
+      <BlogSection posts={blogPosts} />
 
       {!authLoading && !creator && (
-        <section className="sell-band">
-          <div className="wrap sell-band__inner">
-            <div>
-              <h2 className="sell-band__title">Sell what you know</h2>
-              <p className="sell-band__text">Open a storefront in minutes. No monthly fee, paid out to your EcoCash.</p>
-            </div>
-            <Link to={user ? '/onboarding' : '/login?role=creator'} className="btn btn--primary">Start selling</Link>
+        <section className="home-sell">
+          <div className="wrap home-sell__inner">
+            <h2 className="home-sell__title">Sell what you know</h2>
+            <p className="home-sell__text">Open a storefront in minutes. No monthly fee. Paid out to your EcoCash.</p>
+            <Link to={user ? '/onboarding' : '/login?role=creator'} className="btn btn--cta">Start selling</Link>
           </div>
         </section>
       )}

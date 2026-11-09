@@ -72,7 +72,9 @@ async function uploadCover(file) {
 
 const LIST_FIELDS = `
   bp.id, bp.slug, bp.title, bp.excerpt, bp.cover_path, bp.author_name, bp.published_at, bp.created_at,
-  c.handle AS creator_handle, c.avatar_path AS creator_avatar
+  c.handle AS creator_handle, c.avatar_path AS creator_avatar,
+  substr(bp.body_markdown, 1, 700) AS body_preview,
+  (length(trim(bp.body_markdown)) - length(replace(replace(trim(bp.body_markdown), ' ', ''), char(10), '')) + 1) AS word_count
 `;
 const DETAIL_FIELDS = `
   bp.*, c.handle AS creator_handle, c.avatar_path AS creator_avatar,

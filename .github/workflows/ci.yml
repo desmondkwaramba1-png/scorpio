@@ -35,3 +35,19 @@ jobs:
           cache-dependency-path: ${{ matrix.app }}/package-lock.json
       - run: npm ci
       - run: npm run build
+
+  deploy-backend:
+    name: Deploy backend to Fly.io
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: backend
+    runs-on: ubuntu-latest
+    concurrency:
+      group: fly-production-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy Scorpio API
+        run: flyctl deploy --remote-only --app scorpio-api
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

@@ -1,20 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiMail } from 'react-icons/fi';
 import { api } from '../lib/api';
-
-const CAP_SHIELD_SITE_KEY = 'ca7656de201ab286ce18';
-
-function useCapShieldWidget() {
-  useEffect(() => {
-    if (document.querySelector('script[data-capshield-widget]')) return;
-    const script = document.createElement('script');
-    script.src = 'https://capshield.vercel.app/widget.js';
-    script.async = true;
-    script.dataset.capshieldWidget = 'true';
-    document.head.appendChild(script);
-  }, []);
-}
+import { CAP_SHIELD_ENDPOINT, getCapToken, resetCap, useCapShieldWidget } from '../lib/capShield';
 import AuthShell from '../components/AuthShell.jsx';
 
 export default function ForgotPassword() {
@@ -26,15 +14,17 @@ export default function ForgotPassword() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    const formEl = e.currentTarget;
     setError(null);
     setSubmitting(true);
     try {
-      const capToken = document.querySelector('input[name="cap-token"]')?.value;
+      const capToken = await getCapToken(formEl);
       if (!capToken) { setError('Complete the security check before continuing.'); return; }
       await api.post('/api/auth/forgot-password', { identifier, 'cap-token': capToken });
       setSent(true);
     } catch (err) {
       setError(err.message);
+      resetCap(formEl);
     } finally {
       setSubmitting(false);
     }
@@ -62,7 +52,7 @@ export default function ForgotPassword() {
           <input id="identifier" required value={identifier} onChange={e => setIdentifier(e.target.value)} autoFocus />
         </div>
 
-        <div style={{ margin: '8px 0 18px' }}><cap-widget data-cap-api-endpoint={`https://capshield.vercel.app/v1/${CAP_SHIELD_SITE_KEY}/`}></cap-widget></div>
+        <div style={{ margin: '8px 0 18px' }}><cap-widget data-cap-api-endpoint={CAP_SHIELD_ENDPOINT}></cap-widget></div>
         {error && <p className="error-text">{error}</p>}
         <button className="btn btn--primary btn--block" disabled={submitting} type="submit">
           <FiMail size={15} /> {submitting ? 'Sending...' : 'Send reset link'}

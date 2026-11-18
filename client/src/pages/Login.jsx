@@ -4,10 +4,9 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { FiShoppingBag, FiShoppingCart, FiEye, FiEyeOff, FiCheck } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
 import { api } from '../lib/api';
+import { CAP_SHIELD_ENDPOINT, getCapToken, resetCap, useCapShieldWidget } from '../lib/capShield';
 import { useAuth } from '../context/AuthContext.jsx';
 import AuthShell from '../components/AuthShell.jsx';
-
-const CAP_SHIELD_SITE_KEY = 'ca7656de201ab286ce18';
 
 // Google's OAuth app cleared verification and is published out of
 // "Testing." Confirmed for real, not just by console status: hit the
@@ -121,15 +120,7 @@ export default function Login() {
     window.scrollTo(0, 0);
   }, [tab, signupRole, signupStep]);
 
-  useEffect(() => {
-    if (!document.querySelector('script[data-capshield-widget]')) {
-      const script = document.createElement('script');
-      script.src = 'https://capshield.vercel.app/widget.js';
-      script.async = true;
-      script.dataset.capshieldWidget = 'true';
-      document.head.appendChild(script);
-    }
-  }, []);
+  useCapShieldWidget();
 
   function pickRole(role) {
     setSignupRole(role);
@@ -180,16 +171,18 @@ export default function Login() {
 
   async function handleLogin(e) {
     e.preventDefault();
+    const formEl = e.currentTarget;
     setError(null);
     setSubmitting(true);
     try {
-      const capToken = document.querySelector('input[name="cap-token"]')?.value;
+      const capToken = await getCapToken(formEl);
       if (!capToken) { setError('Complete the security check before logging in.'); return; }
       const data = await api.post('/api/auth/login', { identifier: form.identifier, password: form.password, 'cap-token': capToken });
       await refresh(data);
       afterAuth(data);
     } catch (err) {
       setError(err.message);
+      resetCap(formEl);
     } finally {
       setSubmitting(false);
     }
@@ -197,18 +190,19 @@ export default function Login() {
 
   async function handleSignup(e) {
     e.preventDefault();
+    const formEl = e.currentTarget;
     setError(null);
     if (form.password !== form.confirm) {
       setError('Passwords do not match.');
       return;
     }
-    const capToken = document.querySelector('input[name="cap-token"]')?.value;
-    if (!capToken) {
-      setError('Complete the security check before creating your account.');
-      return;
-    }
     setSubmitting(true);
     try {
+      const capToken = await getCapToken(formEl);
+      if (!capToken) {
+        setError('Complete the security check before creating your account.');
+        return;
+      }
       const data = await api.post('/api/auth/signup', {
         username: form.username, email: form.email, phone: form.phone, password: form.password,
         terms_accepted: form.terms, 'cap-token': capToken
@@ -217,6 +211,7 @@ export default function Login() {
       afterAuth(data);
     } catch (err) {
       setError(err.message);
+      resetCap(formEl);
       // Those fields are on the first step, so that's where to fix them.
       if (err.status === 409) setSignupStep(0);
     } finally {
@@ -327,7 +322,7 @@ export default function Login() {
                 autoComplete="current-password"
               />
               <div style={{ margin: '8px 0 18px' }}>
-                <cap-widget data-cap-api-endpoint={`https://capshield.vercel.app/v1/${CAP_SHIELD_SITE_KEY}/`}></cap-widget>
+                <cap-widget data-cap-api-endpoint={CAP_SHIELD_ENDPOINT}></cap-widget>
               </div>
               {error && <p className="error-text">{error}</p>}
               <button className="btn btn--primary btn--block" disabled={submitting} type="submit">
@@ -381,7 +376,7 @@ export default function Login() {
                     />
                   </div>
                   <div style={{ margin: '8px 0 18px' }}>
-                    <cap-widget data-cap-api-endpoint={`https://capshield.vercel.app/v1/${CAP_SHIELD_SITE_KEY}/`}></cap-widget>
+                    <cap-widget data-cap-api-endpoint={CAP_SHIELD_ENDPOINT}></cap-widget>
                   </div>
                   <div className="field">
                     <label style={{ display: 'flex', alignItems: 'flex-start', fontWeight: 400, gap: 8 }}>

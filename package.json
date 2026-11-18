@@ -15,7 +15,7 @@
     "test:payment": "node scripts/test-payment-gateway.js",
     "test:upload-tokens": "node scripts/test-product-upload-tokens.js",
     "test:security": "node scripts/test-security-regressions.js",
-    "test:capshield": "node scripts/test-capshield.js"
+    "test:capshield": "node scripts/test-capshield.js && node scripts/test-csp-middleware.mjs"
   },
   "engines": {
     "node": ">=20 <25"

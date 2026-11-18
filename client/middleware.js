@@ -53,6 +53,10 @@ export function isAppShell(html) {
   return html.length < 200000 && html.includes('<div id="root"></div>') && /<script type="module"[^>]*src="\/(assets|src)\//.test(html);
 }
 
+const SHELL_TIMEOUT_MS = 2500;
+const shellCache = new Map(); // host -> verified app shell HTML (never the nonce'd output)
+export function clearShellCache() { shellCache.clear(); }
+
 const pass = () => new Response(null, { headers: { 'x-middleware-next': '1' } });
 
 export default async function middleware(request) {
@@ -69,15 +73,21 @@ export default async function middleware(request) {
     const v = request.headers.get(h);
     if (v) headers[h] = v;
   }
-  let html;
-  try {
-    const res = await fetch(shellUrl, { headers, redirect: 'manual' });
-    if (res.status !== 200 || !/^text\/html/i.test(res.headers.get('content-type') || '')) return pass();
-    html = await res.text();
-  } catch {
-    return pass(); // fall back to the static file and vercel.json's CSP
+  // The shell is fixed for a deployment, so a warm instance reuses it instead of fetching it on
+  // every page view. The fetch is time-limited: a slow cold start falls back to the static page
+  // rather than leaving the visitor (or an uptime/security scanner) waiting.
+  let html = shellCache.get(shellUrl.host);
+  if (!html) {
+    try {
+      const res = await fetch(shellUrl, { headers, redirect: 'manual', signal: AbortSignal.timeout(SHELL_TIMEOUT_MS) });
+      if (res.status !== 200 || !/^text\/html/i.test(res.headers.get('content-type') || '')) return pass();
+      html = await res.text();
+    } catch {
+      return pass(); // fall back to the static file and vercel.json's CSP
+    }
+    if (!isAppShell(html)) return pass();
+    shellCache.set(shellUrl.host, html);
   }
-  if (!isAppShell(html)) return pass();
 
   const nonce = makeNonce();
   const body = injectNonce(html, nonce);

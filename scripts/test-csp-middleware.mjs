@@ -1,6 +1,6 @@
 // Tests for client/middleware.js (the per-response CSP nonce for the CapShield widget).
 import assert from 'node:assert/strict';
-import middleware, { buildCsp, injectNonce, makeNonce, config } from '../client/middleware.js';
+import middleware, { buildCsp, clearShellCache, injectNonce, makeNonce, config } from '../client/middleware.js';
 
 const SHELL = '<!DOCTYPE html><html lang="en"><head>\n<meta charset="UTF-8" /></head><body><div id="root"></div><script type="module" src="/assets/index.js"></script></body></html>';
 const originalFetch = globalThis.fetch;
@@ -38,9 +38,12 @@ try {
   cases++;
 
   // A page request: HTML with a fresh nonce matching the CSP, never cached.
+  let shellFetches = 0;
   globalThis.fetch = async (url, opts) => {
+    shellFetches++;
     assert.equal(String(url), 'https://www.scorpio.co.zw/index.html');
     assert.equal(opts.headers.cookie, 'a=b');
+    assert.ok(opts.signal, 'shell fetch is time-limited');
     return new Response(SHELL, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
   };
   const page = () => middleware(new Request('https://www.scorpio.co.zw/login', { headers: { cookie: 'a=b', 'user-agent': 'Mozilla/5.0 Chrome/130' } }));
@@ -54,6 +57,7 @@ try {
   assert.match(r1.headers.get('cache-control'), /no-store/);
   assert.equal(r1.headers.get('x-frame-options'), 'DENY');
   assert.equal(r1.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(shellFetches, 1, 'a warm instance reuses the shell instead of refetching it');
   cases++;
 
   // Link-preview bots and non-GET requests pass through untouched (vercel.json's /share rewrite).
@@ -65,6 +69,14 @@ try {
   cases++;
 
   // If the shell can't be read, fall back to the static page (and its vercel.json CSP).
+  clearShellCache();
+  // A slow shell fetch is abandoned at the time limit; the visitor gets the static page.
+  globalThis.fetch = (url, opts) => new Promise((resolve, reject) => opts.signal.addEventListener('abort', () => reject(opts.signal.reason)));
+  const t0 = Date.now();
+  const keepAlive = setTimeout(() => {}, 10000); // AbortSignal.timeout timers don't hold the process open
+  assert.equal((await middleware(new Request('https://www.scorpio.co.zw/login'))).headers.get('x-middleware-next'), '1');
+  clearTimeout(keepAlive);
+  assert.ok(Date.now() - t0 < 4000, 'slow shell must not stall the page');
   // A protected preview redirects to a sign-in page: never serve that, never follow it.
   globalThis.fetch = async (url, opts) => {
     assert.equal(opts.redirect, 'manual');

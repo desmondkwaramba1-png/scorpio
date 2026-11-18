@@ -48,23 +48,36 @@ export function injectNonce(html, nonce) {
   return html.slice(0, end) + tag + html.slice(end);
 }
 
+// Our built index.html: the React mount point and a same-origin module bundle.
+export function isAppShell(html) {
+  return html.length < 200000 && html.includes('<div id="root"></div>') && /<script type="module"[^>]*src="\/(assets|src)\//.test(html);
+}
+
 const pass = () => new Response(null, { headers: { 'x-middleware-next': '1' } });
 
 export default async function middleware(request) {
   if (request.method !== 'GET' && request.method !== 'HEAD') return pass();
   if (SOCIAL_BOTS.test(request.headers.get('user-agent') || '')) return pass();
 
-  // The app shell. Forward cookies only so preview-deployment protection still lets us read it.
+  // The app shell from this same deployment. Only the credentials preview-deployment protection
+  // needs are forwarded, and redirects are refused: if the shell can't be read directly (e.g. a
+  // protected preview bouncing to a sign-in page), serve the static file instead of whatever
+  // the redirect returns.
   const shellUrl = new URL('/index.html', request.url);
-  const cookie = request.headers.get('cookie');
+  const headers = {};
+  for (const h of ['cookie', 'x-vercel-protection-bypass']) {
+    const v = request.headers.get(h);
+    if (v) headers[h] = v;
+  }
   let html;
   try {
-    const res = await fetch(shellUrl, { headers: cookie ? { cookie } : {} });
-    if (!res.ok) return pass();
+    const res = await fetch(shellUrl, { headers, redirect: 'manual' });
+    if (res.status !== 200 || !/^text\/html/i.test(res.headers.get('content-type') || '')) return pass();
     html = await res.text();
   } catch {
     return pass(); // fall back to the static file and vercel.json's CSP
   }
+  if (!isAppShell(html)) return pass();
 
   const nonce = makeNonce();
   const body = injectNonce(html, nonce);

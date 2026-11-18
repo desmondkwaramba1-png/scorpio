@@ -41,7 +41,7 @@ try {
   globalThis.fetch = async (url, opts) => {
     assert.equal(String(url), 'https://www.scorpio.co.zw/index.html');
     assert.equal(opts.headers.cookie, 'a=b');
-    return new Response(SHELL, { status: 200 });
+    return new Response(SHELL, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
   };
   const page = () => middleware(new Request('https://www.scorpio.co.zw/login', { headers: { cookie: 'a=b', 'user-agent': 'Mozilla/5.0 Chrome/130' } }));
   const r1 = await page();
@@ -65,6 +65,17 @@ try {
   cases++;
 
   // If the shell can't be read, fall back to the static page (and its vercel.json CSP).
+  // A protected preview redirects to a sign-in page: never serve that, never follow it.
+  globalThis.fetch = async (url, opts) => {
+    assert.equal(opts.redirect, 'manual');
+    return new Response(null, { status: 302, headers: { location: 'https://vercel.com/sso-api' } });
+  };
+  assert.equal((await middleware(new Request('https://www.scorpio.co.zw/login'))).headers.get('x-middleware-next'), '1');
+  // A 200 that isn't our shell (some other HTML) is not served with our nonce either.
+  globalThis.fetch = async () => new Response('<html><head></head><body>Sign in</body></html>', { status: 200, headers: { 'content-type': 'text/html' } });
+  assert.equal((await middleware(new Request('https://www.scorpio.co.zw/login'))).headers.get('x-middleware-next'), '1');
+  globalThis.fetch = async () => new Response(SHELL, { status: 200, headers: { 'content-type': 'application/json' } });
+  assert.equal((await middleware(new Request('https://www.scorpio.co.zw/login'))).headers.get('x-middleware-next'), '1');
   globalThis.fetch = async () => new Response('nope', { status: 500 });
   assert.equal((await middleware(new Request('https://www.scorpio.co.zw/'))).headers.get('x-middleware-next'), '1');
   globalThis.fetch = async () => { throw new Error('offline'); };

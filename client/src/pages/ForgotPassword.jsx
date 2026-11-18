@@ -1,10 +1,24 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiMail } from 'react-icons/fi';
 import { api } from '../lib/api';
+
+const CAP_SHIELD_SITE_KEY = 'ca7656de201ab286ce18';
+
+function useCapShieldWidget() {
+  useEffect(() => {
+    if (document.querySelector('script[data-capshield-widget]')) return;
+    const script = document.createElement('script');
+    script.src = 'https://capshield.vercel.app/widget.js';
+    script.async = true;
+    script.dataset.capshieldWidget = 'true';
+    document.head.appendChild(script);
+  }, []);
+}
 import AuthShell from '../components/AuthShell.jsx';
 
 export default function ForgotPassword() {
+  useCapShieldWidget();
   const [identifier, setIdentifier] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -15,7 +29,9 @@ export default function ForgotPassword() {
     setError(null);
     setSubmitting(true);
     try {
-      await api.post('/api/auth/forgot-password', { identifier });
+      const capToken = document.querySelector('input[name="cap-token"]')?.value;
+      if (!capToken) { setError('Complete the security check before continuing.'); return; }
+      await api.post('/api/auth/forgot-password', { identifier, 'cap-token': capToken });
       setSent(true);
     } catch (err) {
       setError(err.message);
@@ -46,6 +62,7 @@ export default function ForgotPassword() {
           <input id="identifier" required value={identifier} onChange={e => setIdentifier(e.target.value)} autoFocus />
         </div>
 
+        <div style={{ margin: '8px 0 18px' }}><cap-widget data-cap-api-endpoint={`https://capshield.vercel.app/v1/${CAP_SHIELD_SITE_KEY}/`}></cap-widget></div>
         {error && <p className="error-text">{error}</p>}
         <button className="btn btn--primary btn--block" disabled={submitting} type="submit">
           <FiMail size={15} /> {submitting ? 'Sending...' : 'Send reset link'}

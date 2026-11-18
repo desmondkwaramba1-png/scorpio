@@ -183,7 +183,9 @@ export default function Login() {
     setError(null);
     setSubmitting(true);
     try {
-      const data = await api.post('/api/auth/login', { identifier: form.identifier, password: form.password });
+      const capToken = document.querySelector('input[name="cap-token"]')?.value;
+      if (!capToken) { setError('Complete the security check before logging in.'); return; }
+      const data = await api.post('/api/auth/login', { identifier: form.identifier, password: form.password, 'cap-token': capToken });
       await refresh(data);
       afterAuth(data);
     } catch (err) {
@@ -324,6 +326,9 @@ export default function Login() {
                 id="password" label="Password" value={form.password} onChange={update('password')}
                 autoComplete="current-password"
               />
+              <div style={{ margin: '8px 0 18px' }}>
+                <cap-widget data-cap-api-endpoint={`https://capshield.vercel.app/v1/${CAP_SHIELD_SITE_KEY}/`}></cap-widget>
+              </div>
               {error && <p className="error-text">{error}</p>}
               <button className="btn btn--primary btn--block" disabled={submitting} type="submit">
                 {submitting ? 'Logging in...' : 'Log in'}

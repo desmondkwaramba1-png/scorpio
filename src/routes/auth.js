@@ -123,7 +123,7 @@ router.post('/signup', authLimiter, verifyCapShield, (req, res) => {
 });
 
 // POST /api/auth/login, identifier is a username or an email.
-router.post('/login', loginLimiter, (req, res) => {
+router.post('/login', loginLimiter, verifyCapShield, (req, res) => {
   const { identifier, password } = req.body;
   const normalizedIdentifier = typeof identifier === 'string' ? identifier.trim() : '';
   if (!normalizedIdentifier || !password) {
@@ -206,7 +206,7 @@ router.post('/resend-verification', authLimiter, requireAuth, (req, res) => {
 // POST /api/auth/forgot-password, always responds { sent: true } regardless
 // of whether the account exists, so this endpoint can't be used to check
 // which usernames/emails are registered.
-router.post('/forgot-password', authLimiter, (req, res) => {
+router.post('/forgot-password', authLimiter, verifyCapShield, (req, res) => {
   const { identifier } = req.body;
   if (!identifier) {
     return res.status(400).json({ error: 'identifier is required.' });
@@ -231,7 +231,7 @@ router.post('/forgot-password', authLimiter, (req, res) => {
 
 // POST /api/auth/reset-password, token is either the emailed link token or
 // the WhatsApp-delivered code; both live in the same table.
-router.post('/reset-password', authLimiter, (req, res) => {
+router.post('/reset-password', authLimiter, verifyCapShield, (req, res) => {
   const { token, password } = req.body;
   if (!token || !password) return res.status(400).json({ error: 'token and password are required.' });
 

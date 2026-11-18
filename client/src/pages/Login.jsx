@@ -7,6 +7,8 @@ import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext.jsx';
 import AuthShell from '../components/AuthShell.jsx';
 
+const CAP_SHIELD_SITE_KEY = 'ca7656de201ab286ce18';
+
 // Google's OAuth app cleared verification and is published out of
 // "Testing." Confirmed for real, not just by console status: hit the
 // live /api/auth/google redirect directly, followed it through to
@@ -119,6 +121,16 @@ export default function Login() {
     window.scrollTo(0, 0);
   }, [tab, signupRole, signupStep]);
 
+  useEffect(() => {
+    if (!document.querySelector('script[data-capshield-widget]')) {
+      const script = document.createElement('script');
+      script.src = 'https://capshield.vercel.app/widget.js';
+      script.async = true;
+      script.dataset.capshieldWidget = 'true';
+      document.head.appendChild(script);
+    }
+  }, []);
+
   function pickRole(role) {
     setSignupRole(role);
     setSignupStep(0);
@@ -188,11 +200,16 @@ export default function Login() {
       setError('Passwords do not match.');
       return;
     }
+    const capToken = document.querySelector('input[name="cap-token"]')?.value;
+    if (!capToken) {
+      setError('Complete the security check before creating your account.');
+      return;
+    }
     setSubmitting(true);
     try {
       const data = await api.post('/api/auth/signup', {
         username: form.username, email: form.email, phone: form.phone, password: form.password,
-        terms_accepted: form.terms
+        terms_accepted: form.terms, 'cap-token': capToken
       });
       await refresh(data);
       afterAuth(data);
@@ -357,6 +374,9 @@ export default function Login() {
                       id="confirm" label="Confirm password" value={form.confirm} onChange={update('confirm')}
                       autoComplete="new-password"
                     />
+                  </div>
+                  <div style={{ margin: '8px 0 18px' }}>
+                    <cap-widget data-cap-api-endpoint={`https://capshield.vercel.app/v1/${CAP_SHIELD_SITE_KEY}/`}></cap-widget>
                   </div>
                   <div className="field">
                     <label style={{ display: 'flex', alignItems: 'flex-start', fontWeight: 400, gap: 8 }}>

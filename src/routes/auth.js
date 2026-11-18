@@ -13,6 +13,7 @@ const { checkAndUpdateVerification } = require('../lib/verification');
 const { linkGuestPurchases } = require('../lib/linkGuestPurchases');
 const { prepareImage } = require('../lib/imageProcessing');
 const storage = require('../lib/storage');
+const verifyCapShield = require('../middleware/capShield');
 
 const router = express.Router();
 
@@ -72,7 +73,7 @@ function futureTimestamp(minutesFromNow) {
 }
 
 // POST /api/auth/signup
-router.post('/signup', authLimiter, (req, res) => {
+router.post('/signup', authLimiter, verifyCapShield, (req, res) => {
   const { username, email, phone, password, terms_accepted } = req.body;
 
   if (!username || !email || !phone || !password) {

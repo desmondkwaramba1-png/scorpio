@@ -3020,3 +3020,55 @@ body { background: var(--paper); }
 @media (max-width:520px) {
   .home-load-warning { align-items:flex-start; flex-direction:column; }
 }
+
+
+/* Auth screens: one quiet, confident flow across sign-in, registration and recovery. */
+.auth-page { padding:clamp(28px,6vh,64px) 18px clamp(40px,8vh,84px); }
+.auth-shell { max-width:440px; }
+.auth-shell--wide { max-width:560px; }
+.auth-shell__intro { margin:0 0 18px 2px; }
+.auth-shell__mark { width:36px;height:36px;border-radius:11px; }
+.auth-card {
+  padding:clamp(24px,4vw,34px);
+  border-radius:16px;
+  box-shadow:0 10px 36px rgba(28,25,23,.055);
+}
+.auth-card h1 { font-size:clamp(1.55rem,3vw,1.8rem) !important; line-height:1.15; }
+.auth-card > p.muted { max-width:48ch; line-height:1.55; }
+.auth-card .tabs {
+  display:grid;grid-template-columns:1fr 1fr;gap:4px;
+  padding:4px;margin:0 0 22px;border:0;border-radius:11px;background:var(--paper);
+}
+.auth-card .tab {
+  min-height:40px;padding:8px 12px;border:0;border-radius:8px;
+  color:var(--muted);font-size:.86rem;font-weight:650;
+}
+.auth-card .tab:hover { background:var(--brand-tint);color:var(--brand-strong); }
+.auth-card .tab--active { background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(28,25,23,.12); }
+.auth-card .field { margin-bottom:17px; }
+.auth-card .field label { margin-bottom:6px;font-size:.8rem; }
+.auth-card .field input { min-height:46px;padding:11px 13px;border-radius:9px;font-size:.94rem; }
+.auth-card .field small { font-size:.74rem;line-height:1.45; }
+.auth-card .btn--block { min-height:46px;border-radius:9px;font-size:.92rem; }
+.auth-card .role-grid { gap:10px; }
+.auth-card .role-card {
+  min-height:142px;padding:18px 14px;border:1px solid var(--line);
+  border-radius:12px;box-shadow:none;transition:border-color .16s ease,background .16s ease;
+}
+.auth-card .role-card:hover {
+  transform:none;border-color:var(--brand-strong);background:var(--brand-tint);box-shadow:none;
+}
+.auth-card .role-card__icon { width:42px;height:42px;margin-bottom:10px;border-radius:11px; }
+.auth-card .role-card__sub { max-width:24ch; }
+.auth-card .wizard-steps { margin-bottom:20px; }
+.auth-card .wizard-step { font-size:.78rem; }
+.auth-card .wizard-step__circle { width:25px;height:25px; }
+.auth-card .field-row { gap:0 12px; }
+.auth-card .error-text { border-radius:9px; }
+@media(max-width:600px) {
+  .auth-page { padding:26px 14px 48px; }
+  .auth-shell,.auth-shell--wide { max-width:100%; }
+  .auth-card { padding:24px 20px;border-radius:14px; }
+  .auth-card .role-card { min-height:124px; }
+  .auth-card .role-card__sub { display:block;font-size:.72rem; }
+}

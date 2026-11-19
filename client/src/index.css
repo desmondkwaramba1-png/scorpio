@@ -3072,3 +3072,80 @@ body { background: var(--paper); }
   .auth-card .role-card { min-height:124px; }
   .auth-card .role-card__sub { display:block;font-size:.72rem; }
 }
+
+
+/* ==========================================================================
+   Cross-page polish pass: buyer journeys, account, creator tools and states.
+   Keep the same restrained system on every route, not just the homepage.
+   ========================================================================== */
+.page-head,.discover-heading,.dash-head,.account-head,.orders-head {
+  display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;
+}
+.page-head h1,.discover-heading h1,.dash-head h1 {font-size:clamp(1.55rem,3vw,2.1rem);line-height:1.12;letter-spacing:-.045em;}
+.page-head p,.discover-heading p,.dash-head p {max-width:58ch;color:var(--muted);line-height:1.6;}
+.empty-state {
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  box-shadow:none;text-align:center;
+}
+.empty-state p {max-width:48ch;margin-inline:auto;color:var(--muted);line-height:1.6;}
+.page-state {background:var(--surface);border:1px solid var(--line);box-shadow:none;}
+.error-text {line-height:1.5;}
+.field input:disabled,.field textarea:disabled,.field select:disabled {opacity:.68;cursor:not-allowed;}
+.field input[aria-invalid="true"],.field textarea[aria-invalid="true"],.field select[aria-invalid="true"] {border-color:var(--red);}
+button:focus-visible,a:focus-visible {scroll-margin-block:12px;}
+.product-layout {align-items:start;gap:clamp(24px,4vw,48px);}
+.product-layout__content {min-width:0;}
+.product-layout__cover-col {min-width:0;}
+.product-layout__content h1 {font-size:clamp(1.65rem,3.4vw,2.45rem);line-height:1.12;letter-spacing:-.05em;}
+.product-layout__content p {line-height:1.65;}
+.product-cover {border-radius:16px;overflow:hidden;border:1px solid var(--line);background:var(--soft);}
+.buy-panel,.product-detail,.checkout-panel {border:1px solid var(--line);box-shadow:var(--shadow-1);background:var(--surface);}
+.buy-panel {padding:clamp(18px,2.5vw,26px);}
+.buy-panel .mono {font-variant-numeric:tabular-nums;}
+.cart-summary {border:1px solid var(--line);border-top:2px solid var(--brand);box-shadow:var(--shadow-1);background:var(--surface);}
+.cart-item {background:var(--surface);}
+.order-card {border:1px solid var(--line);box-shadow:none;}
+.order-card__header,.order-card__toolbar {gap:12px;flex-wrap:wrap;}
+.order-card__summary {min-width:0;}
+.order-card__title {overflow-wrap:anywhere;}
+.creator-header {border-bottom:1px solid var(--line);}
+.creator-header__inner {min-width:0;}
+.creator-header__meta {flex-wrap:wrap;}
+.setup {max-width:1080px;}
+.setup__layout {gap:clamp(20px,4vw,48px);}
+.setup__card {border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow-1);}
+.setup__title {letter-spacing:-.04em;}
+.setup__progress {border-radius:999px;overflow:hidden;}
+.dash-main > * {min-width:0;}
+.dash-head {margin-bottom:24px;}
+.dash-profile__url {overflow-wrap:anywhere;}
+.dash-nav__label {letter-spacing:.08em;}
+.dash-trust {border:1px solid var(--line);}
+.dash-chip {border:1px solid var(--line);background:var(--surface);}
+.dash-chip:hover {border-color:var(--line-strong);background:var(--soft);}
+.stat-tile {border:1px solid var(--line);box-shadow:none;background:var(--surface);}
+.health {border:1px solid var(--line);box-shadow:none;}
+.health__item {gap:12px;}
+.table-wrap {max-width:100%;}
+@media(max-width:760px) {
+  .page-head,.discover-heading,.dash-head,.account-head,.orders-head {align-items:flex-start;}
+  .product-layout {gap:22px;}
+  .buy-panel {position:static;}
+  .setup__layout {grid-template-columns:minmax(0,1fr);}
+  .setup__side {position:static;}
+}
+@media(max-width:600px) {
+  .page-head h1,.discover-heading h1,.dash-head h1 {font-size:1.55rem;}
+  .product-layout__content h1 {font-size:1.65rem;}
+  .order-card {padding:14px;}
+  .order-card__toolbar {align-items:flex-start;}
+  .creator-header {padding-block:22px;}
+  .creator-header__inner {align-items:flex-start;}
+  .dash-profile__url {font-size:.68rem;}
+  .dash-bar {scrollbar-width:none;}
+  .dash-bar::-webkit-scrollbar {display:none;}
+  .dash-tab {flex:0 0 auto;}
+}
+@media(prefers-reduced-motion:reduce) {
+  .btn,.card,.product-card,.dash-chip {transition:none !important;}
+}

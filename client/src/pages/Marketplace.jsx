@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiPlay, FiChevronRight, FiSearch, FiSmartphone, FiDownload, FiCheckCircle } from 'react-icons/fi';
+import { FiPlay, FiChevronRight } from 'react-icons/fi';
 import ReelViewer from '../components/ReelViewer.jsx';
 import StoryCard from '../components/StoryCard.jsx';
 import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../lib/launchScope.js';
@@ -60,26 +60,6 @@ function ProductTile({ product: p }) {
   );
 }
 
-// A card with four products in a 2x2 grid, the way big stores open their home page.
-function QuadCard({ title, link, products, linkLabel = 'See more' }) {
-  const four = (products || []).slice(0, 4);
-  if (four.length < 2) return null;
-  return (
-    <section className="quad">
-      <h2 className="quad__title">{title}</h2>
-      <div className="quad__grid">
-        {four.map(p => (
-          <Link key={p.id} to={`/@${p.creator_handle}/${p.slug}`} className="quad__item">
-            <span className="quad__cover"><Cover product={p} /></span>
-            <span className="quad__name">{p.title}</span>
-          </Link>
-        ))}
-      </div>
-      <Link to={link} className="quad__link">{linkLabel}</Link>
-    </section>
-  );
-}
-
 function Panel({ title, link, linkLabel = 'See all', children, className = '' }) {
   return (
     <section className={`panel ${className}`}>
@@ -100,12 +80,6 @@ function ProductRow({ title, link, products }) {
     </Panel>
   );
 }
-
-const STEPS = [
-  { icon: FiSearch, title: 'Find what you need', text: 'Guides, templates and courses from people who know the subject.' },
-  { icon: FiSmartphone, title: 'Pay with EcoCash', text: 'Confirm on your phone. No card needed.' },
-  { icon: FiDownload, title: 'Download straight away', text: 'Files stay in your account, with 5 days of buyer protection.' },
-];
 
 function Creators({ creators, reelsByCreator, onPlay }) {
   if (!creators || !creators.length) return null;
@@ -144,7 +118,6 @@ export default function Marketplace() {
   const [trending, setTrending] = useState(null);
   const [fresh, setFresh] = useState(null);
   const [blogPosts, setBlogPosts] = useState(null);
-  const [byCategory, setByCategory] = useState({});
   const [spotlightCreators, setSpotlightCreators] = useState(null);
   const [reelsByCreator, setReelsByCreator] = useState({});
   const [viewingReels, setViewingReels] = useState(null);
@@ -153,7 +126,6 @@ export default function Marketplace() {
 
   // Everything the page needs, applied together so it settles in one layout pass.
   useEffect(() => {
-    const cats = ACTIVE_CATEGORIES.length > 1 ? ACTIVE_CATEGORIES : [];
     const get = url => fetch(url).then(r => r.json()).catch(() => []);
     const list = v => (Array.isArray(v) ? v : []);
     Promise.all([
@@ -162,8 +134,7 @@ export default function Marketplace() {
       get('/api/creators?limit=14'),
       get('/api/reels?limit=60'),
       get('/api/blog?limit=3'),
-      Promise.all(cats.map(c => get(`/api/products?category=${c.value}&limit=4`))),
-    ]).then(([popular, newest, creators, reels, blog, catResults]) => {
+    ]).then(([popular, newest, creators, reels, blog]) => {
       popular = list(popular); newest = list(newest);
       setTrending(popular);
       // With little like activity, "popular" and "newest" overlap; don't show the same products twice.
@@ -175,9 +146,6 @@ export default function Marketplace() {
       const grouped = {};
       for (const r of list(reels)) (grouped[r.creator_handle] ||= []).push(r);
       setReelsByCreator(grouped);
-      const map = {};
-      cats.forEach((c, i) => { map[c.value] = list(catResults[i]); });
-      setByCategory(map);
     });
   }, []);
 

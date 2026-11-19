@@ -2871,3 +2871,135 @@ body:has(.article){background:var(--surface);}
   .quad__grid{gap:8px;}
   .quad__title{font-size:1rem;}
 }
+
+
+/* ==========================================================================
+   Scorpio UX refresh: quieter surfaces, clearer hierarchy, consistent rhythm.
+   This layer intentionally reuses existing components and design tokens.
+   ========================================================================== */
+:root {
+  --radius: 14px;
+  --radius-sm: 10px;
+  --max-w: 1160px;
+}
+body { background: var(--paper); }
+.wrap { padding-inline: clamp(16px, 3vw, 28px); }
+.section { padding-block: clamp(36px, 5vw, 64px); }
+.section__head { margin-bottom: 28px; }
+.section__title { letter-spacing: -.035em; }
+.btn { font-weight: 650; letter-spacing: -.01em; }
+.btn--cta { background: var(--brand); color: var(--on-brand); }
+.btn--cta:hover { background: var(--accent-dark); }
+.card, .product-card, .feature-card, .page-state {
+  border-color: var(--line);
+  border-radius: 14px;
+}
+.card { box-shadow: var(--shadow-1); }
+.card:hover { box-shadow: var(--shadow-2); }
+.field input, .field textarea, .field select,
+.input-icon input, .discover-search input, .discover-sort {
+  min-height: 46px;
+  border-radius: 10px;
+}
+:where(button, a, input, textarea, select):focus-visible {
+  outline-offset: 3px;
+}
+.nav { border-bottom: 1px solid var(--line); box-shadow: none; }
+.nav__inner { min-height: 68px; gap: 22px; }
+.nav__search { max-width: 520px; border-radius: 999px; }
+.nav__search input { min-height: 42px; }
+.nav__belt { border-top: 0; }
+.nav__belt-inner { min-height: 44px; }
+.belt-item { min-height: 42px; }
+.nav__cta { border-radius: 9px; }
+.footer { margin-top: 48px; }
+.footer__grid { padding-block: 36px; }
+.banner { padding-block: clamp(44px, 7vw, 84px); }
+.banner__inner { max-width: var(--max-w); }
+.banner__kicker { margin-bottom: 14px; }
+.banner__title { max-width: 680px; font-size: clamp(2.15rem, 5.4vw, 4.1rem); line-height: 1.04; letter-spacing: -.065em; }
+.banner__sub { max-width: 48ch; font-size: 1.05rem; line-height: 1.65; }
+.banner__actions { margin-top: 26px; }
+.banner__trust { margin-top: 24px; gap: 10px 22px; }
+.home__body { padding-top: 14px; }
+.home-category-nav { padding: 28px 0 8px; }
+.home-category-nav__head { display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:14px; }
+.home-category-nav__title { font-size:1.05rem; letter-spacing:-.025em; }
+.home-category-nav__items { display:flex; flex-wrap:wrap; gap:8px; }
+.home-category-nav__item {
+  display:inline-flex; align-items:center; min-height:38px; padding:8px 13px;
+  border:1px solid var(--line); border-radius:999px; background:var(--surface);
+  color:var(--ink-dim); font-size:.84rem; font-weight:600; transition:border-color .15s,background .15s,color .15s;
+}
+.home-category-nav__item:hover { border-color:var(--brand-strong); color:var(--ink); background:var(--brand-tint); }
+.panel { padding-block: clamp(24px, 3vw, 38px); }
+.panel__head { margin-bottom:18px; }
+.panel__title { font-size:clamp(1.2rem,2.4vw,1.55rem); letter-spacing:-.04em; }
+.row { gap:18px; }
+.tile { min-width:0; }
+.tile__cover { border-radius:12px; overflow:hidden; background:var(--soft); }
+.tile__title { font-weight:650; letter-spacing:-.015em; line-height:1.35; }
+.tile__by { color:var(--muted); }
+.tile__price { margin-top:5px; }
+.product-grid { gap:18px; }
+.product-card { overflow:hidden; box-shadow:none; transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease; }
+.product-card:hover { transform:translateY(-2px); border-color:var(--line-strong); box-shadow:var(--shadow-2); }
+.product-card__cover { background:var(--soft); }
+.product-card__body { padding:14px; }
+.product-card__title { font-size:.96rem; line-height:1.35; }
+.product-card__buyrow .btn { min-height:40px; }
+.discover-head, .page-head, .dash-head { margin-bottom:24px; }
+.discover-search { max-width:680px; }
+.creator-header { padding-block:32px; }
+.creator-header__inner { gap:22px; }
+.creator-header__name { letter-spacing:-.045em; }
+.storefront-reels-link { border-radius:14px; }
+.buy-panel, .product-detail, .checkout-panel { border-radius:14px; }
+.dash { gap:28px; padding-top:28px; padding-bottom:56px; }
+.dash-side { align-self:start; }
+.dash-main { min-width:0; }
+.dash-nav { gap:4px; }
+.dash-tab { border-radius:9px; min-height:42px; }
+.dash-tab--active { font-weight:700; }
+.dash-profile { padding-bottom:18px; }
+.stat-grid { gap:12px; }
+.stat-tile { padding:18px; }
+.stat-tile__value { letter-spacing:-.045em; }
+.health { padding:22px; }
+.health__item { padding-block:13px; }
+.dash-quick__item { border-radius:12px; }
+.empty-state, .page-state { border-radius:14px; padding:32px 22px; }
+.skeleton-card { overflow:hidden; border:1px solid var(--line); border-radius:14px; }
+.auth-card { border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow-2); }
+.auth-card h1, .auth-card h2 { letter-spacing:-.045em; }
+.cart-item { gap:14px; }
+.cart-summary { position:sticky; top:18px; }
+@media (min-width: 960px) {
+  .dash { grid-template-columns: 228px minmax(0,1fr); gap:34px; }
+  .dash-side { position:sticky; top:24px; }
+}
+@media (max-width: 860px) {
+  .nav__inner { min-height:60px; gap:12px; }
+  .nav__search { max-width:none; }
+  .dash { padding-top:16px; gap:18px; }
+}
+@media (max-width: 600px) {
+  .wrap { padding-inline:16px; }
+  .banner { padding-block:38px 32px; }
+  .banner__title { font-size:clamp(2rem,10vw,2.8rem); }
+  .banner__sub { font-size:.96rem; }
+  .banner__trust { flex-wrap:wrap; font-size:.76rem; }
+  .panel { padding-block:24px; }
+  .row { gap:12px; }
+  .product-grid { gap:10px; }
+  .product-card { border-radius:11px; }
+  .product-card__body { padding:10px; }
+  .stat-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .stat-tile { padding:14px; }
+  .health { padding:16px; }
+  .auth-card { border-radius:14px; }
+  .cart-summary { position:static; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .product-card, .home-category-nav__item { transition:none; }
+}

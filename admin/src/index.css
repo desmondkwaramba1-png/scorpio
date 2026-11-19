@@ -1130,3 +1130,50 @@ img{max-width:100%;display:block;}
 }
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 input[type=file]::file-selector-button{margin-right:12px;padding:.4rem .8rem;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font:inherit;font-weight:600;cursor:pointer;}
+
+
+/* ==========================================================================
+   Admin workspace refresh: compact operations UI, readable data, clear actions.
+   ========================================================================== */
+body { -webkit-font-smoothing:antialiased; }
+.wrap { padding-inline:clamp(16px,3vw,28px); }
+.tabs { gap:5px; padding:5px; border:1px solid var(--line); border-radius:12px; background:var(--surface); }
+.tab { min-height:38px; padding:8px 12px; border-radius:8px; color:var(--muted); font-size:.84rem; font-weight:650; }
+.tab:hover { color:var(--ink); background:var(--brand-tint); }
+.tab--active { color:var(--ink); background:var(--paper); box-shadow:var(--shadow-1); }
+.card { border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow-1); }
+.card--pad { padding:clamp(16px,2.2vw,24px); }
+.stat-grid { gap:12px; }
+.stat-tile { min-width:0; padding:18px; border:1px solid var(--line); border-radius:14px; background:var(--surface); box-shadow:none; }
+.stat-tile__label { color:var(--muted); font-size:.78rem; font-weight:650; }
+.stat-tile__value { margin-top:7px; font-size:clamp(1.45rem,3vw,2rem); letter-spacing:-.045em; overflow-wrap:anywhere; }
+.table-wrap { width:100%; overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--surface); }
+.admin-table { width:100%; border-collapse:collapse; font-size:.84rem; }
+.admin-table th { padding:12px 14px; background:var(--paper); color:var(--muted); font-size:.7rem; font-weight:700; letter-spacing:.055em; text-transform:uppercase; text-align:left; white-space:nowrap; }
+.admin-table td { padding:13px 14px; border-top:1px solid var(--line); vertical-align:middle; }
+.admin-table tr:hover td { background:rgba(255,140,66,.035); }
+.admin-table td .btn { margin:2px 4px 2px 0; }
+.badge { display:inline-flex; align-items:center; min-height:24px; padding:4px 8px; border-radius:999px; font-size:.7rem; font-weight:700; white-space:nowrap; }
+.field { margin-bottom:16px; }
+.field input,.field textarea,.field select { min-height:44px; border-radius:9px; }
+.error-text { line-height:1.5; }
+.admin-payout-totals { gap:12px; }
+.admin-fund-hold,.dispute-hold-summary,.dispute-repeat-warning { border-radius:12px; }
+button:focus-visible,a:focus-visible { scroll-margin-block:12px; }
+.wrap > header h1 { font-size:clamp(1.4rem,3vw,1.75rem) !important; letter-spacing:-.04em; }
+@media(max-width:900px) {
+  .tabs { overflow-x:auto; flex-wrap:nowrap; scrollbar-width:thin; }
+  .tabs .tab { flex:0 0 auto; }
+}
+@media(max-width:640px) {
+  .wrap { padding-inline:14px; }
+  .wrap > header { align-items:flex-start !important; }
+  .admin-table tr { padding:5px 12px; }
+  .admin-table td { align-items:flex-start; }
+  .admin-table td::before { max-width:42%; overflow-wrap:anywhere; }
+  .stat-tile { padding:14px; }
+  .card--pad { padding:16px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .btn,.tab,.card { transition:none !important; }
+}

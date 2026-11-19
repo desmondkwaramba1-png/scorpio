@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiPlay, FiChevronRight, FiSearch, FiSmartphone, FiDownload, FiCheckCircle } from 'react-icons/fi';
+import { FiPlay, FiChevronRight, FiRefreshCw, FiCheckCircle } from 'react-icons/fi';
 import ReelViewer from '../components/ReelViewer.jsx';
 import StoryCard from '../components/StoryCard.jsx';
 import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../lib/launchScope.js';
@@ -60,26 +60,6 @@ function ProductTile({ product: p }) {
   );
 }
 
-// A card with four products in a 2x2 grid, the way big stores open their home page.
-function QuadCard({ title, link, products, linkLabel = 'See more' }) {
-  const four = (products || []).slice(0, 4);
-  if (four.length < 2) return null;
-  return (
-    <section className="quad">
-      <h2 className="quad__title">{title}</h2>
-      <div className="quad__grid">
-        {four.map(p => (
-          <Link key={p.id} to={`/@${p.creator_handle}/${p.slug}`} className="quad__item">
-            <span className="quad__cover"><Cover product={p} /></span>
-            <span className="quad__name">{p.title}</span>
-          </Link>
-        ))}
-      </div>
-      <Link to={link} className="quad__link">{linkLabel}</Link>
-    </section>
-  );
-}
-
 function Panel({ title, link, linkLabel = 'See all', children, className = '' }) {
   return (
     <section className={`panel ${className}`}>
@@ -100,12 +80,6 @@ function ProductRow({ title, link, products }) {
     </Panel>
   );
 }
-
-const STEPS = [
-  { icon: FiSearch, title: 'Find what you need', text: 'Guides, templates and courses from people who know the subject.' },
-  { icon: FiSmartphone, title: 'Pay with EcoCash', text: 'Confirm on your phone. No card needed.' },
-  { icon: FiDownload, title: 'Download straight away', text: 'Files stay in your account, with 5 days of buyer protection.' },
-];
 
 function Creators({ creators, reelsByCreator, onPlay }) {
   if (!creators || !creators.length) return null;
@@ -144,42 +118,48 @@ export default function Marketplace() {
   const [trending, setTrending] = useState(null);
   const [fresh, setFresh] = useState(null);
   const [blogPosts, setBlogPosts] = useState(null);
-  const [byCategory, setByCategory] = useState({});
   const [spotlightCreators, setSpotlightCreators] = useState(null);
   const [reelsByCreator, setReelsByCreator] = useState({});
   const [viewingReels, setViewingReels] = useState(null);
+  const [loadWarning, setLoadWarning] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => { try { localStorage.setItem(HERO_SEEN_KEY, '1'); } catch { /* private mode */ } }, []);
 
-  // Everything the page needs, applied together so it settles in one layout pass.
+  // Load independent homepage sections together. One failed endpoint should
+  // not erase every other section or silently look like an empty marketplace.
   useEffect(() => {
-    const cats = ACTIVE_CATEGORIES.length > 1 ? ACTIVE_CATEGORIES : [];
-    const get = url => fetch(url).then(r => r.json()).catch(() => []);
-    const list = v => (Array.isArray(v) ? v : []);
-    Promise.all([
+    let active = true;
+    const get = url => fetch(url).then(response => {
+      if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+      return response.json();
+    });
+    const list = value => (Array.isArray(value) ? value : []);
+    Promise.allSettled([
       get('/api/products?sort=popular&limit=12'),
       get('/api/products?limit=16'),
       get('/api/creators?limit=14'),
       get('/api/reels?limit=60'),
       get('/api/blog?limit=3'),
-      Promise.all(cats.map(c => get(`/api/products?category=${c.value}&limit=4`))),
-    ]).then(([popular, newest, creators, reels, blog, catResults]) => {
-      popular = list(popular); newest = list(newest);
+    ]).then(results => {
+      if (!active) return;
+      const value = index => results[index].status === 'fulfilled' ? results[index].value : [];
+      const popular = list(value(0));
+      const newest = list(value(1));
+      setLoadWarning(results.some(result => result.status === 'rejected'));
       setTrending(popular);
       // With little like activity, "popular" and "newest" overlap; don't show the same products twice.
       const seen = new Set(popular.map(p => p.id));
       const unseen = newest.filter(p => !seen.has(p.id));
       setFresh(unseen.length >= 4 ? unseen : newest);
-      setSpotlightCreators(list(creators));
-      setBlogPosts(list(blog));
+      setSpotlightCreators(list(value(2)));
+      setBlogPosts(list(value(4)));
       const grouped = {};
-      for (const r of list(reels)) (grouped[r.creator_handle] ||= []).push(r);
+      for (const reel of list(value(3))) (grouped[reel.creator_handle] ||= []).push(reel);
       setReelsByCreator(grouped);
-      const map = {};
-      cats.forEach((c, i) => { map[c.value] = list(catResults[i]); });
-      setByCategory(map);
     });
-  }, []);
+    return () => { active = false; };
+  }, [retryKey]);
 
   const sellHref = user ? '/onboarding' : '/login?role=creator';
 
@@ -206,29 +186,32 @@ export default function Marketplace() {
       </header>
 
       <div className="wrap home__body">
-        <div className="quads">
-          <QuadCard title="Trending now" link="/discover?sort=popular" products={trending} />
-          {ACTIVE_CATEGORIES.length > 1 && ACTIVE_CATEGORIES.map(c => (
-            <QuadCard key={c.value} title={c.label} link={`/discover?category=${c.value}`} products={byCategory[c.value]} />
-          ))}
-        </div>
+        {loadWarning && (
+          <div className="home-load-warning" role="status">
+            <span>Some sections could not be loaded. You can still browse what is available.</span>
+            <button type="button" onClick={() => setRetryKey(key => key + 1)}>
+              <FiRefreshCw size={14} /> Retry
+            </button>
+          </div>
+        )}
+        {ACTIVE_CATEGORIES.length > 0 && (
+          <section className="home-category-nav" aria-label="Browse product categories">
+            <div className="home-category-nav__head">
+              <h2 className="home-category-nav__title">Browse categories</h2>
+              <Link to="/discover">View all <FiChevronRight size={14} aria-hidden="true" /></Link>
+            </div>
+            <div className="home-category-nav__items">
+              {ACTIVE_CATEGORIES.map(category => (
+                <Link key={category.value} to={`/discover?category=${category.value}`} className="home-category-nav__item">
+                  {category.label}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
-        <ProductRow title="Best sellers" link="/discover?sort=popular" products={trending} />
-        <ProductRow title="New arrivals" link="/discover" products={fresh} />
-
-        <Panel title="How Scorpio works">
-          <ol className="steps">
-            {STEPS.map(({ icon: Icon, title, text }) => (
-              <li key={title} className="step">
-                <span className="step__icon"><Icon size={20} aria-hidden="true" /></span>
-                <span>
-                  <h3 className="step__title">{title}</h3>
-                  <p className="step__text">{text}</p>
-                </span>
-              </li>
-            ))}
-          </ol>
-        </Panel>
+        <ProductRow title="Popular right now" link="/discover?sort=popular" products={trending} />
+        <ProductRow title="Recently added" link="/discover" products={fresh} />
 
         <Creators creators={spotlightCreators} reelsByCreator={reelsByCreator} onPlay={setViewingReels} />
 

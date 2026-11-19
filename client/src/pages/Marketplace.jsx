@@ -206,29 +206,24 @@ export default function Marketplace() {
       </header>
 
       <div className="wrap home__body">
-        <div className="quads">
-          <QuadCard title="Trending now" link="/discover?sort=popular" products={trending} />
-          {ACTIVE_CATEGORIES.length > 1 && ACTIVE_CATEGORIES.map(c => (
-            <QuadCard key={c.value} title={c.label} link={`/discover?category=${c.value}`} products={byCategory[c.value]} />
-          ))}
-        </div>
+        {ACTIVE_CATEGORIES.length > 0 && (
+          <section className="home-category-nav" aria-label="Browse product categories">
+            <div className="home-category-nav__head">
+              <h2 className="home-category-nav__title">Browse categories</h2>
+              <Link to="/discover">View all <FiChevronRight size={14} aria-hidden="true" /></Link>
+            </div>
+            <div className="home-category-nav__items">
+              {ACTIVE_CATEGORIES.map(category => (
+                <Link key={category.value} to={`/discover?category=${category.value}`} className="home-category-nav__item">
+                  {category.label}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
-        <ProductRow title="Best sellers" link="/discover?sort=popular" products={trending} />
-        <ProductRow title="New arrivals" link="/discover" products={fresh} />
-
-        <Panel title="How Scorpio works">
-          <ol className="steps">
-            {STEPS.map(({ icon: Icon, title, text }) => (
-              <li key={title} className="step">
-                <span className="step__icon"><Icon size={20} aria-hidden="true" /></span>
-                <span>
-                  <h3 className="step__title">{title}</h3>
-                  <p className="step__text">{text}</p>
-                </span>
-              </li>
-            ))}
-          </ol>
-        </Panel>
+        <ProductRow title="Popular right now" link="/discover?sort=popular" products={trending} />
+        <ProductRow title="Recently added" link="/discover" products={fresh} />
 
         <Creators creators={spotlightCreators} reelsByCreator={reelsByCreator} onPlay={setViewingReels} />
 

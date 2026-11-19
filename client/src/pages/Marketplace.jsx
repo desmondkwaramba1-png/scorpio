@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiPlay, FiChevronRight, FiRefreshCw } from 'react-icons/fi';
+import { FiPlay, FiChevronRight, FiRefreshCw, FiCheckCircle } from 'react-icons/fi';
 import ReelViewer from '../components/ReelViewer.jsx';
 import StoryCard from '../components/StoryCard.jsx';
 import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../lib/launchScope.js';

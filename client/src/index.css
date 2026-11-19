@@ -3003,3 +3003,20 @@ body { background: var(--paper); }
 @media (prefers-reduced-motion: reduce) {
   .product-card, .home-category-nav__item { transition:none; }
 }
+
+
+.home-load-warning {
+  display:flex; align-items:center; justify-content:space-between; gap:14px;
+  margin:18px 0; padding:12px 15px; border:1px solid var(--line);
+  border-radius:12px; background:var(--surface); color:var(--muted); font-size:.84rem;
+}
+.home-load-warning button {
+  display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  flex:none; min-height:36px; padding:7px 11px; border:1px solid var(--line);
+  border-radius:9px; background:var(--paper); color:var(--ink); font:inherit;
+  font-weight:650; cursor:pointer;
+}
+.home-load-warning button:hover { border-color:var(--brand-strong); }
+@media (max-width:520px) {
+  .home-load-warning { align-items:flex-start; flex-direction:column; }
+}

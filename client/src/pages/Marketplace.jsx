@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FiPlay, FiChevronRight } from 'react-icons/fi';
+import { FiPlay, FiChevronRight, FiRefreshCw } from 'react-icons/fi';
 import ReelViewer from '../components/ReelViewer.jsx';
 import StoryCard from '../components/StoryCard.jsx';
 import { ACTIVE_CATEGORIES, EBOOKS_ONLY } from '../lib/launchScope.js';
@@ -121,33 +121,45 @@ export default function Marketplace() {
   const [spotlightCreators, setSpotlightCreators] = useState(null);
   const [reelsByCreator, setReelsByCreator] = useState({});
   const [viewingReels, setViewingReels] = useState(null);
+  const [loadWarning, setLoadWarning] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => { try { localStorage.setItem(HERO_SEEN_KEY, '1'); } catch { /* private mode */ } }, []);
 
-  // Everything the page needs, applied together so it settles in one layout pass.
+  // Load independent homepage sections together. One failed endpoint should
+  // not erase every other section or silently look like an empty marketplace.
   useEffect(() => {
-    const get = url => fetch(url).then(r => r.json()).catch(() => []);
-    const list = v => (Array.isArray(v) ? v : []);
-    Promise.all([
+    let active = true;
+    const get = url => fetch(url).then(response => {
+      if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+      return response.json();
+    });
+    const list = value => (Array.isArray(value) ? value : []);
+    Promise.allSettled([
       get('/api/products?sort=popular&limit=12'),
       get('/api/products?limit=16'),
       get('/api/creators?limit=14'),
       get('/api/reels?limit=60'),
       get('/api/blog?limit=3'),
-    ]).then(([popular, newest, creators, reels, blog]) => {
-      popular = list(popular); newest = list(newest);
+    ]).then(results => {
+      if (!active) return;
+      const value = index => results[index].status === 'fulfilled' ? results[index].value : [];
+      const popular = list(value(0));
+      const newest = list(value(1));
+      setLoadWarning(results.some(result => result.status === 'rejected'));
       setTrending(popular);
       // With little like activity, "popular" and "newest" overlap; don't show the same products twice.
       const seen = new Set(popular.map(p => p.id));
       const unseen = newest.filter(p => !seen.has(p.id));
       setFresh(unseen.length >= 4 ? unseen : newest);
-      setSpotlightCreators(list(creators));
-      setBlogPosts(list(blog));
+      setSpotlightCreators(list(value(2)));
+      setBlogPosts(list(value(4)));
       const grouped = {};
-      for (const r of list(reels)) (grouped[r.creator_handle] ||= []).push(r);
+      for (const reel of list(value(3))) (grouped[reel.creator_handle] ||= []).push(reel);
       setReelsByCreator(grouped);
     });
-  }, []);
+    return () => { active = false; };
+  }, [retryKey]);
 
   const sellHref = user ? '/onboarding' : '/login?role=creator';
 
@@ -174,6 +186,14 @@ export default function Marketplace() {
       </header>
 
       <div className="wrap home__body">
+        {loadWarning && (
+          <div className="home-load-warning" role="status">
+            <span>Some sections could not be loaded. You can still browse what is available.</span>
+            <button type="button" onClick={() => setRetryKey(key => key + 1)}>
+              <FiRefreshCw size={14} /> Retry
+            </button>
+          </div>
+        )}
         {ACTIVE_CATEGORIES.length > 0 && (
           <section className="home-category-nav" aria-label="Browse product categories">
             <div className="home-category-nav__head">
